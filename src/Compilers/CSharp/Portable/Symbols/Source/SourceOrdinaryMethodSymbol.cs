@@ -146,23 +146,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     // evaluate method body
                     var bodyDiagnostics = new DiagnosticBag();
                     var boundBody = bodyBinder.BindMethodBody(syntax, bodyDiagnostics);
-                    var exitPaths = ArrayBuilder<(BoundNode, TypeWithAnnotations)>.GetInstance();
-                    CodeBlockExitPathsFinder.GetExitPaths(exitPaths, boundBody);
-                    if (exitPaths.Count > 0)
-                    {
-                        // there is some return, so lets use the last return statement
-                        var exitPath = exitPaths.Last();
-                        var exitPathReturnType = exitPath.Item2;
-
-                        // if the return type is null... then there is some issue... we only use the return type if we have a valid one...
-                        if (!ReferenceEquals(exitPathReturnType.Type, null))
-                            returnType = exitPathReturnType;
-                    }
-                    else
-                    {
-                        // there is no return, so lets make it "void" per default
-                        returnType = signatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
-                    }
+                    var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBody);
+                    if (isVoidType) returnType = signatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
+                    else if (resolvedType != null) returnType = resolvedType.Value;
                 }
                 else
                 {

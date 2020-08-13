@@ -526,20 +526,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                             if (boundBody != null)
                             {
-                                var exitPaths = ArrayBuilder<(BoundNode, TypeWithAnnotations)>.GetInstance();
-                                CodeBlockExitPathsFinder.GetExitPaths(exitPaths, boundBody);
-                                if (exitPaths.Count > 0)
-                                {
-                                    // there is some return, so lets use the last return statement
-                                    var exitPath = exitPaths.Last();
-                                    type = exitPath.Item2;
-                                }
-                                else
-                                {
-                                    // no exit paths available... so fallback to some "error" by using the explicit type of the property...
-                                    type = prop.GetExplicitReturnTypeWithAnnotations(null, null, diagnostics, out var propRefKind);
-                                }
-                                exitPaths.Free();
+                                var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBody);
+                                if (isVoidType) type = prop.GetExplicitReturnTypeWithAnnotations(null, null, diagnostics, out var propRefKind);
+                                else if (resolvedType != null) type = resolvedType.Value;
                             }
                         }
                     }

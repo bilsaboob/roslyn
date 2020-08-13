@@ -252,19 +252,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                 if (boundBodyNode != null)
                 {
-                    var exitPaths = ArrayBuilder<(BoundNode, TypeWithAnnotations)>.GetInstance();
-                    CodeBlockExitPathsFinder.GetExitPaths(exitPaths, boundBodyNode);
-                    if (exitPaths.Count > 0)
-                    {
-                        // there is some return, so lets use the last return statement
-                        var exitPath = exitPaths.Last();
-                        returnType = exitPath.Item2;
-                    }
-                    else
-                    {
-                        // there is no return, so lets make it "void" per default
-                        returnType = SignatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
-                    }
+                    var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBodyNode);
+                    if (isVoidType) returnType = SignatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
+                    else if (resolvedType != null) returnType = resolvedType.Value;
                 }
             }
 
