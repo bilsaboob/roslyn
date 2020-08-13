@@ -169,6 +169,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         returnType = signatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
                     }
                 }
+                else
+                {
+                    // could be that there is no body defined... in that case we can pretty much assume it's a "void" type
+                    var (arrowBody, blockBody) = Bodies;
+                    if (arrowBody == null && blockBody == null)
+                    {
+                        returnType = signatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
+                    }
+                }
             }
 
             // span-like types are returnable in general
