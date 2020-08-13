@@ -113,11 +113,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             SyntaxToken arglistToken;
 
-            if (Name == "InferEmptyBody")
-            {
-
-            }
-
             // Constraint checking for parameter and return types must be delayed until
             // the method has been added to the containing type member list since
             // evaluating the constraints may depend on accessing this method from
