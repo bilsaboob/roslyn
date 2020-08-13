@@ -9781,7 +9781,7 @@ tryAgain:
         /// </summary>
         private bool CanStartExpression()
         {
-            return IsPossibleExpression(allowBinaryExpressions: false, allowAssignmentExpressions: false, allowBraceLambdaExpression: false);
+            return IsPossibleExpression(allowBinaryExpressions: false, allowAssignmentExpressions: false, allowBraceLambdaExpression: false, allowArrowLambdaExpression: false);
         }
 
         /// <summary>
@@ -9789,10 +9789,10 @@ tryAgain:
         /// </summary>
         private bool IsPossibleExpression()
         {
-            return IsPossibleExpression(allowBinaryExpressions: true, allowAssignmentExpressions: true, allowBraceLambdaExpression: false);
+            return IsPossibleExpression(allowBinaryExpressions: true, allowAssignmentExpressions: true, allowBraceLambdaExpression: false, allowArrowLambdaExpression: false);
         }
 
-        private bool IsPossibleExpression(bool allowBinaryExpressions, bool allowAssignmentExpressions, bool allowBraceLambdaExpression)
+        private bool IsPossibleExpression(bool allowBinaryExpressions, bool allowAssignmentExpressions, bool allowBraceLambdaExpression, bool allowArrowLambdaExpression)
         {
             SyntaxKind tk = this.CurrentToken.Kind;
             switch (tk)
@@ -9826,9 +9826,19 @@ tryAgain:
                 case SyntaxKind.RefKeyword:
                     return true;
                 case SyntaxKind.StaticKeyword:
-                    return IsPossibleAnonymousMethodExpression() || IsPossibleLambdaExpression(Precedence.Expression, allowBraceLambdaExpression: allowBraceLambdaExpression);
+                    return IsPossibleAnonymousMethodExpression() || IsPossibleLambdaExpression(Precedence.Expression, allowBraceLambdaExpression: allowBraceLambdaExpression, allowArrowLambdaExpression: allowArrowLambdaExpression);
                 case SyntaxKind.OpenBraceToken:
-                    if (allowBraceLambdaExpression && IsPossibleLambdaExpression(Precedence.Expression, allowBraceLambdaExpression: true))
+                    if (allowBraceLambdaExpression && IsPossibleLambdaExpression(Precedence.Expression, allowBraceLambdaExpression: true, allowArrowLambdaExpression: false))
+                        return true;
+                    return false;
+                case SyntaxKind.EqualsGreaterThanToken:
+                    if (allowArrowLambdaExpression && IsPossibleLambdaExpression(Precedence.Expression, allowBraceLambdaExpression: false, allowArrowLambdaExpression: true))
+                        return true;
+                    return false;
+                case SyntaxKind.AsyncKeyword:
+                    if (!allowBraceLambdaExpression && !allowArrowLambdaExpression)
+                        return false;
+                    if (IsPossibleLambdaExpression(Precedence.Expression, allowBraceLambdaExpression: allowBraceLambdaExpression, allowArrowLambdaExpression: allowArrowLambdaExpression))
                         return true;
                     return false;
                 case SyntaxKind.IdentifierToken:
@@ -10487,6 +10497,25 @@ tryAgain:
                 case SyntaxKind.IdentifierToken:
                     if (this.IsTrueIdentifier())
                     {
+                        // check for special case lambdas:
+                        // 1. async { ... }
+                        // 2. async => ...
+                        if(this.CurrentToken.ContextualKind == SyntaxKind.AsyncKeyword)
+                        {
+                            var peekIndex = 1;
+                            
+                            if(this.PeekToken(peekIndex).Kind == SyntaxKind.StaticKeyword)
+                                peekIndex = 2;
+
+                            if (
+                                (this.PeekToken(peekIndex).Kind == SyntaxKind.EqualsEqualsToken || this.PeekToken(peekIndex).Kind == SyntaxKind.OpenBraceToken) &&
+                                this.IsPossibleLambdaExpression(precedence, allowBraceLambdaExpression: true, allowArrowLambdaExpression: true)
+                              )
+                            {
+                                return this.ParseLambdaExpression();
+                            }
+                        }
+
                         if (this.IsPossibleAnonymousMethodExpression())
                         {
                             return this.ParseAnonymousMethodExpression();
@@ -10951,7 +10980,7 @@ tryAgain:
 
         private bool IsPossibleArgumentExpression()
         {
-            return IsValidArgumentRefKindKeyword(this.CurrentToken.Kind) || this.IsPossibleExpression(allowBinaryExpressions: true, allowAssignmentExpressions: true, allowBraceLambdaExpression: true);
+            return IsValidArgumentRefKindKeyword(this.CurrentToken.Kind) || this.IsPossibleExpression(allowBinaryExpressions: true, allowAssignmentExpressions: true, allowBraceLambdaExpression: true, allowArrowLambdaExpression: true);
         }
 
         private static bool IsValidArgumentRefKindKeyword(SyntaxKind kind)
@@ -11433,7 +11462,7 @@ tryAgain:
             }
         }
 
-        private bool IsPossibleLambdaExpression(Precedence precedence, bool allowBraceLambdaExpression = false)
+        private bool IsPossibleLambdaExpression(Precedence precedence, bool allowBraceLambdaExpression = false, bool allowArrowLambdaExpression = false)
         {
             // Only call into this if after `static` or after a legal identifier.
             // Debug.Assert(this.CurrentToken.Kind == SyntaxKind.StaticKeyword || this.IsTrueIdentifier(this.CurrentToken));
@@ -11456,13 +11485,21 @@ tryAgain:
             {
                 peekIndex = 1;
                 seenStatic = true;
+                if (this.PeekToken(peekIndex).Kind == SyntaxKind.AsyncKeyword)
+                {
+                    peekIndex = 2;
+                    seenAsync = true;
+                }
             }
-            else if (this.CurrentToken.ContextualKind == SyntaxKind.AsyncKeyword &&
-                     this.PeekToken(1).Kind == SyntaxKind.StaticKeyword)
+            else if (this.CurrentToken.ContextualKind == SyntaxKind.AsyncKeyword)
             {
-                peekIndex = 2;
-                seenStatic = true;
+                peekIndex = 1;
                 seenAsync = true;
+                if (this.PeekToken(peekIndex).Kind == SyntaxKind.StaticKeyword)
+                {
+                    peekIndex = 2;
+                    seenStatic = true;
+                }
             }
             else
             {
@@ -11476,13 +11513,17 @@ tryAgain:
                 // We only got into IsPossibleLambdaExpression if we saw 'static' or an identifier.
                 // So if we're now on => then we must have been on 'static' in order to have moved
                 // past those.
-                Contract.Requires(seenStatic);
+
+                // Unless explicitly specified that arrow lambda expressions are allowed!
+                if (!allowArrowLambdaExpression)
+                {
+                    Contract.Requires(seenStatic);
+                }
 
                 // 1. `static =>`
                 // 2. `async static =>`
+                // 3. `=>`
 
-                // This is an error case, but we have enough code in front of us to be certain
-                // the user was trying to write a static lambda.
                 return true;
             }
 
@@ -12358,8 +12399,7 @@ tryAgain:
                     continue;
                 }
 
-                if (this.CurrentToken.ContextualKind == SyntaxKind.AsyncKeyword &&
-                    this.PeekToken(1).Kind != SyntaxKind.EqualsGreaterThanToken)
+                if (this.CurrentToken.ContextualKind == SyntaxKind.AsyncKeyword)
                 {
                     var asyncToken = this.EatContextualToken(SyntaxKind.AsyncKeyword);
                     asyncToken = CheckFeatureAvailability(asyncToken, MessageID.IDS_FeatureAsync);
@@ -12392,6 +12432,8 @@ tryAgain:
 
                 if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken)
                 {
+                    // 1. '() => ...'
+                    // 2. '(arg...) => ...'
                     var paramList = this.ParseLambdaParameterList();
                     var arrow = this.EatToken(SyntaxKind.EqualsGreaterThanToken);
                     arrow = CheckFeatureAvailability(arrow, MessageID.IDS_FeatureLambda);
@@ -12402,6 +12444,7 @@ tryAgain:
                 }
                 else if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
                 {
+                    // 1. '{ ... }'
                     var openParen = SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken, "(");
                     var closeParen = SyntaxFactory.FakeToken(SyntaxKind.CloseParenToken, ")");
                     var arrow = SyntaxFactory.FakeToken(SyntaxKind.EqualsGreaterThanToken, "=>");
@@ -12416,8 +12459,29 @@ tryAgain:
                     return _syntaxFactory.ParenthesizedLambdaExpression(
                         modifiers, paramList, arrow, block, expression);
                 }
+                else if(this.CurrentToken.Kind == SyntaxKind.EqualsGreaterThanToken)
+                {
+                    // 1. '=> ...'
+                    // 2. '=> { ... }'
+                    var openParen = SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken, "(");
+                    var closeParen = SyntaxFactory.FakeToken(SyntaxKind.CloseParenToken, ")");
+
+                    var arrow = this.EatToken(SyntaxKind.EqualsGreaterThanToken);
+                    arrow = CheckFeatureAvailability(arrow, MessageID.IDS_FeatureLambda);
+
+                    // build fake parameters list
+                    var nodes = _pool.AllocateSeparated<ParameterSyntax>();
+                    var paramList = _syntaxFactory.ParameterList(openParen, nodes, closeParen);
+
+                    // parse the body
+                    var (block, expression) = ParseLambdaBody();
+
+                    return _syntaxFactory.ParenthesizedLambdaExpression(
+                        modifiers, paramList, arrow, block, expression);
+                }
                 else
                 {
+                    // 1. 'arg => SomeExpression()'
                     var name = this.ParseIdentifierToken();
                     var arrow = this.EatToken(SyntaxKind.EqualsGreaterThanToken);
                     arrow = CheckFeatureAvailability(arrow, MessageID.IDS_FeatureLambda);
