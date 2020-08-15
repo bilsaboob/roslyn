@@ -146,7 +146,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     // evaluate method body
                     var bodyDiagnostics = new DiagnosticBag();
                     var boundBody = bodyBinder.BindMethodBody(syntax, bodyDiagnostics);
-                    var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBody);
+                    var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBody, bodyBinder.Conversions, out var useSiteDiagnostics);
                     if (isVoidType) returnType = signatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
                     else if (resolvedType != null) returnType = resolvedType.Value;
                 }

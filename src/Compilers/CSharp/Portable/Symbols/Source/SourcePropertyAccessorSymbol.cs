@@ -526,7 +526,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                             if (boundBody != null)
                             {
-                                var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBody);
+                                var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBody, bodyBinder.Conversions);
                                 if (isVoidType) type = prop.GetExplicitReturnTypeWithAnnotations(null, null, diagnostics, out var propRefKind);
                                 else if (resolvedType != null) type = resolvedType.Value;
                             }

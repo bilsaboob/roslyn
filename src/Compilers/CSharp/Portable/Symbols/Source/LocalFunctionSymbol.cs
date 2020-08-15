@@ -252,7 +252,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                 if (boundBodyNode != null)
                 {
-                    var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBodyNode);
+                    var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBodyNode, _binder.Conversions);
                     if (isVoidType) returnType = SignatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
                     else if (resolvedType != null) returnType = resolvedType.Value;
                 }
