@@ -550,7 +550,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return BindImplicitObjectCreationExpression((ImplicitObjectCreationExpressionSyntax)node, diagnostics);
                 case SyntaxKind.IdentifierName:
                 case SyntaxKind.GenericName:
-                    return BindIdentifier((SimpleNameSyntax)node, invoked, indexed, diagnostics);
+                    {
+                        var tryResolveExtensionMethods = node.Parent is InvocationExpressionSyntax;
+                        return BindIdentifier((SimpleNameSyntax)node, invoked, indexed, diagnostics, tryResolveExtensionMethods: tryResolveExtensionMethods);
+                    }
                 case SyntaxKind.SimpleMemberAccessExpression:
                 case SyntaxKind.PointerMemberAccessExpression:
                     return BindMemberAccess((MemberAccessExpressionSyntax)node, invoked, indexed, diagnostics: diagnostics);
@@ -1363,7 +1366,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             SimpleNameSyntax node,
             bool invoked,
             bool indexed,
-            DiagnosticBag diagnostics)
+            DiagnosticBag diagnostics,
+            bool tryResolveExtensionMethods = false)
         {
             Debug.Assert(node != null);
 
@@ -1424,6 +1428,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.LookupSymbolsWithFallback(lookupResult, name, arity: arity, useSiteDiagnostics: ref useSiteDiagnostics, options: options);
             diagnostics.Add(node, useSiteDiagnostics);
 
+            // if we continue this code path, we will consume the "first best found symbol"... which is the standard if no "extension methods" are allowed 
             if (lookupResult.Kind != LookupResultKind.Empty)
             {
                 // have we detected an error with the current node?
@@ -1435,7 +1440,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     Debug.Assert(members.Count > 0);
 
+                    var methodGroupFlags = BoundMethodGroupFlags.SearchExtensionMethods;
                     var receiver = SynthesizeMethodGroupReceiver(node, members);
+                    if (receiver != null) methodGroupFlags |= BoundMethodGroupFlags.HasImplicitReceiver;
+
                     expression = ConstructBoundMemberGroupAndReportOmittedTypeArguments(
                         node,
                         typeArgumentList,
@@ -1444,7 +1452,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         name,
                         members,
                         lookupResult,
-                        receiver != null ? BoundMethodGroupFlags.HasImplicitReceiver : BoundMethodGroupFlags.None,
+                        methodGroupFlags,
                         isError,
                         diagnostics);
 
@@ -1495,6 +1503,29 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Otherwise, the simple-name is undefined and a compile-time error occurs.
                 if (expression is null)
                 {
+                    // try also to resolve extension methods rather than returning an error immediately
+                    if (tryResolveExtensionMethods && (object)this.ContainingType != null)
+                    {
+                        // for extension methods... use an implicit receiver... since we didn't really have the "this" in syntax...
+                        var thisExprSyntax = SyntaxFactory.ThisExpression();
+                        var thisBoundNode = BindExpression(thisExprSyntax, diagnostics);
+
+                        if ((object)thisBoundNode != null && (object)thisBoundNode.Type != null)
+                        {
+                            var flags = BoundMethodGroupFlags.HasImplicitReceiver | BoundMethodGroupFlags.SearchExtensionMethods;
+
+                            // return a method group with the receiver and extension method... we also pass the lookup results... so the local methods will be considered too!
+                            return new BoundMethodGroup(
+                                node,
+                                typeArgumentsWithAnnotations,
+                                thisBoundNode,
+                                name,
+                                lookupResult.Symbols.All(s => s.Kind == SymbolKind.Method) ? lookupResult.Symbols.SelectAsArray(s_toMethodSymbolFunc) : ImmutableArray<MethodSymbol>.Empty,
+                                lookupResult,
+                                flags);
+                        }
+                    }
+
                     expression = BadExpression(node);
                     if (lookupResult.Error != null)
                     {
