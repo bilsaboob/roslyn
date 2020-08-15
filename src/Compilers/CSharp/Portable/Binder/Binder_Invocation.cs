@@ -19,18 +19,18 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// </summary>
     internal partial class Binder
     {
-        private BoundExpression BindMethodGroup(ExpressionSyntax node, bool invoked, bool indexed, DiagnosticBag diagnostics)
+        private BoundExpression BindMethodGroup(ExpressionSyntax node, bool invoked, bool indexed, DiagnosticBag diagnostics, bool allowExtensionMethodsForIdentifier)
         {
             switch (node.Kind())
             {
                 case SyntaxKind.IdentifierName:
                 case SyntaxKind.GenericName:
-                    return BindIdentifier((SimpleNameSyntax)node, invoked, indexed, diagnostics);
+                    return BindIdentifier((SimpleNameSyntax)node, invoked, indexed, diagnostics, tryResolveExtensionMethods: allowExtensionMethodsForIdentifier);
                 case SyntaxKind.SimpleMemberAccessExpression:
                 case SyntaxKind.PointerMemberAccessExpression:
                     return BindMemberAccess((MemberAccessExpressionSyntax)node, invoked, indexed, diagnostics);
                 case SyntaxKind.ParenthesizedExpression:
-                    return BindMethodGroup(((ParenthesizedExpressionSyntax)node).Expression, invoked: false, indexed: false, diagnostics: diagnostics);
+                    return BindMethodGroup(((ParenthesizedExpressionSyntax)node).Expression, invoked: false, indexed: false, diagnostics: diagnostics, allowExtensionMethodsForIdentifier: allowExtensionMethodsForIdentifier);
                 default:
                     return BindExpression(node, diagnostics, invoked, indexed);
             }
@@ -164,10 +164,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             else
             {
-                BoundExpression boundExpression = BindMethodGroup(node.Expression, invoked: true, indexed: false, diagnostics: diagnostics);
+                BoundExpression boundExpression = BindMethodGroup(node.Expression, invoked: true, indexed: false, diagnostics: diagnostics, allowExtensionMethodsForIdentifier: true);
                 boundExpression = CheckValue(boundExpression, BindValueKind.RValueOrMethodGroup, diagnostics);
                 string name = boundExpression.Kind == BoundKind.MethodGroup ? GetName(node.Expression) : null;
                 BindArgumentsAndNames(node.ArgumentList, diagnostics, analyzedArguments, allowArglist: true);
+
+                if (name == "LocalTest3")
+                {
+
+                }
+
                 result = BindInvocationExpression(node, node.Expression, name, boundExpression, analyzedArguments, diagnostics);
             }
 
@@ -564,7 +570,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 methodGroup, expression, methodName, analyzedArguments, isMethodGroupConversion: false,
                 useSiteDiagnostics: ref useSiteDiagnostics, allowUnexpandedForm: allowUnexpandedForm);
             diagnostics.Add(expression, useSiteDiagnostics);
-            anyApplicableCandidates = resolution.ResultKind == LookupResultKind.Viable && resolution.OverloadResolutionResult.HasAnyApplicableMember;
+
+            anyApplicableCandidates = resolution.ResultKind == LookupResultKind.Viable && resolution.OverloadResolutionResult.HasAnyApplicableMember == true;
 
             if (!methodGroup.HasAnyErrors) diagnostics.AddRange(resolution.Diagnostics); // Suppress cascading.
 
