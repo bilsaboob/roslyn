@@ -166,7 +166,11 @@ constructor_initializer
   ;
 
 argument_list
-  : '(' (argument (',' argument)*)? ')'
+  : '(' (argument (',' argument)*)? ')' parenthesized_lambda_expression?
+  ;
+
+parenthesized_lambda_expression
+  : modifier* parameter_list '=>' (block | expression)
   ;
 
 block
@@ -720,10 +724,6 @@ anonymous_method_expression
 lambda_expression
   : parenthesized_lambda_expression
   | simple_lambda_expression
-  ;
-
-parenthesized_lambda_expression
-  : modifier* parameter_list '=>' (block | expression)
   ;
 
 simple_lambda_expression

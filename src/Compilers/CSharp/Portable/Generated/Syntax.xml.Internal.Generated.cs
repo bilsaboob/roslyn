@@ -4861,11 +4861,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         internal readonly SyntaxToken openParenToken;
         internal readonly GreenNode? arguments;
         internal readonly SyntaxToken closeParenToken;
+        internal readonly ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock;
 
-        internal ArgumentListSyntax(SyntaxKind kind, SyntaxToken openParenToken, GreenNode? arguments, SyntaxToken closeParenToken, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+        internal ArgumentListSyntax(SyntaxKind kind, SyntaxToken openParenToken, GreenNode? arguments, SyntaxToken closeParenToken, ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
           : base(kind, diagnostics, annotations)
         {
-            this.SlotCount = 3;
+            this.SlotCount = 4;
             this.AdjustFlagsAndWidth(openParenToken);
             this.openParenToken = openParenToken;
             if (arguments != null)
@@ -4875,13 +4876,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             this.AdjustFlagsAndWidth(closeParenToken);
             this.closeParenToken = closeParenToken;
+            if (trailingLambdaBlock != null)
+            {
+                this.AdjustFlagsAndWidth(trailingLambdaBlock);
+                this.trailingLambdaBlock = trailingLambdaBlock;
+            }
         }
 
-        internal ArgumentListSyntax(SyntaxKind kind, SyntaxToken openParenToken, GreenNode? arguments, SyntaxToken closeParenToken, SyntaxFactoryContext context)
+        internal ArgumentListSyntax(SyntaxKind kind, SyntaxToken openParenToken, GreenNode? arguments, SyntaxToken closeParenToken, ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock, SyntaxFactoryContext context)
           : base(kind)
         {
             this.SetFactoryContext(context);
-            this.SlotCount = 3;
+            this.SlotCount = 4;
             this.AdjustFlagsAndWidth(openParenToken);
             this.openParenToken = openParenToken;
             if (arguments != null)
@@ -4891,12 +4897,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             this.AdjustFlagsAndWidth(closeParenToken);
             this.closeParenToken = closeParenToken;
+            if (trailingLambdaBlock != null)
+            {
+                this.AdjustFlagsAndWidth(trailingLambdaBlock);
+                this.trailingLambdaBlock = trailingLambdaBlock;
+            }
         }
 
-        internal ArgumentListSyntax(SyntaxKind kind, SyntaxToken openParenToken, GreenNode? arguments, SyntaxToken closeParenToken)
+        internal ArgumentListSyntax(SyntaxKind kind, SyntaxToken openParenToken, GreenNode? arguments, SyntaxToken closeParenToken, ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock)
           : base(kind)
         {
-            this.SlotCount = 3;
+            this.SlotCount = 4;
             this.AdjustFlagsAndWidth(openParenToken);
             this.openParenToken = openParenToken;
             if (arguments != null)
@@ -4906,6 +4917,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             this.AdjustFlagsAndWidth(closeParenToken);
             this.closeParenToken = closeParenToken;
+            if (trailingLambdaBlock != null)
+            {
+                this.AdjustFlagsAndWidth(trailingLambdaBlock);
+                this.trailingLambdaBlock = trailingLambdaBlock;
+            }
         }
 
         /// <summary>SyntaxToken representing open parenthesis.</summary>
@@ -4914,6 +4930,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public override Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax> Arguments => new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax>(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<CSharpSyntaxNode>(this.arguments));
         /// <summary>SyntaxToken representing close parenthesis.</summary>
         public SyntaxToken CloseParenToken => this.closeParenToken;
+        /// <summary>Block syntax representing an additional argument outside the parenthesis.</summary>
+        public ParenthesizedLambdaExpressionSyntax? TrailingLambdaBlock => this.trailingLambdaBlock;
 
         internal override GreenNode? GetSlot(int index)
             => index switch
@@ -4921,6 +4939,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 0 => this.openParenToken,
                 1 => this.arguments,
                 2 => this.closeParenToken,
+                3 => this.trailingLambdaBlock,
                 _ => null,
             };
 
@@ -4929,11 +4948,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitArgumentList(this);
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitArgumentList(this);
 
-        public ArgumentListSyntax Update(SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken)
+        public ArgumentListSyntax Update(SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken, ParenthesizedLambdaExpressionSyntax trailingLambdaBlock)
         {
-            if (openParenToken != this.OpenParenToken || arguments != this.Arguments || closeParenToken != this.CloseParenToken)
+            if (openParenToken != this.OpenParenToken || arguments != this.Arguments || closeParenToken != this.CloseParenToken || trailingLambdaBlock != this.TrailingLambdaBlock)
             {
-                var newNode = SyntaxFactory.ArgumentList(openParenToken, arguments, closeParenToken);
+                var newNode = SyntaxFactory.ArgumentList(openParenToken, arguments, closeParenToken, trailingLambdaBlock);
                 var diags = GetDiagnostics();
                 if (diags?.Length > 0)
                     newNode = newNode.WithDiagnosticsGreen(diags);
@@ -4947,15 +4966,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
 
         internal override GreenNode SetDiagnostics(DiagnosticInfo[]? diagnostics)
-            => new ArgumentListSyntax(this.Kind, this.openParenToken, this.arguments, this.closeParenToken, diagnostics, GetAnnotations());
+            => new ArgumentListSyntax(this.Kind, this.openParenToken, this.arguments, this.closeParenToken, this.trailingLambdaBlock, diagnostics, GetAnnotations());
 
         internal override GreenNode SetAnnotations(SyntaxAnnotation[]? annotations)
-            => new ArgumentListSyntax(this.Kind, this.openParenToken, this.arguments, this.closeParenToken, GetDiagnostics(), annotations);
+            => new ArgumentListSyntax(this.Kind, this.openParenToken, this.arguments, this.closeParenToken, this.trailingLambdaBlock, GetDiagnostics(), annotations);
 
         internal ArgumentListSyntax(ObjectReader reader)
           : base(reader)
         {
-            this.SlotCount = 3;
+            this.SlotCount = 4;
             var openParenToken = (SyntaxToken)reader.ReadValue();
             AdjustFlagsAndWidth(openParenToken);
             this.openParenToken = openParenToken;
@@ -4968,6 +4987,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var closeParenToken = (SyntaxToken)reader.ReadValue();
             AdjustFlagsAndWidth(closeParenToken);
             this.closeParenToken = closeParenToken;
+            var trailingLambdaBlock = (ParenthesizedLambdaExpressionSyntax?)reader.ReadValue();
+            if (trailingLambdaBlock != null)
+            {
+                AdjustFlagsAndWidth(trailingLambdaBlock);
+                this.trailingLambdaBlock = trailingLambdaBlock;
+            }
         }
 
         internal override void WriteTo(ObjectWriter writer)
@@ -4976,6 +5001,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             writer.WriteValue(this.openParenToken);
             writer.WriteValue(this.arguments);
             writer.WriteValue(this.closeParenToken);
+            writer.WriteValue(this.trailingLambdaBlock);
         }
 
         static ArgumentListSyntax()
@@ -32953,7 +32979,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             => node.Update((ExpressionSyntax)Visit(node.Expression), (BracketedArgumentListSyntax)Visit(node.ArgumentList));
 
         public override CSharpSyntaxNode VisitArgumentList(ArgumentListSyntax node)
-            => node.Update((SyntaxToken)Visit(node.OpenParenToken), VisitList(node.Arguments), (SyntaxToken)Visit(node.CloseParenToken));
+            => node.Update((SyntaxToken)Visit(node.OpenParenToken), VisitList(node.Arguments), (SyntaxToken)Visit(node.CloseParenToken), (ParenthesizedLambdaExpressionSyntax)Visit(node.TrailingLambdaBlock));
 
         public override CSharpSyntaxNode VisitBracketedArgumentList(BracketedArgumentListSyntax node)
             => node.Update((SyntaxToken)Visit(node.OpenBracketToken), VisitList(node.Arguments), (SyntaxToken)Visit(node.CloseBracketToken));
@@ -34526,7 +34552,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return result;
         }
 
-        public ArgumentListSyntax ArgumentList(SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken)
+        public ArgumentListSyntax ArgumentList(SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken, ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock)
         {
 #if DEBUG
             if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
@@ -34535,17 +34561,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
 #endif
 
-            int hash;
-            var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.ArgumentList, openParenToken, arguments.Node, closeParenToken, this.context, out hash);
-            if (cached != null) return (ArgumentListSyntax)cached;
-
-            var result = new ArgumentListSyntax(SyntaxKind.ArgumentList, openParenToken, arguments.Node, closeParenToken, this.context);
-            if (hash >= 0)
-            {
-                SyntaxNodeCache.AddNode(result, hash);
-            }
-
-            return result;
+            return new ArgumentListSyntax(SyntaxKind.ArgumentList, openParenToken, arguments.Node, closeParenToken, trailingLambdaBlock, this.context);
         }
 
         public BracketedArgumentListSyntax BracketedArgumentList(SyntaxToken openBracketToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeBracketToken)
@@ -39289,7 +39305,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return result;
         }
 
-        public static ArgumentListSyntax ArgumentList(SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken)
+        public static ArgumentListSyntax ArgumentList(SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken, ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock)
         {
 #if DEBUG
             if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
@@ -39298,17 +39314,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
 #endif
 
-            int hash;
-            var cached = SyntaxNodeCache.TryGetNode((int)SyntaxKind.ArgumentList, openParenToken, arguments.Node, closeParenToken, out hash);
-            if (cached != null) return (ArgumentListSyntax)cached;
-
-            var result = new ArgumentListSyntax(SyntaxKind.ArgumentList, openParenToken, arguments.Node, closeParenToken);
-            if (hash >= 0)
-            {
-                SyntaxNodeCache.AddNode(result, hash);
-            }
-
-            return result;
+            return new ArgumentListSyntax(SyntaxKind.ArgumentList, openParenToken, arguments.Node, closeParenToken, trailingLambdaBlock);
         }
 
         public static BracketedArgumentListSyntax BracketedArgumentList(SyntaxToken openBracketToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeBracketToken)
