@@ -14,6 +14,7 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 {
+    using System.Linq.Expressions;
     using Microsoft.CodeAnalysis.Syntax.InternalSyntax;
 
     internal partial class LanguageParser : SyntaxParser
@@ -10731,6 +10732,7 @@ tryAgain:
                         break;
 
                     case SyntaxKind.OpenBraceToken:
+                        if (expr is InvocationExpressionSyntax) return expr;
                         var openToken = SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken, "(");
                         var closeToken = SyntaxFactory.FakeToken(SyntaxKind.CloseParenToken, ")");
                         var trailingBlockArg = ParseLambdaExpression() as ParenthesizedLambdaExpressionSyntax;
