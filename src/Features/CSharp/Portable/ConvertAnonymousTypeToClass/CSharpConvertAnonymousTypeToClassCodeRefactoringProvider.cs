@@ -39,7 +39,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertAnonymousTypeToClass
             => SyntaxFactory.ArgumentList(
                 SyntaxFactory.Token(SyntaxKind.OpenParenToken).WithTriviaFrom(anonymousObject.OpenBraceToken),
                 CreateArguments(anonymousObject.Initializers),
-                SyntaxFactory.Token(SyntaxKind.CloseParenToken).WithTriviaFrom(anonymousObject.CloseBraceToken));
+                SyntaxFactory.Token(SyntaxKind.CloseParenToken).WithTriviaFrom(anonymousObject.CloseBraceToken), null);
 
         private SeparatedSyntaxList<ArgumentSyntax> CreateArguments(SeparatedSyntaxList<AnonymousObjectMemberDeclaratorSyntax> initializers)
             => SyntaxFactory.SeparatedList<ArgumentSyntax>(CreateArguments(OmitTrailingComma(initializers.GetWithSeparators())));

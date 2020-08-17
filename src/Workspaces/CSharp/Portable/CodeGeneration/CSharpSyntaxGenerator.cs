@@ -3151,7 +3151,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         internal override SyntaxNode ObjectCreationExpression(SyntaxNode type, SyntaxToken openParen, SeparatedSyntaxList<SyntaxNode> arguments, SyntaxToken closeParen)
             => SyntaxFactory.ObjectCreationExpression(
                 (TypeSyntax)type,
-                SyntaxFactory.ArgumentList(openParen, arguments, closeParen),
+                SyntaxFactory.ArgumentList(openParen, arguments, closeParen, null),
                 initializer: null);
 
         private static ArgumentListSyntax CreateArgumentList(IEnumerable<SyntaxNode> arguments)
