@@ -1130,6 +1130,11 @@
         <summary>SyntaxToken representing close parenthesis.</summary>
       </PropertyComment>
     </Field>
+    <Field Name="TrailingLambdaBlock" Type="ParenthesizedLambdaExpressionSyntax" Optional="true">
+      <PropertyComment>
+        <summary>Block syntax representing an additional argument outside the parenthesis.</summary>
+      </PropertyComment>
+    </Field>
     <TypeComment>
       <summary>Class which represents the syntax node for the list of arguments.</summary>
     </TypeComment>
