@@ -2060,6 +2060,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     public sealed partial class ArgumentListSyntax : BaseArgumentListSyntax
     {
         private SyntaxNode? arguments;
+        private ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock;
 
         internal ArgumentListSyntax(InternalSyntax.CSharpSyntaxNode green, SyntaxNode? parent, int position)
           : base(green, parent, position)
@@ -2082,19 +2083,34 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         /// <summary>SyntaxToken representing close parenthesis.</summary>
         public SyntaxToken CloseParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.ArgumentListSyntax)this.Green).closeParenToken, GetChildPosition(2), GetChildIndex(2));
 
-        internal override SyntaxNode? GetNodeSlot(int index) => index == 1 ? GetRed(ref this.arguments, 1)! : null;
+        /// <summary>Block syntax representing an additional argument outside the parenthesis.</summary>
+        public ParenthesizedLambdaExpressionSyntax? TrailingLambdaBlock => GetRed(ref this.trailingLambdaBlock, 3);
 
-        internal override SyntaxNode? GetCachedSlot(int index) => index == 1 ? this.arguments : null;
+        internal override SyntaxNode? GetNodeSlot(int index)
+            => index switch
+            {
+                1 => GetRed(ref this.arguments, 1)!,
+                3 => GetRed(ref this.trailingLambdaBlock, 3),
+                _ => null,
+            };
+
+        internal override SyntaxNode? GetCachedSlot(int index)
+            => index switch
+            {
+                1 => this.arguments,
+                3 => this.trailingLambdaBlock,
+                _ => null,
+            };
 
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitArgumentList(this);
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitArgumentList(this);
 
-        public ArgumentListSyntax Update(SyntaxToken openParenToken, SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken)
+        public ArgumentListSyntax Update(SyntaxToken openParenToken, SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken, ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock)
         {
-            if (openParenToken != this.OpenParenToken || arguments != this.Arguments || closeParenToken != this.CloseParenToken)
+            if (openParenToken != this.OpenParenToken || arguments != this.Arguments || closeParenToken != this.CloseParenToken || trailingLambdaBlock != this.TrailingLambdaBlock)
             {
-                var newNode = SyntaxFactory.ArgumentList(openParenToken, arguments, closeParenToken);
+                var newNode = SyntaxFactory.ArgumentList(openParenToken, arguments, closeParenToken, trailingLambdaBlock);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -2102,13 +2118,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return this;
         }
 
-        public ArgumentListSyntax WithOpenParenToken(SyntaxToken openParenToken) => Update(openParenToken, this.Arguments, this.CloseParenToken);
+        public ArgumentListSyntax WithOpenParenToken(SyntaxToken openParenToken) => Update(openParenToken, this.Arguments, this.CloseParenToken, this.TrailingLambdaBlock);
         internal override BaseArgumentListSyntax WithArgumentsCore(SeparatedSyntaxList<ArgumentSyntax> arguments) => WithArguments(arguments);
-        public new ArgumentListSyntax WithArguments(SeparatedSyntaxList<ArgumentSyntax> arguments) => Update(this.OpenParenToken, arguments, this.CloseParenToken);
-        public ArgumentListSyntax WithCloseParenToken(SyntaxToken closeParenToken) => Update(this.OpenParenToken, this.Arguments, closeParenToken);
+        public new ArgumentListSyntax WithArguments(SeparatedSyntaxList<ArgumentSyntax> arguments) => Update(this.OpenParenToken, arguments, this.CloseParenToken, this.TrailingLambdaBlock);
+        public ArgumentListSyntax WithCloseParenToken(SyntaxToken closeParenToken) => Update(this.OpenParenToken, this.Arguments, closeParenToken, this.TrailingLambdaBlock);
+        public ArgumentListSyntax WithTrailingLambdaBlock(ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock) => Update(this.OpenParenToken, this.Arguments, this.CloseParenToken, trailingLambdaBlock);
 
         internal override BaseArgumentListSyntax AddArgumentsCore(params ArgumentSyntax[] items) => AddArguments(items);
         public new ArgumentListSyntax AddArguments(params ArgumentSyntax[] items) => WithArguments(this.Arguments.AddRange(items));
+        public ArgumentListSyntax AddTrailingLambdaBlockModifiers(params SyntaxToken[] items)
+        {
+            var trailingLambdaBlock = this.TrailingLambdaBlock ?? SyntaxFactory.ParenthesizedLambdaExpression();
+            return WithTrailingLambdaBlock(trailingLambdaBlock.WithModifiers(trailingLambdaBlock.Modifiers.AddRange(items)));
+        }
     }
 
     /// <summary>Class which represents the syntax node for bracketed argument list.</summary>

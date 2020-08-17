@@ -134,7 +134,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => InternalSyntaxFactory.ElementAccessExpression(GenerateIdentifierName(), GenerateBracketedArgumentList());
 
         private static Syntax.InternalSyntax.ArgumentListSyntax GenerateArgumentList()
-            => InternalSyntaxFactory.ArgumentList(InternalSyntaxFactory.Token(SyntaxKind.OpenParenToken), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.ArgumentSyntax>(), InternalSyntaxFactory.Token(SyntaxKind.CloseParenToken));
+            => InternalSyntaxFactory.ArgumentList(InternalSyntaxFactory.Token(SyntaxKind.OpenParenToken), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.ArgumentSyntax>(), InternalSyntaxFactory.Token(SyntaxKind.CloseParenToken), null);
 
         private static Syntax.InternalSyntax.BracketedArgumentListSyntax GenerateBracketedArgumentList()
             => InternalSyntaxFactory.BracketedArgumentList(InternalSyntaxFactory.Token(SyntaxKind.OpenBracketToken), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.ArgumentSyntax>(), InternalSyntaxFactory.Token(SyntaxKind.CloseBracketToken));
@@ -1177,6 +1177,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             Assert.Equal(SyntaxKind.OpenParenToken, node.OpenParenToken.Kind);
             Assert.Equal(default, node.Arguments);
             Assert.Equal(SyntaxKind.CloseParenToken, node.CloseParenToken.Kind);
+            Assert.Null(node.TrailingLambdaBlock);
 
             AttachAndCheckDiagnostics(node);
         }
@@ -9597,7 +9598,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => SyntaxFactory.ElementAccessExpression(GenerateIdentifierName(), GenerateBracketedArgumentList());
 
         private static ArgumentListSyntax GenerateArgumentList()
-            => SyntaxFactory.ArgumentList(SyntaxFactory.Token(SyntaxKind.OpenParenToken), new SeparatedSyntaxList<ArgumentSyntax>(), SyntaxFactory.Token(SyntaxKind.CloseParenToken));
+            => SyntaxFactory.ArgumentList(SyntaxFactory.Token(SyntaxKind.OpenParenToken), new SeparatedSyntaxList<ArgumentSyntax>(), SyntaxFactory.Token(SyntaxKind.CloseParenToken), default(ParenthesizedLambdaExpressionSyntax));
 
         private static BracketedArgumentListSyntax GenerateBracketedArgumentList()
             => SyntaxFactory.BracketedArgumentList(SyntaxFactory.Token(SyntaxKind.OpenBracketToken), new SeparatedSyntaxList<ArgumentSyntax>(), SyntaxFactory.Token(SyntaxKind.CloseBracketToken));
@@ -10640,7 +10641,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             Assert.Equal(SyntaxKind.OpenParenToken, node.OpenParenToken.Kind());
             Assert.Equal(default, node.Arguments);
             Assert.Equal(SyntaxKind.CloseParenToken, node.CloseParenToken.Kind());
-            var newNode = node.WithOpenParenToken(node.OpenParenToken).WithArguments(node.Arguments).WithCloseParenToken(node.CloseParenToken);
+            Assert.Null(node.TrailingLambdaBlock);
+            var newNode = node.WithOpenParenToken(node.OpenParenToken).WithArguments(node.Arguments).WithCloseParenToken(node.CloseParenToken).WithTrailingLambdaBlock(node.TrailingLambdaBlock);
             Assert.Equal(node, newNode);
         }
 

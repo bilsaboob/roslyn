@@ -1727,7 +1727,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update((ExpressionSyntax?)Visit(node.Expression) ?? throw new ArgumentNullException("expression"), (BracketedArgumentListSyntax?)Visit(node.ArgumentList) ?? throw new ArgumentNullException("argumentList"));
 
         public override SyntaxNode? VisitArgumentList(ArgumentListSyntax node)
-            => node.Update(VisitToken(node.OpenParenToken), VisitList(node.Arguments), VisitToken(node.CloseParenToken));
+            => node.Update(VisitToken(node.OpenParenToken), VisitList(node.Arguments), VisitToken(node.CloseParenToken), (ParenthesizedLambdaExpressionSyntax?)Visit(node.TrailingLambdaBlock));
 
         public override SyntaxNode? VisitBracketedArgumentList(BracketedArgumentListSyntax node)
             => node.Update(VisitToken(node.OpenBracketToken), VisitList(node.Arguments), VisitToken(node.CloseBracketToken));
@@ -3100,16 +3100,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.ElementAccessExpression(expression, SyntaxFactory.BracketedArgumentList());
 
         /// <summary>Creates a new ArgumentListSyntax instance.</summary>
-        public static ArgumentListSyntax ArgumentList(SyntaxToken openParenToken, SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken)
+        public static ArgumentListSyntax ArgumentList(SyntaxToken openParenToken, SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken, ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock)
         {
             if (openParenToken.Kind() != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
             if (closeParenToken.Kind() != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
-            return (ArgumentListSyntax)Syntax.InternalSyntax.SyntaxFactory.ArgumentList((Syntax.InternalSyntax.SyntaxToken)openParenToken.Node!, arguments.Node.ToGreenSeparatedList<Syntax.InternalSyntax.ArgumentSyntax>(), (Syntax.InternalSyntax.SyntaxToken)closeParenToken.Node!).CreateRed();
+            return (ArgumentListSyntax)Syntax.InternalSyntax.SyntaxFactory.ArgumentList((Syntax.InternalSyntax.SyntaxToken)openParenToken.Node!, arguments.Node.ToGreenSeparatedList<Syntax.InternalSyntax.ArgumentSyntax>(), (Syntax.InternalSyntax.SyntaxToken)closeParenToken.Node!, trailingLambdaBlock == null ? null : (Syntax.InternalSyntax.ParenthesizedLambdaExpressionSyntax)trailingLambdaBlock.Green).CreateRed();
         }
 
         /// <summary>Creates a new ArgumentListSyntax instance.</summary>
+        public static ArgumentListSyntax ArgumentList(SeparatedSyntaxList<ArgumentSyntax> arguments, ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock)
+            => SyntaxFactory.ArgumentList(SyntaxFactory.Token(SyntaxKind.OpenParenToken), arguments, SyntaxFactory.Token(SyntaxKind.CloseParenToken), trailingLambdaBlock);
+
+        /// <summary>Creates a new ArgumentListSyntax instance.</summary>
         public static ArgumentListSyntax ArgumentList(SeparatedSyntaxList<ArgumentSyntax> arguments = default)
-            => SyntaxFactory.ArgumentList(SyntaxFactory.Token(SyntaxKind.OpenParenToken), arguments, SyntaxFactory.Token(SyntaxKind.CloseParenToken));
+            => SyntaxFactory.ArgumentList(SyntaxFactory.Token(SyntaxKind.OpenParenToken), arguments, SyntaxFactory.Token(SyntaxKind.CloseParenToken), default);
 
         /// <summary>Creates a new BracketedArgumentListSyntax instance.</summary>
         public static BracketedArgumentListSyntax BracketedArgumentList(SyntaxToken openBracketToken, SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeBracketToken)

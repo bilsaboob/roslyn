@@ -2629,7 +2629,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (argumentListOpt != null)
             {
-                BindArgumentsAndNames(argumentListOpt.Arguments, diagnostics, result, allowArglist, isDelegateCreation: isDelegateCreation);
+                BindArgumentsAndNames(argumentListOpt.Arguments, diagnostics, result, allowArglist, isDelegateCreation: isDelegateCreation, argumentListOpt.TrailingLambdaBlock);
             }
         }
 
@@ -2646,7 +2646,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             DiagnosticBag diagnostics,
             AnalyzedArguments result,
             bool allowArglist,
-            bool isDelegateCreation = false)
+            bool isDelegateCreation = false,
+            ParenthesizedLambdaExpressionSyntax? trailingBlockArg = null)
         {
             // Only report the first "duplicate name" or "named before positional" error,
             // so as to avoid "cascading" errors.
@@ -2660,6 +2661,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 BindArgumentAndName(result, diagnostics, ref hadError, ref hadLangVersionError,
                     argumentSyntax, allowArglist, isDelegateCreation: isDelegateCreation);
+            }
+
+            if (trailingBlockArg != null)
+            {
+                var trailingArgSyntax = SyntaxFactory.Argument(trailingBlockArg);
+                BindArgumentAndName(result, diagnostics, ref hadError, ref hadLangVersionError,
+                    trailingArgSyntax, allowArglist, isDelegateCreation: isDelegateCreation);
             }
         }
 

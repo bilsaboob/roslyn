@@ -274,10 +274,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
                 else if (current.IsAnonymousFunction())
                 {
+                    var binderRequired = true;
+                    if(current.Parent is ArgumentListSyntax argListSyntax && argListSyntax.TrailingLambdaBlock == current)
+                    {
+                        binderRequired = false;
+                    }
+
                     if (LookupPosition.IsInAnonymousFunctionOrQuery(position, current))
                     {
                         binder = rootBinder.GetBinder(current.AnonymousFunctionBody());
-                        Debug.Assert(binder != null);
+
+                        if(binderRequired) Debug.Assert(binder != null);
                     }
                 }
                 else if (kind == SyntaxKind.TypeOfExpression &&
