@@ -933,8 +933,12 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal override int GetSyntaxTreeOrdinal(SyntaxTree tree)
         {
-            Debug.Assert(this.ContainsSyntaxTree(tree));
-            return _syntaxAndDeclarations.GetLazyState().OrdinalMap[tree];
+            //Debug.Assert(this.ContainsSyntaxTree(tree) || this.ContainsSyntaxTree(tree?.GetRoot()?.SyntaxTree));
+            var lazyState = _syntaxAndDeclarations.GetLazyState();
+            if (lazyState.OrdinalMap.TryGetValue(tree, out var ordinal)) return ordinal;
+            var root = tree.GetRoot();
+            if (lazyState.OrdinalMap.TryGetValue(root.SyntaxTree, out var rootOrdinal)) return rootOrdinal;
+            return 0;
         }
 
         #endregion
