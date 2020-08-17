@@ -3040,7 +3040,7 @@ parse_member_name:;
             {
                 var openToken = this.EatToken(SyntaxKind.OpenParenToken, reportError);
                 var closeToken = this.EatToken(SyntaxKind.CloseParenToken, reportError);
-                argumentList = _syntaxFactory.ArgumentList(openToken, default, closeToken);
+                argumentList = _syntaxFactory.ArgumentList(openToken, default, closeToken, null);
             }
 
             return _syntaxFactory.ConstructorInitializer(kind, colon, token, argumentList);
@@ -3115,10 +3115,13 @@ parse_member_name:;
                 }
             }
 
+            var isTrailingLambdaBlock = expressionBody?.Expression is InvocationExpressionSyntax invocationExprSyntax && invocationExprSyntax.ArgumentList?.TrailingLambdaBlock != null;
+            var semicolonRequired = (expressionBody != null || blockBody == null) && !isTrailingLambdaBlock;
+
             semicolon = null;
             // Expression-bodies need semicolons and native behavior
             // expects a semicolon if there is no body
-            if (expressionBody != null || blockBody == null)
+            if (semicolonRequired)
             {
                 semicolon = this.EatToken(SyntaxKind.SemicolonToken);
             }
@@ -3126,6 +3129,11 @@ parse_member_name:;
             else if (parseSemicolonAfterBlock && this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
             {
                 semicolon = this.EatTokenWithPrejudice(ErrorCode.ERR_UnexpectedSemicolon);
+            }
+            else if (parseSemicolonAfterBlock && isTrailingLambdaBlock)
+            {
+                // always at least 
+                semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
             }
         }
 
@@ -3611,14 +3619,25 @@ parse_member_name:;
                 initializer = CheckFeatureAvailability(initializer, MessageID.IDS_FeatureAutoPropertyInitializer);
             }
 
-            SyntaxToken semicolon = null;
-            if (expressionBody != null || initializer != null)
+            var isTrailingLambdaBlock = expressionBody?.Expression is InvocationExpressionSyntax invocationExprSyntax && invocationExprSyntax.ArgumentList?.TrailingLambdaBlock != null;
+            var semicolonRequired = (expressionBody != null || initializer != null) && !isTrailingLambdaBlock;
+
+            SyntaxToken? semicolon = null;
+            // Expression-bodies need semicolons and native behavior
+            // expects a semicolon if there is no body
+            if (semicolonRequired)
             {
                 semicolon = this.EatToken(SyntaxKind.SemicolonToken);
             }
+            // Check for bad semicolon after block body
             else if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
             {
                 semicolon = this.EatTokenWithPrejudice(ErrorCode.ERR_UnexpectedSemicolon);
+            }
+            else if (isTrailingLambdaBlock)
+            {
+                // always at least 
+                semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
             }
 
             return _syntaxFactory.PropertyDeclaration(
@@ -9756,9 +9775,24 @@ tryAgain:
             }
             else
             {
+                var semicolonRequired = true;
+                if (expression is InvocationExpressionSyntax invocationExprSyntax && invocationExprSyntax.ArgumentList?.TrailingLambdaBlock != null)
+                {
+                    // argument expression with a trailing lambda block doesn't require semicolon
+                    semicolonRequired = false;
+                }
+
                 // Do not report an error if the expression is not a statement expression.
                 // The error is reported in semantic analysis.
-                semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                if (semicolonRequired || this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
+                {
+                    semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                }
+                else
+                {
+                    // add a fake token to fulfill the ExpressionStatement requirement of a semicolon token
+                    semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+                }
             }
 
             return _syntaxFactory.ExpressionStatement(attributes, expression, semicolon);
@@ -10693,7 +10727,20 @@ tryAgain:
                 switch (tk)
                 {
                     case SyntaxKind.OpenParenToken:
-                        expr = _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList());
+                        expr = _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList(allowTrailingBlockArg: true));
+                        break;
+
+                    case SyntaxKind.OpenBraceToken:
+                        var openToken = SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken, "(");
+                        var closeToken = SyntaxFactory.FakeToken(SyntaxKind.CloseParenToken, ")");
+                        var trailingBlockArg = ParseLambdaExpression() as ParenthesizedLambdaExpressionSyntax;
+                        var arguments = default(SeparatedSyntaxList<ArgumentSyntax>);
+                        var argsListSyntax = _syntaxFactory.ArgumentList(
+                            openToken,
+                            arguments,
+                            closeToken,
+                            trailingBlockArg);
+                        expr = _syntaxFactory.InvocationExpression(expr, argsListSyntax);
                         break;
 
                     case SyntaxKind.OpenBracketToken:
@@ -10826,7 +10873,7 @@ tryAgain:
             }
         }
 
-        internal ArgumentListSyntax ParseParenthesizedArgumentList()
+        internal ArgumentListSyntax ParseParenthesizedArgumentList(bool allowTrailingBlockArg = false)
         {
             if (this.IsIncrementalAndFactoryContextMatches && this.CurrentNodeKind == SyntaxKind.ArgumentList)
             {
@@ -10839,7 +10886,16 @@ tryAgain:
                 closeToken: out SyntaxToken closeToken,
                 openKind: SyntaxKind.OpenParenToken,
                 closeKind: SyntaxKind.CloseParenToken);
-            return _syntaxFactory.ArgumentList(openToken, arguments, closeToken);
+
+            ParenthesizedLambdaExpressionSyntax? trailingBlockArg = null;
+
+            // only allow trailing block if there is at least 1 argument
+            if (allowTrailingBlockArg && this.CurrentToken.Kind == SyntaxKind.OpenBraceToken && arguments.Count > 0)
+            {
+                trailingBlockArg = ParseLambdaExpression() as ParenthesizedLambdaExpressionSyntax;
+            }
+
+            return _syntaxFactory.ArgumentList(openToken, arguments, closeToken, trailingBlockArg);
         }
 
         internal BracketedArgumentListSyntax ParseBracketedArgumentList()
@@ -11834,7 +11890,7 @@ tryAgain:
                 argumentList = _syntaxFactory.ArgumentList(
                     this.EatToken(SyntaxKind.OpenParenToken, ErrorCode.ERR_BadNewExpr, reportError: type?.ContainsDiagnostics == false),
                     default(SeparatedSyntaxList<ArgumentSyntax>),
-                    SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken));
+                    SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken), null);
             }
 
             return type is null
