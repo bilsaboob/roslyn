@@ -4,7 +4,9 @@
 
 #nullable enable
 
+using System;
 using System.ComponentModel;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.CodeAnalysis.CSharp.Syntax
 {
@@ -29,3 +31,34 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         }
     }
 }
+
+namespace Microsoft.CodeAnalysis.CSharp
+{
+    public partial class SyntaxFactory
+    {
+        public static ArgumentSyntax ArgumentWithParent(ExpressionSyntax expression, SyntaxNode parent, int position)
+        {
+            return ArgumentWithParent(null, default, expression, parent, position);
+        }
+
+        /// <summary>Creates a new ArgumentSyntax instance.</summary>
+        public static ArgumentSyntax ArgumentWithParent(NameColonSyntax? nameColon, SyntaxToken refKindKeyword, ExpressionSyntax expression, SyntaxNode parent, int position)
+        {
+            switch (refKindKeyword.Kind())
+            {
+                case SyntaxKind.RefKeyword:
+                case SyntaxKind.OutKeyword:
+                case SyntaxKind.InKeyword:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(refKindKeyword));
+            }
+            if (expression == null) throw new ArgumentNullException(nameof(expression));
+            return (ArgumentSyntax)Syntax.InternalSyntax.SyntaxFactory.Argument(
+                nameColon == null ? null : (Syntax.InternalSyntax.NameColonSyntax)nameColon.Green,
+                (Syntax.InternalSyntax.SyntaxToken?)refKindKeyword.Node,
+                (Syntax.InternalSyntax.ExpressionSyntax)expression.Green
+            ).CreateRed(parent, position);
+        }
+    }
+}
+

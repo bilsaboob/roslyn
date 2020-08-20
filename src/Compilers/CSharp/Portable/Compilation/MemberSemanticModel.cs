@@ -311,6 +311,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         binder = rootBinder.GetBinder(current);
                     }
+                    else if(argList.TrailingLambdaBlock?.Block != null && LookupPosition.IsBetweenTokens(position, argList.TrailingLambdaBlock.Block.OpenBraceToken, argList.TrailingLambdaBlock.Block.CloseBraceToken))
+                    {
+                        binder = rootBinder.GetBinder(current);
+                    }
                 }
                 else if (kind == SyntaxKind.EqualsValueClause)
                 {

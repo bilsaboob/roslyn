@@ -2629,7 +2629,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (argumentListOpt != null)
             {
-                BindArgumentsAndNames(argumentListOpt.Arguments, diagnostics, result, allowArglist, isDelegateCreation: isDelegateCreation, argumentListOpt.TrailingLambdaBlock);
+                BindArgumentsAndNames(argumentListOpt, argumentListOpt.Arguments, diagnostics, result, allowArglist, isDelegateCreation: isDelegateCreation, argumentListOpt.TrailingLambdaBlock);
             }
         }
 
@@ -2637,11 +2637,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (argumentListOpt != null)
             {
-                BindArgumentsAndNames(argumentListOpt.Arguments, diagnostics, result, allowArglist: false);
+                BindArgumentsAndNames(argumentListOpt, argumentListOpt.Arguments, diagnostics, result, allowArglist: false);
             }
         }
 
         private void BindArgumentsAndNames(
+            SyntaxNode argumentListSyntax,
             SeparatedSyntaxList<ArgumentSyntax> arguments,
             DiagnosticBag diagnostics,
             AnalyzedArguments result,
@@ -2665,7 +2666,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (trailingBlockArg != null)
             {
-                var trailingArgSyntax = SyntaxFactory.Argument(trailingBlockArg);
+                var trailingArgSyntax = SyntaxFactory.ArgumentWithParent(trailingBlockArg, argumentListSyntax, trailingBlockArg.Position);
+
                 BindArgumentAndName(result, diagnostics, ref hadError, ref hadLangVersionError,
                     trailingArgSyntax, allowArglist, isDelegateCreation: isDelegateCreation);
             }
