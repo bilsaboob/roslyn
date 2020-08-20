@@ -9013,7 +9013,15 @@ tryAgain:
                 arg = this.ParsePossibleRefExpression();
             }
 
-            var semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+            SyntaxToken semicolon = null;
+            if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
+            {
+                semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+            }
+            else if (IsProbablyStatementEnd())
+            {
+                semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+            }
             return _syntaxFactory.ReturnStatement(attributes, @return, arg, semicolon);
         }
 
