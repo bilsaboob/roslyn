@@ -291,6 +291,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
+        protected bool IsCurrentTokenOnNewline
+        {
+            get
+            {
+                if (_prevTokenTrailingTrivia != null && _prevTokenTrailingTrivia.RawKind == (int)SyntaxKind.EndOfLineTrivia) return true;
+                if (CurrentToken.LeadingTrivia.Any((int)SyntaxKind.EndOfLineTrivia)) return true;
+                var prevToken = PeekPrevToken(1);
+                if (prevToken != null && prevToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia)) return true;
+                return false;
+            }
+        }
+
         private SyntaxToken FetchCurrentToken()
         {
             if (_tokenOffset >= _tokenCount)
@@ -429,6 +441,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             else
             {
                 return _lexedTokens[_tokenOffset + n];
+            }
+        }
+
+        protected SyntaxToken PeekPrevToken(int n)
+        {
+            Debug.Assert(n >= 0);
+            if (_tokenOffset - n < 0)
+                return null;
+
+            if (_blendedTokens != null)
+            {
+                return _blendedTokens[_tokenOffset - n].Token;
+            }
+            else
+            {
+                return _lexedTokens[_tokenOffset - n];
             }
         }
 
