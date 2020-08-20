@@ -3687,6 +3687,30 @@ parse_member_name:;
             return false;
         }
 
+        private bool IsProbablyStatementEnd()
+        {
+            // semi comma usually means end of the statement
+            if (CurrentToken.Kind == SyntaxKind.SemicolonToken) return true;
+
+            // if not a semi comma... then we must be at a new line at least!
+            if (!IsCurrentTokenOnNewline) return false;
+
+            // closing brace usually means the statement was closed
+            if (CurrentToken.Kind == SyntaxKind.CloseBraceToken) return true;
+
+            // if possibly a new statement
+            if (IsPossibleStatement(acceptAccessibilityMods: false)) return true;
+
+            // if possibly a new local declaration statement
+            // identifiers could be start of something...
+            if (CurrentToken.Kind == SyntaxKind.IdentifierToken)
+            {
+                if (IsPossibleLocalDeclarationStatement(false)) return true;
+            }
+
+            return false;
+        }
+
         private AccessorListSyntax ParseAccessorList(bool isEvent)
         {
             var openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
@@ -4748,7 +4772,8 @@ tryAgain:
             bool allowLocalFunctions,
             SyntaxList<AttributeListSyntax> attributes,
             SyntaxList<SyntaxToken> mods,
-            out LocalFunctionStatementSyntax localFunction)
+            out LocalFunctionStatementSyntax localFunction,
+            bool canSkipSemiComma = false)
         {
             variables.Add(
                 this.ParseVariableDeclarator(
@@ -4769,6 +4794,9 @@ tryAgain:
 
             while (true)
             {
+                // only skip semi comma if it looks like end of statement
+                canSkipSemiComma = canSkipSemiComma && IsProbablyStatementEnd();
+
                 if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
                 {
                     break;
@@ -4786,7 +4814,15 @@ tryAgain:
                             mods: mods,
                             localFunction: out localFunction));
                 }
-                else if (!variableDeclarationsExpected || this.SkipBadVariableListTokens(variables, SyntaxKind.CommaToken) == PostSkipAction.Abort)
+                else if (!variableDeclarationsExpected)
+                {
+                    break;
+                }
+                else if (canSkipSemiComma)
+                {
+                    break;
+                }
+                else if (this.SkipBadVariableListTokens(variables, SyntaxKind.CommaToken) == PostSkipAction.Abort)
                 {
                     break;
                 }
@@ -9377,7 +9413,17 @@ tryAgain:
                         mods[i] = this.AddError(mod, ErrorCode.ERR_BadMemberFlag, mod.Text);
                     }
                 }
-                var semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+
+                SyntaxToken semicolon = null;
+                if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken || !IsCurrentTokenOnNewline)
+                {
+                    semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                }
+                else
+                {
+                    semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+                }
+
                 return _syntaxFactory.LocalDeclarationStatement(
                     attributes,
                     awaitKeyword,
@@ -9546,7 +9592,8 @@ tryAgain:
                 allowLocalFunctions: allowLocalFunctions,
                 attributes: attributes,
                 mods: mods,
-                localFunction: out localFunction);
+                localFunction: out localFunction,
+                canSkipSemiComma: true);
             _termState = saveTerm;
 
             if (allowLocalFunctions && localFunction == null && (type as PredefinedTypeSyntax)?.Keyword.Kind == SyntaxKind.VoidKeyword)
@@ -9816,6 +9863,8 @@ tryAgain:
                     // argument expression with a trailing lambda block doesn't require semicolon
                     semicolonRequired = false;
                 }
+
+                if (IsProbablyStatementEnd()) semicolonRequired = false;
 
                 // Do not report an error if the expression is not a statement expression.
                 // The error is reported in semantic analysis.
