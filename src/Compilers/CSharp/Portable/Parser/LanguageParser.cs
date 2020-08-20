@@ -2677,23 +2677,25 @@ parse_member_name:;
             return false;
         }
 
-        private bool IsPossibleGetterPropertyDeclarationStart()
+        private bool IsPossibleGetterPropertyDeclarationStart(bool checkAtIdentifier = true)
         {
-            if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken)
+            var token = this.CurrentToken;
+            if (checkAtIdentifier)
             {
-                var peeked1 = this.PeekToken(1);
+                if (token.Kind != SyntaxKind.IdentifierToken) return false;
+                token = this.PeekToken(1);
+            }
 
-                // check if following is a "=>" ... then it's most likely the name we are at!
-                if(peeked1.Kind == SyntaxKind.EqualsGreaterThanToken)
-                {
-                    return true;
-                }
+            // check if following is a "=>" ... then it's most likely the name we are at!
+            if (token.Kind == SyntaxKind.EqualsGreaterThanToken)
+            {
+                return true;
+            }
 
-                // check if following is a "{ get " or a "{ set "
-                if(peeked1.Kind == SyntaxKind.OpenBraceToken)
-                {
-                    return true;
-                }
+            // check if following is a "{ get " or a "{ set "
+            if (token.Kind == SyntaxKind.OpenBraceToken)
+            {
+                return true;
             }
 
             return false;
@@ -3088,6 +3090,7 @@ parse_member_name:;
 
             blockBody = null;
             expressionBody = null;
+            bool hasArrowToken = false;
 
             if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
             {
@@ -3101,7 +3104,9 @@ parse_member_name:;
                                 || requestedExpressionBodyFeature == MessageID.IDS_FeatureExpressionBodiedDeOrConstructor,
                                 "Only IDS_FeatureExpressionBodiedMethod, IDS_FeatureExpressionBodiedAccessor or IDS_FeatureExpressionBodiedDeOrConstructor can be requested");
 
-                if(allowBlockAfterLambdaArrow && this.PeekToken(1).Kind == SyntaxKind.OpenBraceToken)
+                hasArrowToken = true;
+
+                if (allowBlockAfterLambdaArrow && this.PeekToken(1).Kind == SyntaxKind.OpenBraceToken)
                 {
                     // this is "=> {}" syntax ... which should be parsed as a block body ... we will just skip the "=>" token all together...
                     var arrowToken = this.EatToken();
@@ -3119,19 +3124,17 @@ parse_member_name:;
             var isTrailingLambdaBlock = expressionBody?.Expression is InvocationExpressionSyntax invocationExprSyntax && invocationExprSyntax.ArgumentList?.TrailingLambdaBlock != null;
             var semicolonRequired = (expressionBody != null || blockBody == null) && !isTrailingLambdaBlock;
 
+            // if it looks like we are at the end of a member declaration... then allow ending without semi comma
+            if (hasArrowToken && IsProbablyMemberDeclarationEnd()) semicolonRequired = false;
+
             semicolon = null;
             // Expression-bodies need semicolons and native behavior
             // expects a semicolon if there is no body
-            if (semicolonRequired)
+            if (semicolonRequired || this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
             {
                 semicolon = this.EatToken(SyntaxKind.SemicolonToken);
             }
-            // Check for bad semicolon after block body
-            else if (parseSemicolonAfterBlock && this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
-            {
-                semicolon = this.EatTokenWithPrejudice(ErrorCode.ERR_UnexpectedSemicolon);
-            }
-            else if (parseSemicolonAfterBlock && isTrailingLambdaBlock)
+            else if (isTrailingLambdaBlock)
             {
                 // always at least 
                 semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
@@ -3623,17 +3626,15 @@ parse_member_name:;
             var isTrailingLambdaBlock = expressionBody?.Expression is InvocationExpressionSyntax invocationExprSyntax && invocationExprSyntax.ArgumentList?.TrailingLambdaBlock != null;
             var semicolonRequired = (expressionBody != null || initializer != null) && !isTrailingLambdaBlock;
 
+            // if it looks like we are at the end of a member declaration... then allow ending without semi comma
+            if (IsProbablyMemberDeclarationEnd()) semicolonRequired = false;
+
             SyntaxToken? semicolon = null;
             // Expression-bodies need semicolons and native behavior
             // expects a semicolon if there is no body
-            if (semicolonRequired)
+            if (semicolonRequired || this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
             {
                 semicolon = this.EatToken(SyntaxKind.SemicolonToken);
-            }
-            // Check for bad semicolon after block body
-            else if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
-            {
-                semicolon = this.EatTokenWithPrejudice(ErrorCode.ERR_UnexpectedSemicolon);
             }
             else if (isTrailingLambdaBlock)
             {
@@ -3651,6 +3652,39 @@ parse_member_name:;
                 expressionBody,
                 initializer,
                 semicolon);
+        }
+
+        private bool IsProbablyMemberDeclarationEnd()
+        {
+            // semi comma usually means end of the member declaration
+            if (CurrentToken.Kind == SyntaxKind.SemicolonToken) return true;
+
+            // if not a semi comma... then we must be at a new line at least!
+            if (!IsCurrentTokenOnNewline) return false;
+
+            // closing brace usually means the member was closed
+            if (CurrentToken.Kind == SyntaxKind.CloseBraceToken) return true;
+
+            // the following token should be "something" that is usually expected as the next member declaration
+            if (IsPossibleMemberStart()) return true;
+            if (IsPossibleStartOfTypeDeclaration(CurrentToken.Kind)) return true;
+
+            // identifiers could be start of something...
+            if (CurrentToken.Kind == SyntaxKind.IdentifierToken)
+            {
+                var nextToken = this.PeekToken(1);
+                if (nextToken.Kind == SyntaxKind.IdentifierToken)
+                {
+                    // check if it looks like a member
+                    if (IsPossibleMethodDeclarationStart(checkAtIdentifier: true) || IsPossibleGetterPropertyDeclarationStart(checkAtIdentifier: true)) return true;
+                }
+                else
+                {
+                    if (IsPossibleMethodDeclarationStart(checkAtIdentifier: false) || IsPossibleGetterPropertyDeclarationStart(checkAtIdentifier: false)) return true;
+                }
+            }
+
+            return false;
         }
 
         private AccessorListSyntax ParseAccessorList(bool isEvent)
