@@ -500,6 +500,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                 var prop = _property as SourcePropertySymbol;
                 var propDeclSyntax = prop?.CSharpSyntaxNode as PropertyDeclarationSyntax;
+                var isOverride = prop?.IsOverride == true;
 
                 if (propDeclSyntax != null)
                 {
@@ -507,6 +508,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     {
                         // use the explicit return type from property
                         type = prop.GetExplicitReturnTypeWithAnnotations(null, null, diagnostics, out var propRefKind);
+                    }
+                    else if (isOverride)
+                    {
+                        // we can only resolve to the same type as the overridden type
+                        type = prop.GetOverriddenReturnTypeWithAnnotations();
                     }
                     else
                     {

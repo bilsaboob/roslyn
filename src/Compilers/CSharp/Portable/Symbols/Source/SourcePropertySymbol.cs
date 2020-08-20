@@ -385,6 +385,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return type;
         }
 
+        internal TypeWithAnnotations GetOverriddenReturnTypeWithAnnotations()
+        {
+            var overriddenProp = FindOverriddenProperty();
+            if (overriddenProp != null) return overriddenProp.TypeWithAnnotations;
+            return default;
+        }
+
         protected override TypeWithAnnotations ComputeType(Binder? binder, SyntaxNode syntax, DiagnosticBag diagnostics)
         {
             if (_lazyType != null) return _lazyType.Value;
@@ -392,12 +399,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var propDeclSyntax = syntax as PropertyDeclarationSyntax ?? CSharpSyntaxNode as PropertyDeclarationSyntax;
             if (propDeclSyntax == null) return default;
 
-            TypeWithAnnotations type;
+            TypeWithAnnotations type = default;
             var refKind = RefKind.None;
             if (propDeclSyntax.HasExplicitReturnType())
             {
                 // try returning the bound explicit type
                 type = GetExplicitReturnTypeWithAnnotations(binder, syntax, diagnostics, out refKind);
+            }
+            else if (IsOverride)
+            {
+                // we can only resolve to the same type as the overridden type
+                type = GetOverriddenReturnTypeWithAnnotations();
             }
             else
             {
@@ -433,6 +445,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             return type;
+        }
+
+        private PropertySymbol FindOverriddenProperty()
+        {
+            var type = ContainingType.BaseTypeNoUseSiteDiagnostics;
+
+            while (!type.IsErrorType())
+            {
+                var overriddenProp = type.GetMembers().FirstOrDefault(m => m.Name == Name && m.IsVirtual && m is PropertySymbol p && IsSymbolAccessible(m, ContainingType)) as PropertySymbol;
+                if (overriddenProp != null) return overriddenProp;
+                type = type.BaseTypeNoUseSiteDiagnostics;
+            }
+
+            return null;
         }
 
         private static ImmutableArray<ParameterSymbol> MakeParameters(
