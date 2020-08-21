@@ -121,7 +121,7 @@ namespace Microsoft.CodeAnalysis.Indentation
                 return trivia;
             }
 
-            private readonly SyntaxToken? TryGetPrecedingVisibleToken()
+            public readonly SyntaxToken? TryGetPrecedingVisibleToken()
             {
                 var token = Root.FindToken(LineToBeIndented.Start);
 
@@ -138,6 +138,21 @@ namespace Microsoft.CodeAnalysis.Indentation
                     while (token != default && string.IsNullOrWhiteSpace(token.ToString()))
                         token = token.GetPreviousToken();
                 }
+
+                if (token == default)
+                    return null;
+
+                return token;
+            }
+
+            public readonly SyntaxToken? TryGetCurrentVisibleToken(out bool isWithin)
+            {
+                var token = Root.FindToken(LineToBeIndented.Start);
+
+                isWithin = token.Span.Contains(LineToBeIndented.Start);
+
+                while (token != default && string.IsNullOrWhiteSpace(token.ToString()))
+                    token = token.GetNextToken();
 
                 if (token == default)
                     return null;
