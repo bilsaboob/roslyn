@@ -4518,7 +4518,15 @@ tryAgain:
             {
                 this.ParseVariableDeclarators(type, VariableFlags.Fixed, variables, parentKind);
 
-                var semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                SyntaxToken semicolon = null;
+                if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
+                {
+                    semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                }
+                else
+                {
+                    semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+                }
 
                 return _syntaxFactory.FieldDeclaration(
                     attributes, modifiers.ToList(),
@@ -4676,7 +4684,16 @@ tryAgain:
             {
                 this.ParseVariableDeclarators(type, flags: 0, variables: variables, parentKind: parentKind);
 
-                var semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                SyntaxToken semicolon = null;
+                if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
+                {
+                    semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                }
+                else
+                {
+                    semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+                }
+
                 return _syntaxFactory.FieldDeclaration(
                     attributes,
                     modifiers.ToList(),
@@ -5262,7 +5279,17 @@ tryAgain:
             try
             {
                 this.ParseVariableDeclarators(type, VariableFlags.Const, variables, parentKind);
-                var semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+
+                SyntaxToken semicolon = null;
+                if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
+                {
+                    semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                }
+                else
+                {
+                    semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+                }
+
                 return _syntaxFactory.FieldDeclaration(
                     attributes,
                     modifiers.ToList(),
