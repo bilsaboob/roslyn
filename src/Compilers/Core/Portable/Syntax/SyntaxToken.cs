@@ -26,6 +26,7 @@ namespace Microsoft.CodeAnalysis
         private static readonly Func<DiagnosticInfo, Diagnostic> s_createDiagnosticWithoutLocation = Diagnostic.Create;
 
         internal static readonly Func<SyntaxToken, bool> NonZeroWidth = t => t.Width > 0;
+        internal static readonly Func<SyntaxToken, bool> NonZeroWidthOrFake = t => t.Width > 0 || (t.RawKind >= 8193 && t.RawKind <= 8222); /* allow all C# punctuation tokens ... even if they are "fake" ... */
         internal static readonly Func<SyntaxToken, bool> Any = t => true;
 
         internal SyntaxToken(SyntaxNode? parent, GreenNode? token, int position, int index)
