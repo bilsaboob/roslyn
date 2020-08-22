@@ -768,6 +768,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
                 syntaxTree.IsRightOfDotOrArrow(position, cancellationToken);
         }
 
+        public static bool IsSymbolDeclarationNameContext(
+            this SyntaxTree syntaxTree, int position, CancellationToken cancellationToken, SemanticModel semanticModelOpt = null)
+        {
+            var tokenOnLeftOfPosition = syntaxTree.FindTokenOnLeftOfPosition(position, cancellationToken);
+
+            // find the parameter syntax within the local declaration / member declaration
+            var paramSyntax = tokenOnLeftOfPosition.GetAncestor(n => n is ParameterSyntax || n is LocalDeclarationStatementSyntax || n is MemberDeclarationSyntax) as ParameterSyntax;
+            if (paramSyntax != null)
+            {
+                // if we are on the identifier token part... then we are not in type context! ... however, we need to make sure there is no "space between" ...
+                if (paramSyntax.Identifier == tokenOnLeftOfPosition && position <= tokenOnLeftOfPosition.Span.End)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static bool IsTypeContext(
             this SyntaxTree syntaxTree, int position, CancellationToken cancellationToken, SemanticModel semanticModelOpt = null)
         {
@@ -781,6 +800,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             // determine whether it is a right place to put type. use lex based one Cyrus created.
 
             var tokenOnLeftOfPosition = syntaxTree.FindTokenOnLeftOfPosition(position, cancellationToken);
+
+            // find the parameter syntax within the local declaration / member declaration
+            var paramSyntax = tokenOnLeftOfPosition.GetAncestor(n => n is ParameterSyntax || n is LocalDeclarationStatementSyntax || n is MemberDeclarationSyntax) as ParameterSyntax;
+            if (paramSyntax != null)
+            {
+                // if we are on the identifier token part... then we are not in type context! ... however, we need to make sure there is no "space between" ...
+                if (paramSyntax.Identifier == tokenOnLeftOfPosition && position <= tokenOnLeftOfPosition.Span.End)
+                {
+                    return false;
+                }
+
+                // we are on the type declaration part
+                return true;
+            }
+
             return
                 syntaxTree.IsAfterKeyword(position, SyntaxKind.ConstKeyword, cancellationToken) ||
                 syntaxTree.IsAfterKeyword(position, SyntaxKind.RefKeyword, cancellationToken) ||
