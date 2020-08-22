@@ -3077,7 +3077,8 @@ parse_member_name:;
             out SyntaxToken semicolon,
             bool parseSemicolonAfterBlock = true,
             MessageID requestedExpressionBodyFeature = MessageID.IDS_FeatureExpressionBodiedMethod,
-            bool allowBlockAfterLambdaArrow = false)
+            bool allowBlockAfterLambdaArrow = false,
+            bool semiCommaOptional = false)
         {
             // Check for 'forward' declarations with no block of any kind
             if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
@@ -3123,6 +3124,8 @@ parse_member_name:;
 
             var isTrailingLambdaBlock = expressionBody?.Expression is InvocationExpressionSyntax invocationExprSyntax && invocationExprSyntax.ArgumentList?.TrailingLambdaBlock != null;
             var semicolonRequired = (expressionBody != null || blockBody == null) && !isTrailingLambdaBlock;
+
+            if (!semiCommaOptional) semicolonRequired = false;
 
             // if it looks like we are at the end of a member declaration... then allow ending without semi comma
             if (hasArrowToken && IsProbablyMemberDeclarationEnd()) semicolonRequired = false;
@@ -3237,7 +3240,7 @@ parse_member_name:;
 
                 IsInAsync = modifiers.Any((int)SyntaxKind.AsyncKeyword);
 
-                this.ParseBlockAndExpressionBodiesWithSemicolon(out blockBody, out expressionBody, out semicolon, allowBlockAfterLambdaArrow: true);
+                this.ParseBlockAndExpressionBodiesWithSemicolon(out blockBody, out expressionBody, out semicolon, allowBlockAfterLambdaArrow: true, semiCommaOptional: true);
 
                 IsInAsync = false;
 
@@ -4088,7 +4091,7 @@ parse_member_name:;
                 {
                     this.ParseBlockAndExpressionBodiesWithSemicolon(
                         out blockBody, out expressionBody, out semicolon,
-                        requestedExpressionBodyFeature: MessageID.IDS_FeatureExpressionBodiedAccessor);
+                        requestedExpressionBodyFeature: MessageID.IDS_FeatureExpressionBodiedAccessor, semiCommaOptional: true);
                 }
                 else if (currentTokenIsSemicolon)
                 {
