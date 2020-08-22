@@ -52,6 +52,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
         public readonly bool IsDestructorTypeContext;
         public readonly bool IsLeftSideOfImportAliasDirective;
         public readonly bool IsFunctionPointerTypeArgumentContext;
+        public readonly bool IsSymbolDeclarationNameContext;
 
         private CSharpSyntaxContext(
             Workspace workspace,
@@ -108,7 +109,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             bool isRightSideOfNumericType,
             bool isInArgumentList,
             bool isFunctionPointerTypeArgumentContext,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool isSymbolDeclarationNameContext = false)
             : base(workspace, semanticModel, position, leftToken, targetToken,
                    isTypeContext, isNamespaceContext, isNamespaceDeclarationNameContext,
                    isPreProcessorDirectiveContext,
@@ -150,6 +152,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             this.IsDestructorTypeContext = isDestructorTypeContext;
             this.IsLeftSideOfImportAliasDirective = isLeftSideOfImportAliasDirective;
             this.IsFunctionPointerTypeArgumentContext = isFunctionPointerTypeArgumentContext;
+            this.IsSymbolDeclarationNameContext = isSymbolDeclarationNameContext;
         }
 
         public static CSharpSyntaxContext CreateContext(Workspace workspace, SemanticModel semanticModel, int position, CancellationToken cancellationToken)
@@ -269,7 +272,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
                 isRightSideOfNumericType: isRightSideOfNumericType,
                 isInArgumentList: isArgumentListToken,
                 isFunctionPointerTypeArgumentContext: syntaxTree.IsFunctionPointerTypeArgumentContext(position, leftToken, cancellationToken),
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken,
+                isSymbolDeclarationNameContext: syntaxTree.IsSymbolDeclarationNameContext(position, cancellationToken, semanticModelOpt: semanticModel));
         }
 
         public static CSharpSyntaxContext CreateContext_Test(SemanticModel semanticModel, int position, CancellationToken cancellationToken)
