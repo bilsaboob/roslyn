@@ -616,10 +616,10 @@ namespace Microsoft.CodeAnalysis.CSharp.ChangeSignature
             return Parameter(
                 attributeLists: default,
                 modifiers: default,
+                Identifier(addedParameter.Name),
                 type: skipParameterType
                     ? null
                     : addedParameter.Type.GenerateTypeSyntax(),
-                Identifier(addedParameter.Name),
                 @default: equalsValueClause);
         }
 

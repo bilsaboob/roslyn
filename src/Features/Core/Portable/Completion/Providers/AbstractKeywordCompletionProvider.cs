@@ -63,8 +63,14 @@ namespace Microsoft.CodeAnalysis.Completion.Providers
         private async Task<IEnumerable<CompletionItem>> RecommendCompletionItemsAsync(Document doc, int position, CancellationToken ct)
         {
             var syntaxContext = await CreateContextAsync(doc, position, ct).ConfigureAwait(false);
+            if (!ShouldTriggerCompletion(doc, position, syntaxContext)) return Enumerable.Empty<CompletionItem>();
             var keywords = await RecommendKeywordsAsync(doc, position, syntaxContext, ct).ConfigureAwait(false);
             return keywords?.Select(k => CreateItem(k, syntaxContext));
+        }
+
+        protected virtual bool ShouldTriggerCompletion(Document doc, int position, TContext syntaxContext)
+        {
+            return true;
         }
 
         protected static ImmutableArray<string> s_Tags = ImmutableArray.Create(WellKnownTags.Intrinsic);

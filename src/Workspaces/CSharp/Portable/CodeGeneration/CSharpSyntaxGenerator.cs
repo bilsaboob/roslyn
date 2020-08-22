@@ -195,8 +195,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             return SyntaxFactory.Parameter(
                 default,
                 GetParameterModifiers(refKind),
-                (TypeSyntax)type,
                 name.ToIdentifierToken(),
+                (TypeSyntax)type,
                 initializer != null ? SyntaxFactory.EqualsValueClause((ExpressionSyntax)initializer) : null);
         }
 

@@ -179,6 +179,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
             }.ToImmutableArray();
         }
 
+        protected override bool ShouldTriggerCompletion(Document doc, int position, CSharpSyntaxContext syntaxContext)
+        {
+            if (syntaxContext.IsSymbolDeclarationNameContext) return false;
+            return true;
+        }
+
         internal override bool IsInsertionTrigger(SourceText text, int characterPosition, OptionSet options)
             => CompletionUtilities.IsTriggerCharacter(text, characterPosition, options);
 
