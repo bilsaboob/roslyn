@@ -54,6 +54,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
 
                 using (Logger.LogBlock(FunctionId.Completion_SnippetCompletionProvider_GetItemsWorker_CSharp, cancellationToken))
                 {
+                    // do not provide snippets at locations where a symbol name is expected...
+                    var syntaxContext = await ImportCompletionProviderHelper.CreateContextAsync(document, position, cancellationToken).ConfigureAwait(false)
+                        as Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery.CSharpSyntaxContext;
+                    if (syntaxContext?.IsSymbolDeclarationNameContext == true)
+                    {
+                        return;
+                    }
+
                     // TODO (https://github.com/dotnet/roslyn/issues/5107): Enable in Interactive.
                     var workspace = document.Project.Solution.Workspace;
                     if (!workspace.CanApplyChange(ApplyChangesKind.ChangeDocument) ||
