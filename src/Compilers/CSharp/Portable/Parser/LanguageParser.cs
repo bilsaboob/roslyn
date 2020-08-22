@@ -4401,8 +4401,8 @@ tryAgain:
                 SyntaxToken name;
                 if (this.CurrentToken.Kind != SyntaxKind.ArgListKeyword)
                 {
-                    type = this.ParseType(mode: ParseTypeMode.Parameter);
                     name = this.ParseIdentifierToken();
+                    type = this.ParseType(mode: ParseTypeMode.Parameter);
 
                     // When the user type "int goo[]", give them a useful error
                     if (this.CurrentToken.Kind == SyntaxKind.OpenBracketToken && this.PeekToken(1).Kind == SyntaxKind.CloseBracketToken)
@@ -4430,7 +4430,7 @@ tryAgain:
                     def = CheckFeatureAvailability(def, MessageID.IDS_FeatureOptionalParameter);
                 }
 
-                return _syntaxFactory.Parameter(attributes, modifiers.ToList(), type, name, def);
+                return _syntaxFactory.Parameter(attributes, modifiers.ToList(), name, type, def);
             }
             finally
             {
@@ -7203,7 +7203,7 @@ done:;
                 var lessThanTokenError = WithAdditionalDiagnostics(SyntaxFactory.MissingToken(SyntaxKind.LessThanToken), GetExpectedTokenError(SyntaxKind.LessThanToken, SyntaxKind.None));
                 var missingTypes = _pool.AllocateSeparated<ParameterSyntax>();
                 var missingTypeName = CreateMissingIdentifierName();
-                var missingType = SyntaxFactory.Parameter(attributeLists: default, modifiers: default, missingTypeName, identifier: CreateMissingIdentifierToken(), @default: null);
+                var missingType = SyntaxFactory.Parameter(attributeLists: default, modifiers: default, CreateMissingIdentifierToken(), missingTypeName, @default: null);
                 missingTypes.Add(missingType);
                 // Handle the simple case of delegate*>. We don't try to deal with any variation of delegate*invalid>, as
                 // we don't know for sure that the expression isn't a relational with something else.
@@ -7229,7 +7229,7 @@ done:;
                         ParseParameterModifiers(modifiers, isFunctionPointerParameter: true);
 
                         var parameterType = ParseTypeOrVoid();
-                        types.Add(SyntaxFactory.Parameter(attributeLists: default, modifiers, parameterType, identifier: CreateMissingIdentifierToken(), @default: null));
+                        types.Add(SyntaxFactory.Parameter(attributeLists: default, modifiers, CreateMissingIdentifierToken(), parameterType, @default: null));
 
                         if (skipBadFunctionPointerParameterListTokens() == PostSkipAction.Abort)
                         {
@@ -12748,6 +12748,8 @@ tryAgain:
             TypeSyntax paramType = null;
             SyntaxListBuilder modifiers = _pool.Allocate();
 
+            SyntaxToken paramName = this.ParseIdentifierToken();
+
             if (ShouldParseLambdaParameterType(hasModifier))
             {
                 if (hasModifier)
@@ -12758,8 +12760,7 @@ tryAgain:
                 paramType = ParseType(ParseTypeMode.Parameter);
             }
 
-            SyntaxToken paramName = this.ParseIdentifierToken();
-            var parameter = _syntaxFactory.Parameter(default(SyntaxList<AttributeListSyntax>), modifiers.ToList(), paramType, paramName, null);
+            var parameter = _syntaxFactory.Parameter(default(SyntaxList<AttributeListSyntax>), modifiers.ToList(), paramName, paramType, null);
             _pool.Free(modifiers);
             return parameter;
         }
