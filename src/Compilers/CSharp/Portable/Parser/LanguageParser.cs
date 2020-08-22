@@ -3692,11 +3692,11 @@ parse_member_name:;
             // semi comma usually means end of the statement
             if (CurrentToken.Kind == SyntaxKind.SemicolonToken) return true;
 
-            // if not a semi comma... then we must be at a new line at least!
-            if (!IsCurrentTokenOnNewline) return false;
-
             // closing brace usually means the statement was closed
             if (CurrentToken.Kind == SyntaxKind.CloseBraceToken) return true;
+
+            // we must be at a new line at least for the remaining checks
+            if (!IsCurrentTokenOnNewline) return false;
 
             // if possibly a new statement
             if (IsPossibleStatement(acceptAccessibilityMods: false)) return true;
