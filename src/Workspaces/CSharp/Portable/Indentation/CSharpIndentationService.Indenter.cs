@@ -224,6 +224,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
 
                         break;
                     }
+                case SyntaxKind.EqualsGreaterThanToken:
+                    {
+                        if (isTokenOnNewline)
+                        {
+                            // we made a newline AFTER a "=>" ... which means it's a lambda / member declaration of some sort and we should indent based on that
+                            return GetIndentationFromTokenLine(indenter, prevToken);
+                        }
+
+                        break;
+                    }
             }
 
             return null;
