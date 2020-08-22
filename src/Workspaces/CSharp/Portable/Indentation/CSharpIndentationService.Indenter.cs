@@ -70,6 +70,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
             return GetIndentationBasedOnToken(indenter, tokenOpt.Value);
         }
 
+        private static SyntaxNode GetAncestorStatementOrDeclaration(SyntaxToken token)
+        {
+            return token.GetAncestor(n => n is StatementSyntax || n is MemberDeclarationSyntax || n is TypeDeclarationSyntax);
+        }
+
+        private static bool IsLikelyExpressionContinuationToken(SyntaxToken token)
+        {
+            var kind = token.Kind();
+            if (SyntaxFacts.IsBinaryExpressionOperatorToken(kind))
+                return true;
+
+            switch(kind)
+            {
+                case SyntaxKind.DotToken: return true;
+                case SyntaxKind.DotDotToken: return true;
+                case SyntaxKind.QuestionToken: return true;
+                case SyntaxKind.QuestionQuestionToken: return true;
+                case SyntaxKind.QuestionQuestionEqualsToken: return true;
+                case SyntaxKind.OpenParenToken: return true;
+                case SyntaxKind.CloseParenToken: return true;
+                case SyntaxKind.OpenBracketToken: return true;
+                case SyntaxKind.CloseBracketToken: return true;
+            }
+
+            return false;
+        }
+
         private static IndentationResult? GetIndentationBasedOnTokenAndNode(Indenter indenter, SyntaxToken prevToken)
         {
             var tokenOpt = indenter.TryGetCurrentVisibleToken(out var isTokenWithin);
@@ -80,21 +107,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
             var isTokenOnNewline = token.IsFirstTokenOnLine(sourceText);
             var isPrevTokenOnNewline = prevToken.IsFirstTokenOnLine(sourceText);
 
-            var prevStatement = prevToken.GetAncestor(n => n is StatementSyntax) as StatementSyntax;
-            var currentStatement = token.GetAncestor(n => n is StatementSyntax) as StatementSyntax;
+            var prevStatement = GetAncestorStatementOrDeclaration(prevToken);
+            var currentStatement = GetAncestorStatementOrDeclaration(token);
             var isOnSameStatement = prevStatement == currentStatement;
 
             // if the current token is on a new line we have 2 cases:
             // 1. the token is a continuation of an expression/statement from the previous line
             // 2. the token is the start of a new statement
+            var useIndentationFromStatement = !isOnSameStatement;
 
-            if (!isOnSameStatement)
+            // if not on the same statement, but there is an error and the previous token looks like a continuation of an expression... we should do the indentation!
+            if (!isOnSameStatement && prevStatement?.HasErrors == true && IsLikelyExpressionContinuationToken(prevToken))
+                useIndentationFromStatement = true;
+
+            if (useIndentationFromStatement)
             {
                 // start of a new statement, should have the same indentation as the previous statement
                 return GetDefaultIndentationFromTokenLine(indenter, prevStatement?.GetFirstToken(includeZeroWidth: true) ?? prevToken, additionalSpace: 0);
             }
 
-            // handle special cases
+            // handle special cases based on the "current token"
             switch (token.Kind())
             {
                 case SyntaxKind.CloseBraceToken:
@@ -142,6 +174,52 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                                     }
                                 }
                             }
+                        }
+
+                        break;
+                    }
+
+                case SyntaxKind.DotToken:
+                    {
+                        if (isTokenOnNewline && token.Parent is MemberAccessExpressionSyntax memberAccess)
+                        {
+                            // we made a newline BEFORE a "." ... which could be a "member access" ... in which case we want to indent based on that indentation
+                            var lastMemberToken = memberAccess.GetLastToken(predicate: t => {
+                                // skip dot tokens
+                                if (t.Kind() == SyntaxKind.DotToken) return false;
+
+                                // skip tokens that are after our dot token
+                                if (t.SpanStart > token.SpanStart) return false;
+
+                                return true;
+                            });
+
+                            return GetIndentationFromTokenLine(indenter, lastMemberToken);
+                        }
+
+                        break;
+                    }
+            }
+
+            // handle special cases base on the "previous token"
+            switch (prevToken.Kind())
+            {
+                case SyntaxKind.DotToken:
+                    {
+                        if (isTokenOnNewline && prevToken.Parent is MemberAccessExpressionSyntax memberAccess)
+                        {
+                            // we made a newline AFTER a "." ... which could be a "member access" ... in which case we want to indent based on that indentation
+                            var lastMemberToken = memberAccess.GetLastToken(predicate: t => {
+                                // skip dot tokens
+                                if (t.Kind() == SyntaxKind.DotToken) return false;
+
+                                // skip tokens that are after our dot token
+                                if (t.SpanStart > prevToken.SpanStart) return false;
+
+                                return true;
+                            });
+
+                            return GetIndentationFromTokenLine(indenter, lastMemberToken);
                         }
 
                         break;
@@ -502,6 +580,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
             if (firstTokenLine.LineNumber == givenTokenLine.LineNumber)
             {
                 return indenter.IndentFromStartOfLine(indenter.Finder.GetIndentationOfCurrentPosition(indenter.Tree, token, position, spaceToAdd, indenter.CancellationToken));
+            }
+
+            // okay, looks like containing node is written over multiple lines, in that case, give same indentation as given token
+            return indenter.GetIndentationOfLine(givenTokenLine);
+        }
+
+        private static IndentationResult GetIndentationFromTokenLine(Indenter indenter, SyntaxToken token, int? additionalSpace = null)
+        {
+            var spaceToAdd = additionalSpace ?? indenter.OptionSet.GetOption(FormattingOptions.IndentationSize, token.Language);
+
+            var sourceText = indenter.LineToBeIndented.Text;
+
+            // find line where given token is
+            var givenTokenLine = sourceText.Lines.GetLineFromPosition(token.SpanStart);
+
+            // find line where first token of the node is
+            var firstTokenLine = sourceText.Lines.GetLineFromPosition(token.Parent.GetFirstToken(includeZeroWidth: true).SpanStart);
+
+            // single line expression
+            if (firstTokenLine.LineNumber == givenTokenLine.LineNumber)
+            {
+                var indent = firstTokenLine.GetColumnOfFirstNonWhitespaceCharacterOrEndOfLine(indenter.OptionSet.GetOption(FormattingOptions.IndentationSize, token.Language));
+                return indenter.IndentFromStartOfLine(indent + spaceToAdd);
             }
 
             // okay, looks like containing node is written over multiple lines, in that case, give same indentation as given token
