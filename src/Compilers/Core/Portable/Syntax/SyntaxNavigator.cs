@@ -42,7 +42,7 @@ namespace Microsoft.CodeAnalysis
             /* 111 */ t => t.IsSkippedTokensTrivia || t.IsDirective || t.IsDocumentationCommentTrivia,
         };
 
-        private static Func<SyntaxTrivia, bool>? GetStepIntoFunction(
+        internal static Func<SyntaxTrivia, bool>? GetStepIntoFunction(
             bool skipped, bool directives, bool docComments)
         {
             var index = (skipped ? SyntaxKinds.SkippedTokens : 0) |
@@ -51,7 +51,7 @@ namespace Microsoft.CodeAnalysis
             return s_stepIntoFunctions[(int)index];
         }
 
-        private static Func<SyntaxToken, bool> GetPredicateFunction(bool includeZeroWidth)
+        internal static Func<SyntaxToken, bool> GetPredicateFunction(bool includeZeroWidth)
         {
             return includeZeroWidth ? SyntaxToken.Any : SyntaxToken.NonZeroWidth;
         }

@@ -897,9 +897,23 @@ namespace Microsoft.CodeAnalysis
         /// Gets the last token of the tree rooted by this node. Skips zero-width tokens.
         /// </summary>
         /// <returns>The last token or <c>default(SyntaxToken)</c> if it doesn't exist.</returns>
-        public SyntaxToken GetLastToken(bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false)
+        public SyntaxToken GetLastToken(bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false, Func<SyntaxToken, bool>? predicate = null)
         {
-            return SyntaxNavigator.Instance.GetLastToken(this, includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
+            if (predicate == null)
+            {
+                return SyntaxNavigator.Instance.GetLastToken(this, includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
+            }
+            else
+            {
+                var initialPredicate = SyntaxNavigator.GetPredicateFunction(includeZeroWidth);
+                Func<SyntaxToken, bool> wrappedPredicate = (token) =>
+                {
+                    if (initialPredicate?.Invoke(token) == false) return false;
+                    if (!predicate(token)) return false;
+                    return true;
+                };
+                return SyntaxNavigator.Instance.GetLastToken(this, wrappedPredicate, SyntaxNavigator.GetStepIntoFunction(includeSkipped, includeDirectives, includeDocumentationComments));
+            }
         }
 
         /// <summary>
@@ -1499,7 +1513,7 @@ recurse:
             return false;
         }
 
-        internal bool HasErrors
+        public bool HasErrors
         {
             get
             {

@@ -1,3 +1,4 @@
+Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.GetLastToken(bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false, System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> tokenFilter = null, System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> untilPredicate = null) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.CSharp.Conversion.IsConditionalExpression.get -> bool
 Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax.AddModifiers(params Microsoft.CodeAnalysis.SyntaxToken[] items) -> Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax.WithModifiers(Microsoft.CodeAnalysis.SyntaxTokenList modifiers) -> Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax
