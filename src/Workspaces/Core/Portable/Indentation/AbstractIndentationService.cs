@@ -43,7 +43,7 @@ namespace Microsoft.CodeAnalysis.Indentation
             if (indentStyle == FormattingOptions.IndentStyle.Smart &&
                 indenter.TryGetSmartTokenIndentation(out var indentationResult))
             {
-                return indentationResult;
+                if (indentationResult.Offset > 0) return indentationResult;
             }
 
             // If the indenter can't produce a valid result, just default to 0 as our indentation.

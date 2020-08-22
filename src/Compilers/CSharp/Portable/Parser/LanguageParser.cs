@@ -2677,23 +2677,25 @@ parse_member_name:;
             return false;
         }
 
-        private bool IsPossibleGetterPropertyDeclarationStart()
+        private bool IsPossibleGetterPropertyDeclarationStart(bool checkAtIdentifier = true)
         {
-            if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken)
+            var token = this.CurrentToken;
+            if (checkAtIdentifier)
             {
-                var peeked1 = this.PeekToken(1);
+                if (token.Kind != SyntaxKind.IdentifierToken) return false;
+                token = this.PeekToken(1);
+            }
 
-                // check if following is a "=>" ... then it's most likely the name we are at!
-                if(peeked1.Kind == SyntaxKind.EqualsGreaterThanToken)
-                {
-                    return true;
-                }
+            // check if following is a "=>" ... then it's most likely the name we are at!
+            if (token.Kind == SyntaxKind.EqualsGreaterThanToken)
+            {
+                return true;
+            }
 
-                // check if following is a "{ get " or a "{ set "
-                if(peeked1.Kind == SyntaxKind.OpenBraceToken)
-                {
-                    return true;
-                }
+            // check if following is a "{ get " or a "{ set "
+            if (token.Kind == SyntaxKind.OpenBraceToken)
+            {
+                return true;
             }
 
             return false;
@@ -3088,6 +3090,7 @@ parse_member_name:;
 
             blockBody = null;
             expressionBody = null;
+            bool hasArrowToken = false;
 
             if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
             {
@@ -3101,7 +3104,9 @@ parse_member_name:;
                                 || requestedExpressionBodyFeature == MessageID.IDS_FeatureExpressionBodiedDeOrConstructor,
                                 "Only IDS_FeatureExpressionBodiedMethod, IDS_FeatureExpressionBodiedAccessor or IDS_FeatureExpressionBodiedDeOrConstructor can be requested");
 
-                if(allowBlockAfterLambdaArrow && this.PeekToken(1).Kind == SyntaxKind.OpenBraceToken)
+                hasArrowToken = true;
+
+                if (allowBlockAfterLambdaArrow && this.PeekToken(1).Kind == SyntaxKind.OpenBraceToken)
                 {
                     // this is "=> {}" syntax ... which should be parsed as a block body ... we will just skip the "=>" token all together...
                     var arrowToken = this.EatToken();
@@ -3119,19 +3124,17 @@ parse_member_name:;
             var isTrailingLambdaBlock = expressionBody?.Expression is InvocationExpressionSyntax invocationExprSyntax && invocationExprSyntax.ArgumentList?.TrailingLambdaBlock != null;
             var semicolonRequired = (expressionBody != null || blockBody == null) && !isTrailingLambdaBlock;
 
+            // if it looks like we are at the end of a member declaration... then allow ending without semi comma
+            if (hasArrowToken && IsProbablyMemberDeclarationEnd()) semicolonRequired = false;
+
             semicolon = null;
             // Expression-bodies need semicolons and native behavior
             // expects a semicolon if there is no body
-            if (semicolonRequired)
+            if (semicolonRequired || this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
             {
                 semicolon = this.EatToken(SyntaxKind.SemicolonToken);
             }
-            // Check for bad semicolon after block body
-            else if (parseSemicolonAfterBlock && this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
-            {
-                semicolon = this.EatTokenWithPrejudice(ErrorCode.ERR_UnexpectedSemicolon);
-            }
-            else if (parseSemicolonAfterBlock && isTrailingLambdaBlock)
+            else if (isTrailingLambdaBlock)
             {
                 // always at least 
                 semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
@@ -3623,17 +3626,15 @@ parse_member_name:;
             var isTrailingLambdaBlock = expressionBody?.Expression is InvocationExpressionSyntax invocationExprSyntax && invocationExprSyntax.ArgumentList?.TrailingLambdaBlock != null;
             var semicolonRequired = (expressionBody != null || initializer != null) && !isTrailingLambdaBlock;
 
+            // if it looks like we are at the end of a member declaration... then allow ending without semi comma
+            if (IsProbablyMemberDeclarationEnd()) semicolonRequired = false;
+
             SyntaxToken? semicolon = null;
             // Expression-bodies need semicolons and native behavior
             // expects a semicolon if there is no body
-            if (semicolonRequired)
+            if (semicolonRequired || this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
             {
                 semicolon = this.EatToken(SyntaxKind.SemicolonToken);
-            }
-            // Check for bad semicolon after block body
-            else if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
-            {
-                semicolon = this.EatTokenWithPrejudice(ErrorCode.ERR_UnexpectedSemicolon);
             }
             else if (isTrailingLambdaBlock)
             {
@@ -3651,6 +3652,63 @@ parse_member_name:;
                 expressionBody,
                 initializer,
                 semicolon);
+        }
+
+        private bool IsProbablyMemberDeclarationEnd()
+        {
+            // semi comma usually means end of the member declaration
+            if (CurrentToken.Kind == SyntaxKind.SemicolonToken) return true;
+
+            // if not a semi comma... then we must be at a new line at least!
+            if (!IsCurrentTokenOnNewline) return false;
+
+            // closing brace usually means the member was closed
+            if (CurrentToken.Kind == SyntaxKind.CloseBraceToken) return true;
+
+            // the following token should be "something" that is usually expected as the next member declaration
+            if (IsPossibleMemberStart()) return true;
+            if (IsPossibleStartOfTypeDeclaration(CurrentToken.Kind)) return true;
+
+            // identifiers could be start of something...
+            if (CurrentToken.Kind == SyntaxKind.IdentifierToken)
+            {
+                var nextToken = this.PeekToken(1);
+                if (nextToken.Kind == SyntaxKind.IdentifierToken)
+                {
+                    // check if it looks like a member
+                    if (IsPossibleMethodDeclarationStart(checkAtIdentifier: true) || IsPossibleGetterPropertyDeclarationStart(checkAtIdentifier: true)) return true;
+                }
+                else
+                {
+                    if (IsPossibleMethodDeclarationStart(checkAtIdentifier: false) || IsPossibleGetterPropertyDeclarationStart(checkAtIdentifier: false)) return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsProbablyStatementEnd()
+        {
+            // semi comma usually means end of the statement
+            if (CurrentToken.Kind == SyntaxKind.SemicolonToken) return true;
+
+            // if not a semi comma... then we must be at a new line at least!
+            if (!IsCurrentTokenOnNewline) return false;
+
+            // closing brace usually means the statement was closed
+            if (CurrentToken.Kind == SyntaxKind.CloseBraceToken) return true;
+
+            // if possibly a new statement
+            if (IsPossibleStatement(acceptAccessibilityMods: false)) return true;
+
+            // if possibly a new local declaration statement
+            // identifiers could be start of something...
+            if (CurrentToken.Kind == SyntaxKind.IdentifierToken)
+            {
+                if (IsPossibleLocalDeclarationStatement(false)) return true;
+            }
+
+            return false;
         }
 
         private AccessorListSyntax ParseAccessorList(bool isEvent)
@@ -4714,7 +4772,8 @@ tryAgain:
             bool allowLocalFunctions,
             SyntaxList<AttributeListSyntax> attributes,
             SyntaxList<SyntaxToken> mods,
-            out LocalFunctionStatementSyntax localFunction)
+            out LocalFunctionStatementSyntax localFunction,
+            bool canSkipSemiComma = false)
         {
             variables.Add(
                 this.ParseVariableDeclarator(
@@ -4735,6 +4794,9 @@ tryAgain:
 
             while (true)
             {
+                // only skip semi comma if it looks like end of statement
+                canSkipSemiComma = canSkipSemiComma && IsProbablyStatementEnd();
+
                 if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
                 {
                     break;
@@ -4752,7 +4814,15 @@ tryAgain:
                             mods: mods,
                             localFunction: out localFunction));
                 }
-                else if (!variableDeclarationsExpected || this.SkipBadVariableListTokens(variables, SyntaxKind.CommaToken) == PostSkipAction.Abort)
+                else if (!variableDeclarationsExpected)
+                {
+                    break;
+                }
+                else if (canSkipSemiComma)
+                {
+                    break;
+                }
+                else if (this.SkipBadVariableListTokens(variables, SyntaxKind.CommaToken) == PostSkipAction.Abort)
                 {
                     break;
                 }
@@ -8943,7 +9013,15 @@ tryAgain:
                 arg = this.ParsePossibleRefExpression();
             }
 
-            var semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+            SyntaxToken semicolon = null;
+            if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
+            {
+                semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+            }
+            else if (IsProbablyStatementEnd())
+            {
+                semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+            }
             return _syntaxFactory.ReturnStatement(attributes, @return, arg, semicolon);
         }
 
@@ -9343,7 +9421,17 @@ tryAgain:
                         mods[i] = this.AddError(mod, ErrorCode.ERR_BadMemberFlag, mod.Text);
                     }
                 }
-                var semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+
+                SyntaxToken semicolon = null;
+                if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken || !IsCurrentTokenOnNewline)
+                {
+                    semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                }
+                else
+                {
+                    semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+                }
+
                 return _syntaxFactory.LocalDeclarationStatement(
                     attributes,
                     awaitKeyword,
@@ -9512,7 +9600,8 @@ tryAgain:
                 allowLocalFunctions: allowLocalFunctions,
                 attributes: attributes,
                 mods: mods,
-                localFunction: out localFunction);
+                localFunction: out localFunction,
+                canSkipSemiComma: true);
             _termState = saveTerm;
 
             if (allowLocalFunctions && localFunction == null && (type as PredefinedTypeSyntax)?.Keyword.Kind == SyntaxKind.VoidKeyword)
@@ -9782,6 +9871,8 @@ tryAgain:
                     // argument expression with a trailing lambda block doesn't require semicolon
                     semicolonRequired = false;
                 }
+
+                if (IsProbablyStatementEnd()) semicolonRequired = false;
 
                 // Do not report an error if the expression is not a statement expression.
                 // The error is reported in semantic analysis.
