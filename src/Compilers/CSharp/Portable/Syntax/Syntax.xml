@@ -4039,7 +4039,6 @@
         <summary>Gets the modifier list.</summary>
       </PropertyComment>
     </Field>
-    <Field Name="Type" Type="TypeSyntax" Optional="true"/>
     <Field Name="Identifier" Type="SyntaxToken">
       <PropertyComment>
         <summary>Gets the identifier.</summary>
@@ -4047,6 +4046,7 @@
       <Kind Name="IdentifierToken"/>
       <Kind Name="ArgListKeyword"/>
     </Field>
+    <Field Name="Type" Type="TypeSyntax" Optional="true"/>
     <Field Name="Default" Type="EqualsValueClauseSyntax" Optional="true"/>
   </Node>
   <Node Name="IncompleteMemberSyntax" Base="MemberDeclarationSyntax">
