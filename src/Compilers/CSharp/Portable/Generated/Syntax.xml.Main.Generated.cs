@@ -1901,7 +1901,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update(VisitList(node.AttributeLists), VisitToken(node.AwaitKeyword), VisitToken(node.UsingKeyword), VisitList(node.Modifiers), (VariableDeclarationSyntax?)Visit(node.Declaration) ?? throw new ArgumentNullException("declaration"), VisitToken(node.SemicolonToken));
 
         public override SyntaxNode? VisitVariableDeclaration(VariableDeclarationSyntax node)
-            => node.Update((TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"), VisitList(node.Variables));
+            => node.Update(VisitList(node.Variables), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"));
 
         public override SyntaxNode? VisitVariableDeclarator(VariableDeclaratorSyntax node)
             => node.Update(VisitToken(node.Identifier), (BracketedArgumentListSyntax?)Visit(node.ArgumentList), (EqualsValueClauseSyntax?)Visit(node.Initializer));
@@ -3953,15 +3953,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.LocalDeclarationStatement(default, default, default, default(SyntaxTokenList), declaration, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
         /// <summary>Creates a new VariableDeclarationSyntax instance.</summary>
-        public static VariableDeclarationSyntax VariableDeclaration(TypeSyntax type, SeparatedSyntaxList<VariableDeclaratorSyntax> variables)
+        public static VariableDeclarationSyntax VariableDeclaration(SeparatedSyntaxList<VariableDeclaratorSyntax> variables, TypeSyntax type)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
-            return (VariableDeclarationSyntax)Syntax.InternalSyntax.SyntaxFactory.VariableDeclaration((Syntax.InternalSyntax.TypeSyntax)type.Green, variables.Node.ToGreenSeparatedList<Syntax.InternalSyntax.VariableDeclaratorSyntax>()).CreateRed();
+            return (VariableDeclarationSyntax)Syntax.InternalSyntax.SyntaxFactory.VariableDeclaration(variables.Node.ToGreenSeparatedList<Syntax.InternalSyntax.VariableDeclaratorSyntax>(), (Syntax.InternalSyntax.TypeSyntax)type.Green).CreateRed();
         }
 
         /// <summary>Creates a new VariableDeclarationSyntax instance.</summary>
         public static VariableDeclarationSyntax VariableDeclaration(TypeSyntax type)
-            => SyntaxFactory.VariableDeclaration(type, default);
+            => SyntaxFactory.VariableDeclaration(default, type);
 
         /// <summary>Creates a new VariableDeclaratorSyntax instance.</summary>
         public static VariableDeclaratorSyntax VariableDeclarator(SyntaxToken identifier, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)

@@ -5356,38 +5356,38 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
     public sealed partial class VariableDeclarationSyntax : CSharpSyntaxNode
     {
-        private TypeSyntax? type;
         private SyntaxNode? variables;
+        private TypeSyntax? type;
 
         internal VariableDeclarationSyntax(InternalSyntax.CSharpSyntaxNode green, SyntaxNode? parent, int position)
           : base(green, parent, position)
         {
         }
 
-        public TypeSyntax Type => GetRedAtZero(ref this.type)!;
-
         public SeparatedSyntaxList<VariableDeclaratorSyntax> Variables
         {
             get
             {
-                var red = GetRed(ref this.variables, 1);
-                return red != null ? new SeparatedSyntaxList<VariableDeclaratorSyntax>(red, GetChildIndex(1)) : default;
+                var red = GetRed(ref this.variables, 0);
+                return red != null ? new SeparatedSyntaxList<VariableDeclaratorSyntax>(red, 0) : default;
             }
         }
+
+        public TypeSyntax Type => GetRed(ref this.type, 1)!;
 
         internal override SyntaxNode? GetNodeSlot(int index)
             => index switch
             {
-                0 => GetRedAtZero(ref this.type)!,
-                1 => GetRed(ref this.variables, 1)!,
+                0 => GetRedAtZero(ref this.variables)!,
+                1 => GetRed(ref this.type, 1)!,
                 _ => null,
             };
 
         internal override SyntaxNode? GetCachedSlot(int index)
             => index switch
             {
-                0 => this.type,
-                1 => this.variables,
+                0 => this.variables,
+                1 => this.type,
                 _ => null,
             };
 
@@ -5395,11 +5395,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitVariableDeclaration(this);
 
-        public VariableDeclarationSyntax Update(TypeSyntax type, SeparatedSyntaxList<VariableDeclaratorSyntax> variables)
+        public VariableDeclarationSyntax Update(SeparatedSyntaxList<VariableDeclaratorSyntax> variables, TypeSyntax type)
         {
-            if (type != this.Type || variables != this.Variables)
+            if (variables != this.Variables || type != this.Type)
             {
-                var newNode = SyntaxFactory.VariableDeclaration(type, variables);
+                var newNode = SyntaxFactory.VariableDeclaration(variables, type);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -5407,8 +5407,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return this;
         }
 
-        public VariableDeclarationSyntax WithType(TypeSyntax type) => Update(type, this.Variables);
-        public VariableDeclarationSyntax WithVariables(SeparatedSyntaxList<VariableDeclaratorSyntax> variables) => Update(this.Type, variables);
+        public VariableDeclarationSyntax WithVariables(SeparatedSyntaxList<VariableDeclaratorSyntax> variables) => Update(variables, this.Type);
+        public VariableDeclarationSyntax WithType(TypeSyntax type) => Update(this.Variables, type);
 
         public VariableDeclarationSyntax AddVariables(params VariableDeclaratorSyntax[] items) => WithVariables(this.Variables.AddRange(items));
     }
