@@ -97,12 +97,16 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertSwitchStatementToExpression
 
                 return LocalDeclarationStatement(
                     VariableDeclaration(
-                        type,
                         variables: SingletonSeparatedList(
                                     VariableDeclarator(
                                         identifier: ((IdentifierNameSyntax)_assignmentTargetOpt).Identifier,
                                         argumentList: null,
-                                        initializer: EqualsValueClause(switchExpression)))));
+                                        initializer: EqualsValueClause(switchExpression)
+                                    )
+                        ),
+                        type: type
+                    )
+                );
             }
 
             private SwitchExpressionArmSyntax GetSwitchExpressionArm(SwitchSectionSyntax node)

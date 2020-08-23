@@ -4533,7 +4533,7 @@ tryAgain:
 
                 return _syntaxFactory.FieldDeclaration(
                     attributes, modifiers.ToList(),
-                    _syntaxFactory.VariableDeclaration(type, variables),
+                    _syntaxFactory.VariableDeclaration(variables, type),
                     semicolon);
             }
             finally
@@ -4700,7 +4700,7 @@ tryAgain:
                 return _syntaxFactory.FieldDeclaration(
                     attributes,
                     modifiers.ToList(),
-                    _syntaxFactory.VariableDeclaration(type, variables),
+                    _syntaxFactory.VariableDeclaration(variables, type),
                     semicolon);
             }
             finally
@@ -4747,7 +4747,7 @@ tryAgain:
                     attributes,
                     modifiers.ToList(),
                     eventToken,
-                    _syntaxFactory.VariableDeclaration(type, variables),
+                    _syntaxFactory.VariableDeclaration(variables, type),
                     semicolon);
             }
             finally
@@ -5296,7 +5296,7 @@ tryAgain:
                 return _syntaxFactory.FieldDeclaration(
                     attributes,
                     modifiers.ToList(),
-                    _syntaxFactory.VariableDeclaration(type, variables),
+                    _syntaxFactory.VariableDeclaration(variables, type),
                     semicolon);
             }
             finally
@@ -8663,9 +8663,7 @@ done:;
                     decl = ParseVariableDeclaration();
                     if (decl.Type.Kind == SyntaxKind.RefType)
                     {
-                        decl = decl.Update(
-                            CheckFeatureAvailability(decl.Type, MessageID.IDS_FeatureRefFor),
-                            decl.Variables);
+                        decl = decl.Update(decl.Variables, CheckFeatureAvailability(decl.Type, MessageID.IDS_FeatureRefFor));
                     }
                 }
                 else if (this.CurrentToken.Kind != SyntaxKind.SemicolonToken)
@@ -9467,7 +9465,7 @@ tryAgain:
                     awaitKeyword,
                     usingKeyword,
                     mods.ToList(),
-                    _syntaxFactory.VariableDeclaration(type, variables),
+                    _syntaxFactory.VariableDeclaration(variables, type),
                     semicolon);
             }
             finally
@@ -9569,7 +9567,7 @@ tryAgain:
             LocalFunctionStatementSyntax localFunction;
             ParseLocalDeclaration(variables, false, attributes: default, mods: default, out type, out localFunction);
             Debug.Assert(localFunction == null);
-            var result = _syntaxFactory.VariableDeclaration(type, variables);
+            var result = _syntaxFactory.VariableDeclaration(variables, type);
             _pool.Free(variables);
             return result;
         }

@@ -41,12 +41,16 @@ namespace Microsoft.CodeAnalysis.CSharp.IntroduceVariable
                 default,
                 MakeFieldModifiers(isConstant, inScript: oldType.IsScriptClass),
                 SyntaxFactory.VariableDeclaration(
-                    GetTypeSymbol(document, expression, cancellationToken).GenerateTypeSyntax(),
                     SyntaxFactory.SingletonSeparatedList(
                         SyntaxFactory.VariableDeclarator(
                             newNameToken.WithAdditionalAnnotations(RenameAnnotation.Create()),
                             null,
-                            SyntaxFactory.EqualsValueClause(expression.WithoutTrivia()))))).WithAdditionalAnnotations(Formatter.Annotation);
+                            SyntaxFactory.EqualsValueClause(expression.WithoutTrivia())
+                        )
+                    ),
+                    GetTypeSymbol(document, expression, cancellationToken).GenerateTypeSyntax()
+                )
+            ).WithAdditionalAnnotations(Formatter.Annotation);
 
             if (oldTypeDeclaration != null)
             {

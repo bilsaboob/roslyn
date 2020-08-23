@@ -44,11 +44,14 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         internal static VariableDeclarationSyntax VariableDeclaration(SyntaxNode type, SyntaxToken name, SyntaxNode expression)
         {
             return SyntaxFactory.VariableDeclaration(
-                type == null ? SyntaxFactory.IdentifierName("var") : (TypeSyntax)type,
                     SyntaxFactory.SingletonSeparatedList(
                         SyntaxFactory.VariableDeclarator(
                             name, argumentList: null,
-                            expression == null ? null : SyntaxFactory.EqualsValueClause((ExpressionSyntax)expression))));
+                            expression == null ? null : SyntaxFactory.EqualsValueClause((ExpressionSyntax)expression)
+                        )
+                    ),
+                    type == null ? SyntaxFactory.IdentifierName("var") : (TypeSyntax)type
+                );
         }
 
         internal override SyntaxToken Identifier(string identifier)

@@ -404,8 +404,9 @@ namespace Microsoft.CodeAnalysis.CSharp.ExtractMethod
                         yield return SyntaxFactory.LocalDeclarationStatement(
                             declarationStatement.Modifiers,
                             SyntaxFactory.VariableDeclaration(
-                                declarationStatement.Declaration.Type,
-                                SyntaxFactory.SeparatedList(list)),
+                                SyntaxFactory.SeparatedList(list),
+                                declarationStatement.Declaration.Type
+                            ),
                             declarationStatement.SemicolonToken.WithPrependedLeadingTrivia(triviaList));
                         triviaList.Clear();
                     }

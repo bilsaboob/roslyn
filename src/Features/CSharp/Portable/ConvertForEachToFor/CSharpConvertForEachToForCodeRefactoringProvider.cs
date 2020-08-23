@@ -80,12 +80,15 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertForEachToFor
             // create for statement from foreach statement
             var forStatement = SyntaxFactory.ForStatement(
                 SyntaxFactory.VariableDeclaration(
-                    model.Compilation.GetSpecialType(SpecialType.System_Int32).GenerateTypeSyntax(),
                     SyntaxFactory.SingletonSeparatedList(
                         SyntaxFactory.VariableDeclarator(
                             indexVariable.WithAdditionalAnnotations(RenameAnnotation.Create()),
                             argumentList: null,
-                            SyntaxFactory.EqualsValueClause((ExpressionSyntax)generator.LiteralExpression(0))))),
+                            SyntaxFactory.EqualsValueClause((ExpressionSyntax)generator.LiteralExpression(0))
+                        )
+                    ),
+                    model.Compilation.GetSpecialType(SpecialType.System_Int32).GenerateTypeSyntax()
+                ),
                 SyntaxFactory.SeparatedList<ExpressionSyntax>(),
                 (ExpressionSyntax)generator.LessThanExpression(
                     generator.IdentifierName(indexVariable),

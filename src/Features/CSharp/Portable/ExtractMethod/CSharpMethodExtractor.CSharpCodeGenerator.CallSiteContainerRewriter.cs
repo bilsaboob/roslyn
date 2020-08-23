@@ -114,10 +114,12 @@ namespace Microsoft.CodeAnalysis.CSharp.ExtractMethod
                     return
                         SyntaxFactory.LocalDeclarationStatement(
                             node.Modifiers,
-                                SyntaxFactory.VariableDeclaration(
-                                    node.Declaration.Type,
-                                    SyntaxFactory.SeparatedList(list)),
-                                    node.SemicolonToken.WithPrependedLeadingTrivia(triviaList));
+                            SyntaxFactory.VariableDeclaration(
+                                SyntaxFactory.SeparatedList(list),
+                                node.Declaration.Type
+                            ),
+                            node.SemicolonToken.WithPrependedLeadingTrivia(triviaList)
+                        );
                 }
 
                 // for every kind of extract methods
