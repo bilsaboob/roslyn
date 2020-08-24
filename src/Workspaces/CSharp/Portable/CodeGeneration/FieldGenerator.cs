@@ -98,14 +98,15 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 ? SyntaxFactory.EqualsValueClause(initializerNode)
                 : GenerateEqualsValue(field);
 
+            var type = field.Type.GenerateTypeSyntax();
             var fieldDeclaration = SyntaxFactory.FieldDeclaration(
                 AttributeGenerator.GenerateAttributeLists(field.GetAttributes(), options),
                 GenerateModifiers(field, options),
                 SyntaxFactory.VariableDeclaration(
                     SyntaxFactory.SingletonSeparatedList(
-                        AddAnnotationsTo(field, SyntaxFactory.VariableDeclarator(field.Name.ToIdentifierToken(), null, initializer))
+                        AddAnnotationsTo(field, SyntaxFactory.VariableDeclarator(field.Name.ToIdentifierToken(), type, null, initializer))
                     ),
-                    field.Type.GenerateTypeSyntax()
+                    type
                 )
             );
 

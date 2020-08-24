@@ -186,6 +186,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         SyntaxFactory.VariableDeclarator(
                             name.ToIdentifierToken(),
                             null,
+                            null,
                             initializer != null ? SyntaxFactory.EqualsValueClause((ExpressionSyntax)initializer) : null)),
                         (TypeSyntax)type
                     )

@@ -527,6 +527,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq
                                 SyntaxFactory.SingletonSeparatedList(
                                     SyntaxFactory.VariableDeclarator(
                                         identifier,
+                                        typeSyntax,
                                         argumentList: null,
                                         SyntaxFactory.EqualsValueClause(expression)
                                     )
@@ -702,6 +703,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq
                             SyntaxFactory.SingletonSeparatedList(
                                 SyntaxFactory.VariableDeclarator(
                                     forEachStatement.Identifier,
+                                    forEachStatement.Type,
                                     argumentList: null,
                                     SyntaxFactory.EqualsValueClause(expression)
                                 )

@@ -38,15 +38,17 @@ namespace Microsoft.CodeAnalysis.CSharp.IntroduceVariable
                 ? SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ConstKeyword))
                 : default;
 
+            var type = GetTypeSyntax(document, expression, cancellationToken);
             var declarationStatement = SyntaxFactory.LocalDeclarationStatement(
                 modifiers,
                 SyntaxFactory.VariableDeclaration(
                     SyntaxFactory.SingletonSeparatedList(SyntaxFactory.VariableDeclarator(
                         newLocalNameToken.WithAdditionalAnnotations(RenameAnnotation.Create()),
+                        type,
                         null,
                         SyntaxFactory.EqualsValueClause(expression.WithoutTrivia()))
                     ),
-                    GetTypeSyntax(document, expression, cancellationToken)
+                    type
                 )
             );
 

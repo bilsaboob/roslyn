@@ -100,6 +100,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertSwitchStatementToExpression
                         variables: SingletonSeparatedList(
                                     VariableDeclarator(
                                         identifier: ((IdentifierNameSyntax)_assignmentTargetOpt).Identifier,
+                                        type,
                                         argumentList: null,
                                         initializer: EqualsValueClause(switchExpression)
                                     )

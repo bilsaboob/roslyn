@@ -43,14 +43,15 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
         internal static VariableDeclarationSyntax VariableDeclaration(SyntaxNode type, SyntaxToken name, SyntaxNode expression)
         {
+            var t = type == null ? SyntaxFactory.IdentifierName("var") : (TypeSyntax)type;
             return SyntaxFactory.VariableDeclaration(
                     SyntaxFactory.SingletonSeparatedList(
                         SyntaxFactory.VariableDeclarator(
-                            name, argumentList: null,
+                            name, t, argumentList: null,
                             expression == null ? null : SyntaxFactory.EqualsValueClause((ExpressionSyntax)expression)
                         )
                     ),
-                    type == null ? SyntaxFactory.IdentifierName("var") : (TypeSyntax)type
+                    t
                 );
         }
 

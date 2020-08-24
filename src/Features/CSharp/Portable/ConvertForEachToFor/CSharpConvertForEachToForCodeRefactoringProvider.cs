@@ -78,16 +78,18 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertForEachToFor
             var bodyStatement = GetForLoopBody(generator, foreachInfo, collectionVariable, indexVariable);
 
             // create for statement from foreach statement
+            var type = model.Compilation.GetSpecialType(SpecialType.System_Int32).GenerateTypeSyntax();
             var forStatement = SyntaxFactory.ForStatement(
                 SyntaxFactory.VariableDeclaration(
                     SyntaxFactory.SingletonSeparatedList(
                         SyntaxFactory.VariableDeclarator(
                             indexVariable.WithAdditionalAnnotations(RenameAnnotation.Create()),
+                            type,
                             argumentList: null,
                             SyntaxFactory.EqualsValueClause((ExpressionSyntax)generator.LiteralExpression(0))
                         )
                     ),
-                    model.Compilation.GetSpecialType(SpecialType.System_Int32).GenerateTypeSyntax()
+                    type
                 ),
                 SyntaxFactory.SeparatedList<ExpressionSyntax>(),
                 (ExpressionSyntax)generator.LessThanExpression(
