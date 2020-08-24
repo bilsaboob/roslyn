@@ -5415,6 +5415,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
     public sealed partial class VariableDeclaratorSyntax : CSharpSyntaxNode
     {
+        private TypeSyntax? type;
         private BracketedArgumentListSyntax? argumentList;
         private EqualsValueClauseSyntax? initializer;
 
@@ -5426,23 +5427,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         /// <summary>Gets the identifier.</summary>
         public SyntaxToken Identifier => new SyntaxToken(this, ((Syntax.InternalSyntax.VariableDeclaratorSyntax)this.Green).identifier, Position, 0);
 
-        public BracketedArgumentListSyntax? ArgumentList => GetRed(ref this.argumentList, 1);
+        public TypeSyntax? Type => GetRed(ref this.type, 1);
 
-        public EqualsValueClauseSyntax? Initializer => GetRed(ref this.initializer, 2);
+        public BracketedArgumentListSyntax? ArgumentList => GetRed(ref this.argumentList, 2);
+
+        public EqualsValueClauseSyntax? Initializer => GetRed(ref this.initializer, 3);
 
         internal override SyntaxNode? GetNodeSlot(int index)
             => index switch
             {
-                1 => GetRed(ref this.argumentList, 1),
-                2 => GetRed(ref this.initializer, 2),
+                1 => GetRed(ref this.type, 1),
+                2 => GetRed(ref this.argumentList, 2),
+                3 => GetRed(ref this.initializer, 3),
                 _ => null,
             };
 
         internal override SyntaxNode? GetCachedSlot(int index)
             => index switch
             {
-                1 => this.argumentList,
-                2 => this.initializer,
+                1 => this.type,
+                2 => this.argumentList,
+                3 => this.initializer,
                 _ => null,
             };
 
@@ -5450,11 +5455,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitVariableDeclarator(this);
 
-        public VariableDeclaratorSyntax Update(SyntaxToken identifier, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
+        public VariableDeclaratorSyntax Update(SyntaxToken identifier, TypeSyntax? type, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
         {
-            if (identifier != this.Identifier || argumentList != this.ArgumentList || initializer != this.Initializer)
+            if (identifier != this.Identifier || type != this.Type || argumentList != this.ArgumentList || initializer != this.Initializer)
             {
-                var newNode = SyntaxFactory.VariableDeclarator(identifier, argumentList, initializer);
+                var newNode = SyntaxFactory.VariableDeclarator(identifier, type, argumentList, initializer);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -5462,9 +5467,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return this;
         }
 
-        public VariableDeclaratorSyntax WithIdentifier(SyntaxToken identifier) => Update(identifier, this.ArgumentList, this.Initializer);
-        public VariableDeclaratorSyntax WithArgumentList(BracketedArgumentListSyntax? argumentList) => Update(this.Identifier, argumentList, this.Initializer);
-        public VariableDeclaratorSyntax WithInitializer(EqualsValueClauseSyntax? initializer) => Update(this.Identifier, this.ArgumentList, initializer);
+        public VariableDeclaratorSyntax WithIdentifier(SyntaxToken identifier) => Update(identifier, this.Type, this.ArgumentList, this.Initializer);
+        public VariableDeclaratorSyntax WithType(TypeSyntax? type) => Update(this.Identifier, type, this.ArgumentList, this.Initializer);
+        public VariableDeclaratorSyntax WithArgumentList(BracketedArgumentListSyntax? argumentList) => Update(this.Identifier, this.Type, argumentList, this.Initializer);
+        public VariableDeclaratorSyntax WithInitializer(EqualsValueClauseSyntax? initializer) => Update(this.Identifier, this.Type, this.ArgumentList, initializer);
 
         public VariableDeclaratorSyntax AddArgumentListArguments(params ArgumentSyntax[] items)
         {

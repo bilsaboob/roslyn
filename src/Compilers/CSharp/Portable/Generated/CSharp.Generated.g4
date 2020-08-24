@@ -122,7 +122,7 @@ variable_declaration
   ;
 
 variable_declarator
-  : identifier_token bracketed_argument_list? equals_value_clause?
+  : identifier_token type? bracketed_argument_list? equals_value_clause?
   ;
 
 bracketed_argument_list

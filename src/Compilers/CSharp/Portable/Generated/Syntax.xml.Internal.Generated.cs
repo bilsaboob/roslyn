@@ -12573,15 +12573,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
     internal sealed partial class VariableDeclaratorSyntax : CSharpSyntaxNode
     {
         internal readonly SyntaxToken identifier;
+        internal readonly TypeSyntax? type;
         internal readonly BracketedArgumentListSyntax? argumentList;
         internal readonly EqualsValueClauseSyntax? initializer;
 
-        internal VariableDeclaratorSyntax(SyntaxKind kind, SyntaxToken identifier, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+        internal VariableDeclaratorSyntax(SyntaxKind kind, SyntaxToken identifier, TypeSyntax? type, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
           : base(kind, diagnostics, annotations)
         {
-            this.SlotCount = 3;
+            this.SlotCount = 4;
             this.AdjustFlagsAndWidth(identifier);
             this.identifier = identifier;
+            if (type != null)
+            {
+                this.AdjustFlagsAndWidth(type);
+                this.type = type;
+            }
             if (argumentList != null)
             {
                 this.AdjustFlagsAndWidth(argumentList);
@@ -12594,13 +12600,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        internal VariableDeclaratorSyntax(SyntaxKind kind, SyntaxToken identifier, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer, SyntaxFactoryContext context)
+        internal VariableDeclaratorSyntax(SyntaxKind kind, SyntaxToken identifier, TypeSyntax? type, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer, SyntaxFactoryContext context)
           : base(kind)
         {
             this.SetFactoryContext(context);
-            this.SlotCount = 3;
+            this.SlotCount = 4;
             this.AdjustFlagsAndWidth(identifier);
             this.identifier = identifier;
+            if (type != null)
+            {
+                this.AdjustFlagsAndWidth(type);
+                this.type = type;
+            }
             if (argumentList != null)
             {
                 this.AdjustFlagsAndWidth(argumentList);
@@ -12613,12 +12624,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        internal VariableDeclaratorSyntax(SyntaxKind kind, SyntaxToken identifier, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
+        internal VariableDeclaratorSyntax(SyntaxKind kind, SyntaxToken identifier, TypeSyntax? type, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
           : base(kind)
         {
-            this.SlotCount = 3;
+            this.SlotCount = 4;
             this.AdjustFlagsAndWidth(identifier);
             this.identifier = identifier;
+            if (type != null)
+            {
+                this.AdjustFlagsAndWidth(type);
+                this.type = type;
+            }
             if (argumentList != null)
             {
                 this.AdjustFlagsAndWidth(argumentList);
@@ -12633,6 +12649,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         /// <summary>Gets the identifier.</summary>
         public SyntaxToken Identifier => this.identifier;
+        public TypeSyntax? Type => this.type;
         public BracketedArgumentListSyntax? ArgumentList => this.argumentList;
         public EqualsValueClauseSyntax? Initializer => this.initializer;
 
@@ -12640,8 +12657,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             => index switch
             {
                 0 => this.identifier,
-                1 => this.argumentList,
-                2 => this.initializer,
+                1 => this.type,
+                2 => this.argumentList,
+                3 => this.initializer,
                 _ => null,
             };
 
@@ -12650,11 +12668,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitVariableDeclarator(this);
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitVariableDeclarator(this);
 
-        public VariableDeclaratorSyntax Update(SyntaxToken identifier, BracketedArgumentListSyntax argumentList, EqualsValueClauseSyntax initializer)
+        public VariableDeclaratorSyntax Update(SyntaxToken identifier, TypeSyntax type, BracketedArgumentListSyntax argumentList, EqualsValueClauseSyntax initializer)
         {
-            if (identifier != this.Identifier || argumentList != this.ArgumentList || initializer != this.Initializer)
+            if (identifier != this.Identifier || type != this.Type || argumentList != this.ArgumentList || initializer != this.Initializer)
             {
-                var newNode = SyntaxFactory.VariableDeclarator(identifier, argumentList, initializer);
+                var newNode = SyntaxFactory.VariableDeclarator(identifier, type, argumentList, initializer);
                 var diags = GetDiagnostics();
                 if (diags?.Length > 0)
                     newNode = newNode.WithDiagnosticsGreen(diags);
@@ -12668,18 +12686,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
 
         internal override GreenNode SetDiagnostics(DiagnosticInfo[]? diagnostics)
-            => new VariableDeclaratorSyntax(this.Kind, this.identifier, this.argumentList, this.initializer, diagnostics, GetAnnotations());
+            => new VariableDeclaratorSyntax(this.Kind, this.identifier, this.type, this.argumentList, this.initializer, diagnostics, GetAnnotations());
 
         internal override GreenNode SetAnnotations(SyntaxAnnotation[]? annotations)
-            => new VariableDeclaratorSyntax(this.Kind, this.identifier, this.argumentList, this.initializer, GetDiagnostics(), annotations);
+            => new VariableDeclaratorSyntax(this.Kind, this.identifier, this.type, this.argumentList, this.initializer, GetDiagnostics(), annotations);
 
         internal VariableDeclaratorSyntax(ObjectReader reader)
           : base(reader)
         {
-            this.SlotCount = 3;
+            this.SlotCount = 4;
             var identifier = (SyntaxToken)reader.ReadValue();
             AdjustFlagsAndWidth(identifier);
             this.identifier = identifier;
+            var type = (TypeSyntax?)reader.ReadValue();
+            if (type != null)
+            {
+                AdjustFlagsAndWidth(type);
+                this.type = type;
+            }
             var argumentList = (BracketedArgumentListSyntax?)reader.ReadValue();
             if (argumentList != null)
             {
@@ -12698,6 +12722,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             base.WriteTo(writer);
             writer.WriteValue(this.identifier);
+            writer.WriteValue(this.type);
             writer.WriteValue(this.argumentList);
             writer.WriteValue(this.initializer);
         }
@@ -33156,7 +33181,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             => node.Update(VisitList(node.Variables), (TypeSyntax)Visit(node.Type));
 
         public override CSharpSyntaxNode VisitVariableDeclarator(VariableDeclaratorSyntax node)
-            => node.Update((SyntaxToken)Visit(node.Identifier), (BracketedArgumentListSyntax)Visit(node.ArgumentList), (EqualsValueClauseSyntax)Visit(node.Initializer));
+            => node.Update((SyntaxToken)Visit(node.Identifier), (TypeSyntax)Visit(node.Type), (BracketedArgumentListSyntax)Visit(node.ArgumentList), (EqualsValueClauseSyntax)Visit(node.Initializer));
 
         public override CSharpSyntaxNode VisitEqualsValueClause(EqualsValueClauseSyntax node)
             => node.Update((SyntaxToken)Visit(node.EqualsToken), (ExpressionSyntax)Visit(node.Value));
@@ -35723,24 +35748,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return result;
         }
 
-        public VariableDeclaratorSyntax VariableDeclarator(SyntaxToken identifier, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
+        public VariableDeclaratorSyntax VariableDeclarator(SyntaxToken identifier, TypeSyntax? type, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
         {
 #if DEBUG
             if (identifier == null) throw new ArgumentNullException(nameof(identifier));
             if (identifier.Kind != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
 #endif
 
-            int hash;
-            var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.VariableDeclarator, identifier, argumentList, initializer, this.context, out hash);
-            if (cached != null) return (VariableDeclaratorSyntax)cached;
-
-            var result = new VariableDeclaratorSyntax(SyntaxKind.VariableDeclarator, identifier, argumentList, initializer, this.context);
-            if (hash >= 0)
-            {
-                SyntaxNodeCache.AddNode(result, hash);
-            }
-
-            return result;
+            return new VariableDeclaratorSyntax(SyntaxKind.VariableDeclarator, identifier, type, argumentList, initializer, this.context);
         }
 
         public EqualsValueClauseSyntax EqualsValueClause(SyntaxToken equalsToken, ExpressionSyntax value)
@@ -40476,24 +40491,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return result;
         }
 
-        public static VariableDeclaratorSyntax VariableDeclarator(SyntaxToken identifier, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
+        public static VariableDeclaratorSyntax VariableDeclarator(SyntaxToken identifier, TypeSyntax? type, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
         {
 #if DEBUG
             if (identifier == null) throw new ArgumentNullException(nameof(identifier));
             if (identifier.Kind != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
 #endif
 
-            int hash;
-            var cached = SyntaxNodeCache.TryGetNode((int)SyntaxKind.VariableDeclarator, identifier, argumentList, initializer, out hash);
-            if (cached != null) return (VariableDeclaratorSyntax)cached;
-
-            var result = new VariableDeclaratorSyntax(SyntaxKind.VariableDeclarator, identifier, argumentList, initializer);
-            if (hash >= 0)
-            {
-                SyntaxNodeCache.AddNode(result, hash);
-            }
-
-            return result;
+            return new VariableDeclaratorSyntax(SyntaxKind.VariableDeclarator, identifier, type, argumentList, initializer);
         }
 
         public static EqualsValueClauseSyntax EqualsValueClause(SyntaxToken equalsToken, ExpressionSyntax value)

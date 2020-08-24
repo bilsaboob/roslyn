@@ -311,7 +311,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => InternalSyntaxFactory.VariableDeclaration(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.VariableDeclaratorSyntax>(), GenerateIdentifierName());
 
         private static Syntax.InternalSyntax.VariableDeclaratorSyntax GenerateVariableDeclarator()
-            => InternalSyntaxFactory.VariableDeclarator(InternalSyntaxFactory.Identifier("Identifier"), null, null);
+            => InternalSyntaxFactory.VariableDeclarator(InternalSyntaxFactory.Identifier("Identifier"), null, null, null);
 
         private static Syntax.InternalSyntax.EqualsValueClauseSyntax GenerateEqualsValueClause()
             => InternalSyntaxFactory.EqualsValueClause(InternalSyntaxFactory.Token(SyntaxKind.EqualsToken), GenerateIdentifierName());
@@ -1891,6 +1891,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             var node = GenerateVariableDeclarator();
 
             Assert.Equal(SyntaxKind.IdentifierToken, node.Identifier.Kind);
+            Assert.Null(node.Type);
             Assert.Null(node.ArgumentList);
             Assert.Null(node.Initializer);
 
@@ -9775,7 +9776,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => SyntaxFactory.VariableDeclaration(new SeparatedSyntaxList<VariableDeclaratorSyntax>(), GenerateIdentifierName());
 
         private static VariableDeclaratorSyntax GenerateVariableDeclarator()
-            => SyntaxFactory.VariableDeclarator(SyntaxFactory.Identifier("Identifier"), default(BracketedArgumentListSyntax), default(EqualsValueClauseSyntax));
+            => SyntaxFactory.VariableDeclarator(SyntaxFactory.Identifier("Identifier"), default(TypeSyntax), default(BracketedArgumentListSyntax), default(EqualsValueClauseSyntax));
 
         private static EqualsValueClauseSyntax GenerateEqualsValueClause()
             => SyntaxFactory.EqualsValueClause(SyntaxFactory.Token(SyntaxKind.EqualsToken), GenerateIdentifierName());
@@ -11355,9 +11356,10 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             var node = GenerateVariableDeclarator();
 
             Assert.Equal(SyntaxKind.IdentifierToken, node.Identifier.Kind());
+            Assert.Null(node.Type);
             Assert.Null(node.ArgumentList);
             Assert.Null(node.Initializer);
-            var newNode = node.WithIdentifier(node.Identifier).WithArgumentList(node.ArgumentList).WithInitializer(node.Initializer);
+            var newNode = node.WithIdentifier(node.Identifier).WithType(node.Type).WithArgumentList(node.ArgumentList).WithInitializer(node.Initializer);
             Assert.Equal(node, newNode);
         }
 

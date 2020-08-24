@@ -1904,7 +1904,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update(VisitList(node.Variables), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"));
 
         public override SyntaxNode? VisitVariableDeclarator(VariableDeclaratorSyntax node)
-            => node.Update(VisitToken(node.Identifier), (BracketedArgumentListSyntax?)Visit(node.ArgumentList), (EqualsValueClauseSyntax?)Visit(node.Initializer));
+            => node.Update(VisitToken(node.Identifier), (TypeSyntax?)Visit(node.Type), (BracketedArgumentListSyntax?)Visit(node.ArgumentList), (EqualsValueClauseSyntax?)Visit(node.Initializer));
 
         public override SyntaxNode? VisitEqualsValueClause(EqualsValueClauseSyntax node)
             => node.Update(VisitToken(node.EqualsToken), (ExpressionSyntax?)Visit(node.Value) ?? throw new ArgumentNullException("value"));
@@ -3966,19 +3966,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.VariableDeclaration(default, type);
 
         /// <summary>Creates a new VariableDeclaratorSyntax instance.</summary>
-        public static VariableDeclaratorSyntax VariableDeclarator(SyntaxToken identifier, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
+        public static VariableDeclaratorSyntax VariableDeclarator(SyntaxToken identifier, TypeSyntax? type, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
         {
             if (identifier.Kind() != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
-            return (VariableDeclaratorSyntax)Syntax.InternalSyntax.SyntaxFactory.VariableDeclarator((Syntax.InternalSyntax.SyntaxToken)identifier.Node!, argumentList == null ? null : (Syntax.InternalSyntax.BracketedArgumentListSyntax)argumentList.Green, initializer == null ? null : (Syntax.InternalSyntax.EqualsValueClauseSyntax)initializer.Green).CreateRed();
+            return (VariableDeclaratorSyntax)Syntax.InternalSyntax.SyntaxFactory.VariableDeclarator((Syntax.InternalSyntax.SyntaxToken)identifier.Node!, type == null ? null : (Syntax.InternalSyntax.TypeSyntax)type.Green, argumentList == null ? null : (Syntax.InternalSyntax.BracketedArgumentListSyntax)argumentList.Green, initializer == null ? null : (Syntax.InternalSyntax.EqualsValueClauseSyntax)initializer.Green).CreateRed();
         }
 
         /// <summary>Creates a new VariableDeclaratorSyntax instance.</summary>
         public static VariableDeclaratorSyntax VariableDeclarator(SyntaxToken identifier)
-            => SyntaxFactory.VariableDeclarator(identifier, default, default);
+            => SyntaxFactory.VariableDeclarator(identifier, default, default, default);
 
         /// <summary>Creates a new VariableDeclaratorSyntax instance.</summary>
         public static VariableDeclaratorSyntax VariableDeclarator(string identifier)
-            => SyntaxFactory.VariableDeclarator(SyntaxFactory.Identifier(identifier), default, default);
+            => SyntaxFactory.VariableDeclarator(SyntaxFactory.Identifier(identifier), default, default, default);
 
         /// <summary>Creates a new EqualsValueClauseSyntax instance.</summary>
         public static EqualsValueClauseSyntax EqualsValueClause(SyntaxToken equalsToken, ExpressionSyntax value)
