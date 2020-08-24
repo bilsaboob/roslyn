@@ -291,6 +291,7 @@ namespace Microsoft.CodeAnalysis
         /// <remarks>The length of the returned string is always the same as Span.Length</remarks>
         public override string ToString()
         {
+            if (this.Green.IsFake) return string.Empty;
             return this.Green.ToString();
         }
 
@@ -301,6 +302,7 @@ namespace Microsoft.CodeAnalysis
         /// <remarks>The length of the returned string is always the same as FullSpan.Length</remarks>
         public virtual string ToFullString()
         {
+            if (this.Green.IsFake) return string.Empty;
             return this.Green.ToFullString();
         }
 
@@ -309,6 +311,7 @@ namespace Microsoft.CodeAnalysis
         /// </summary>
         public virtual void WriteTo(TextWriter writer)
         {
+            if (this.Green.IsFake) return;
             this.Green.WriteTo(writer, leading: true, trailing: true);
         }
 

@@ -266,9 +266,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
+        private string _explicitText;
         public virtual string Text
         {
-            get { return SyntaxFacts.GetText(this.Kind); }
+            get
+            {
+                if (_explicitText != null) return _explicitText;
+                return SyntaxFacts.GetText(this.Kind);
+            }
+            set
+            {
+                _explicitText = value;
+            }
         }
 
         /// <summary>
