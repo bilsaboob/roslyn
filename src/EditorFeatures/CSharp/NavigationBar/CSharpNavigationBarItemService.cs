@@ -234,8 +234,8 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.NavigationBar
                         if (reference.SyntaxTree.Equals(tree))
                         {
                             var span = reference.Span;
-
-                            spans.Add(span);
+                            if (span.Length > 0)
+                                spans.Add(span);
                         }
                     }
                 }
@@ -276,7 +276,9 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.NavigationBar
                 }
             }
 
-            spans.Add(TextSpan.FromBounds(spanStart, spanEnd));
+            var length = spanEnd - spanStart;
+            if (length > 0)
+                spans.Add(TextSpan.FromBounds(spanStart, spanEnd));
         }
 
         private static void AddEnumMemberSpan(ISymbol symbol, SyntaxTree tree, List<TextSpan> spans)
@@ -303,13 +305,16 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.NavigationBar
                         var start = enumMember.SpanStart;
                         var end = enumDeclaration.Members.GetSeparator(index).Span.End;
 
-                        spans.Add(TextSpan.FromBounds(start, end));
+                        var length = end - start;
+                        if (length > 0)
+                            spans.Add(TextSpan.FromBounds(start, end));
                         return;
                     }
                 }
             }
 
-            spans.Add(declaringNode.Span);
+            if (declaringNode.Span.Length > 0)
+                spans.Add(declaringNode.Span);
         }
 
         protected internal override VirtualTreePoint? GetSymbolItemNavigationPoint(Document document, NavigationBarSymbolItem item, CancellationToken cancellationToken)
