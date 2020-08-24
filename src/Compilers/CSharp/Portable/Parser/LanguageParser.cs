@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -4858,6 +4859,7 @@ tryAgain:
             SyntaxList<SyntaxToken> mods,
             out LocalFunctionStatementSyntax localFunction,
             out TypeSyntax type,
+            out bool isVar,
             bool canSkipSemiComma = false)
         {
             // parse the variable declarator... then possibly continue parsing more
@@ -4868,7 +4870,8 @@ tryAgain:
                 attributes: attributes,
                 mods: mods,
                 localFunction: out localFunction,
-                type: out type
+                type: out type,
+                isVar: out isVar
             );
             variables.Add(firstVariableDeclarator);
 
@@ -4899,8 +4902,13 @@ tryAgain:
                         attributes: attributes,
                         mods: mods,
                         localFunction: out localFunction,
-                        type: out var varType
+                        type: out var varType,
+                        isVar: out var isVarDeclVarType
                     );
+
+                    // if at least one is a var type... we have a var type
+                    if (isVarDeclVarType)
+                        isVar = true;
 
                     if (varType != null && type != null)
                     {
@@ -4927,6 +4935,10 @@ tryAgain:
                     break;
                 }
             }
+
+            // if at least one variable has type, none can be var
+            if (type != null)
+                isVar = false;
         }
 
         private PostSkipAction SkipBadVariableListTokens(SeparatedSyntaxListBuilder<VariableDeclaratorSyntax> list, SyntaxKind expected)
@@ -5042,10 +5054,12 @@ tryAgain:
             SyntaxList<SyntaxToken> mods,
             out LocalFunctionStatementSyntax localFunction,
             out TypeSyntax type,
+            out bool isVar,
             bool isExpressionContext = false)
         {
             localFunction = null;
             type = null;
+            isVar = false;
 
             if (this.IsIncrementalAndFactoryContextMatches && CanReuseVariableDeclarator(this.CurrentNode as CSharp.Syntax.VariableDeclaratorSyntax, flags, isFirst))
             {
@@ -5104,9 +5118,11 @@ tryAgain:
                     equals = this.EatToken();
                     equals.RawKind = (int)SyntaxKind.EqualsToken;
                     equals.Text = ":=";
+                    isVar = true;
                     goto default;
                 case SyntaxKind.EqualsToken:
                     equals = this.EatToken();
+                    if (equals.Text == ":=") isVar = true;
                     goto default;
                 default:
                     if (equals != null)
@@ -7847,10 +7863,20 @@ done:;
             if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken)
             {
                 // there is special assignment type with ":="
-                switch (this.PeekToken(1).Kind)
+                var nextToken = this.PeekToken(1);
+                switch (nextToken.Kind)
                 {
                     case SyntaxKind.ColonEqualsToken:
                         return true;
+                    case SyntaxKind.EqualsToken:
+                        {
+                            if (nextToken.Text == ":=")
+                            {
+                                return true;
+                            }
+
+                            break;
+                        }
                 }
 
                 // finally check if followed by a type
@@ -9642,6 +9668,7 @@ tryAgain:
                     attributes: attributes,
                     mods: mods.ToList(),
                     type: out var type,
+                    isVar: out var isVar,
                     localFunction: out var localFunction);
 
                 if (localFunction != null)
@@ -9694,6 +9721,9 @@ tryAgain:
                     // when we share the type, we must make sure the system ignores it in certain "text operations"
                     varDeclTypeSyntax = type.ShareAsFake();
                 }
+
+                // set explicitly wheter its a var or not
+                varDeclTypeSyntax.IsVar = isVar;
 
                 return _syntaxFactory.LocalDeclarationStatement(
                     attributes,
@@ -9879,6 +9909,7 @@ tryAgain:
            SyntaxList<AttributeListSyntax> attributes,
            SyntaxList<SyntaxToken> mods,
            out TypeSyntax type,
+           out bool isVar,
            out LocalFunctionStatementSyntax localFunction)
         {
             VariableFlags flags = VariableFlags.Local;
@@ -9899,6 +9930,7 @@ tryAgain:
                 mods: mods,
                 localFunction: out localFunction,
                 type: out type,
+                isVar: out isVar,
                 canSkipSemiComma: true
              );
 
