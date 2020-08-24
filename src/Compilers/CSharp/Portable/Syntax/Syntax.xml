@@ -2162,6 +2162,7 @@
       </PropertyComment>
       <Kind Name="IdentifierToken"/>
     </Field>
+    <Field Name="Type" Type="TypeSyntax" Optional="true"/>
     <Field Name="ArgumentList" Type="BracketedArgumentListSyntax" Optional="true"/>
     <Field Name="Initializer" Type="EqualsValueClauseSyntax" Optional="true"/>
   </Node>
