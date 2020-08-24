@@ -487,10 +487,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
                 case ':':
                     TextWindow.AdvanceChar();
-                    if (TextWindow.PeekChar() == ':')
+                    if ((character = TextWindow.PeekChar()) == ':')
                     {
                         TextWindow.AdvanceChar();
                         info.Kind = SyntaxKind.ColonColonToken;
+                    }
+                    else if (character == '=')
+                    {
+                        TextWindow.AdvanceChar();
+                        info.Kind = SyntaxKind.ColonEqualsToken;
                     }
                     else
                     {
