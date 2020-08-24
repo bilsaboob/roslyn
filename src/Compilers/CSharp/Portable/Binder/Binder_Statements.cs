@@ -782,7 +782,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // check if it's a new type of declaration using the ":=" syntax... then treat this as a "var"
                 if (declarationNode is VariableDeclarationSyntax varDecl)
                 {
-                    var colonEqualsToken = varDecl.Variables.FirstOrDefault(v => v.Initializer.EqualsToken.Text == ":=");
+                    var colonEqualsToken = varDecl.Variables.FirstOrDefault(v => v != null && v.Initializer != null && v.Initializer.EqualsToken.Text == ":=");
                     if (colonEqualsToken != null)
                     {
                         isVar = true;
