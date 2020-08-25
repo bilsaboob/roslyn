@@ -2169,6 +2169,7 @@
     <Kind Name="EqualsValueClause"/>
     <Field Name="EqualsToken" Type="SyntaxToken">
       <Kind Name="EqualsToken"/>
+      <Kind Name="ColonEqualsToken"/>
     </Field>
     <Field Name="Value" Type="ExpressionSyntax"/>
   </Node>
@@ -3605,11 +3606,6 @@
     <Kind Name="MethodDeclaration"/>
     <Field Name="AttributeLists" Type="SyntaxList&lt;AttributeListSyntax&gt;" Override="true"/>
     <Field Name="Modifiers" Type="SyntaxList&lt;SyntaxToken&gt;" Override="true"/>
-    <Field Name="ReturnType" Type="TypeSyntax">
-      <PropertyComment>
-        <summary>Gets the return type syntax.</summary>
-      </PropertyComment>
-    </Field>
     <Field Name="ExplicitInterfaceSpecifier" Type="ExplicitInterfaceSpecifierSyntax" Optional="true"/>
     <Field Name="Identifier" Type="SyntaxToken">
       <PropertyComment>
@@ -3619,6 +3615,11 @@
     </Field>
     <Field Name="TypeParameterList" Type="TypeParameterListSyntax" Optional="true"/>
     <Field Name="ParameterList" Type="ParameterListSyntax" Override="true"/>
+    <Field Name="ReturnType" Type="TypeSyntax">
+      <PropertyComment>
+        <summary>Gets the return type syntax.</summary>
+      </PropertyComment>
+    </Field>
     <Field Name="ConstraintClauses" Type="SyntaxList&lt;TypeParameterConstraintClauseSyntax&gt;">
       <PropertyComment>
         <summary>Gets the constraint clause list.</summary>
@@ -3840,7 +3841,6 @@
     <Kind Name="PropertyDeclaration"/>
     <Field Name="AttributeLists" Type="SyntaxList&lt;AttributeListSyntax&gt;" Override="true"/>
     <Field Name="Modifiers" Type="SyntaxList&lt;SyntaxToken&gt;" Override="true"/>
-    <Field Name="Type" Type="TypeSyntax" Override="true"/>
     <Field Name="ExplicitInterfaceSpecifier" Type="ExplicitInterfaceSpecifierSyntax" Optional="true" Override="true"/>
     <Field Name="Identifier" Type="SyntaxToken">
       <PropertyComment>
@@ -3848,6 +3848,7 @@
       </PropertyComment>
       <Kind Name="IdentifierToken"/>
     </Field>
+    <Field Name="Type" Type="TypeSyntax" Override="true"/>
     <Choice>
       <Field Name="AccessorList" Type="AccessorListSyntax" Override="true" />
       <Sequence>
@@ -3878,7 +3879,6 @@
     <Field Name="EventKeyword" Type="SyntaxToken">
       <Kind Name="EventKeyword"/>
     </Field>
-    <Field Name="Type" Type="TypeSyntax" Override="true"/>
     <Field Name="ExplicitInterfaceSpecifier" Type="ExplicitInterfaceSpecifierSyntax" Optional="true" Override="true"/>
     <Field Name="Identifier" Type="SyntaxToken">
       <PropertyComment>
@@ -3886,6 +3886,7 @@
       </PropertyComment>
       <Kind Name="IdentifierToken"/>
     </Field>
+    <Field Name="Type" Type="TypeSyntax" Override="true"/>
     <Choice>
       <Field Name="AccessorList" Type="AccessorListSyntax" Override="true"/>
       <Field Name="SemicolonToken" Type="SyntaxToken">
@@ -3897,7 +3898,6 @@
     <Kind Name="IndexerDeclaration"/>
     <Field Name="AttributeLists" Type="SyntaxList&lt;AttributeListSyntax&gt;" Override="true"/>
     <Field Name="Modifiers" Type="SyntaxList&lt;SyntaxToken&gt;" Override="true"/>
-    <Field Name="Type" Type="TypeSyntax" Override="true"/>
     <Field Name="ExplicitInterfaceSpecifier" Type="ExplicitInterfaceSpecifierSyntax" Optional="true" Override="true"/>
     <Field Name="ThisKeyword" Type="SyntaxToken">
       <Kind Name="ThisKeyword"/>
@@ -3907,6 +3907,7 @@
         <summary>Gets the parameter list.</summary>
       </PropertyComment>
     </Field>
+    <Field Name="Type" Type="TypeSyntax" Override="true"/>
     <Choice>
       <Field Name="AccessorList" Type="AccessorListSyntax" Override="true"/>
       <Sequence>
