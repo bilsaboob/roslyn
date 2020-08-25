@@ -46,6 +46,10 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.NavigationBar
             _modelTaskCancellationSource = new CancellationTokenSource();
             var cancellationToken = _modelTaskCancellationSource.Token;
 
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
+
             // Enqueue a new computation for the model
             var asyncToken = _asyncListener.BeginAsyncOperation(GetType().Name + ".StartModelUpdateTask");
             _modelTask =
@@ -121,6 +125,10 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.NavigationBar
 
             var cancellationToken = _selectedItemInfoTaskCancellationSource.Token;
             var subjectBufferCaretPosition = currentView.GetCaretPoint(_subjectBuffer);
+
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
 
             if (!subjectBufferCaretPosition.HasValue)
             {
