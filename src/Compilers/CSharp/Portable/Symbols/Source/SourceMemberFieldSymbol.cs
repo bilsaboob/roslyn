@@ -452,15 +452,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var binder = binderFactory.GetBinder(typeSyntax);
 
                 binder = binder.WithAdditionalFlagsAndContainingMemberOrLambda(BinderFlags.SuppressConstraintChecks, this);
-                if (!ContainingType.IsScriptClass)
-                {
-                    type = binder.BindType(typeSyntax, diagnosticsForFirstDeclarator);
-                }
-                else
-                {
-                    bool isVar;
-                    type = binder.BindTypeOrVarKeyword(typeSyntax, diagnostics, out isVar);
 
+                bool isVar;
+                type = binder.BindTypeOrVarKeyword(typeSyntax, diagnostics, out isVar);
+
+                if (isVar)
+                {
                     Debug.Assert(type.HasType || isVar);
 
                     if (isVar)
@@ -507,6 +504,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                             type = TypeWithAnnotations.Create(binder.CreateErrorType("var"));
                         }
                     }
+                }
+                else
+                {
+                    type = binder.BindType(typeSyntax, diagnosticsForFirstDeclarator);
                 }
 
                 if (IsFixedSizeBuffer)
@@ -557,11 +558,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal bool FieldTypeInferred(ConsList<FieldSymbol> fieldsBeingBound)
         {
-            if (!ContainingType.IsScriptClass)
-            {
-                return false;
-            }
-
             GetFieldType(fieldsBeingBound);
 
             // lazyIsImplicitlyTypedField can only transition from value 0 to 1:
