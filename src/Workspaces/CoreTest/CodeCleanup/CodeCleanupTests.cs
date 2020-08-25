@@ -292,7 +292,7 @@ End Module";
         }
 
         public static CSharp.Syntax.MethodDeclarationSyntax CreateCSharpMethod(string returnType = "void", string methodName = "Method")
-            => CSharp.SyntaxFactory.MethodDeclaration(CSharp.SyntaxFactory.ParseTypeName(returnType), CSharp.SyntaxFactory.Identifier(methodName));
+            => CSharp.SyntaxFactory.MethodDeclaration(CSharp.SyntaxFactory.Identifier(methodName), CSharp.SyntaxFactory.ParseTypeName(returnType));
 
         private static void VerifyRange(string codeWithMarker, string language = LanguageNames.CSharp)
         {

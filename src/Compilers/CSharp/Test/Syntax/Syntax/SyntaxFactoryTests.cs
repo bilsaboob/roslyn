@@ -482,10 +482,11 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
                         .WithMembers(
                             SyntaxFactory.SingletonList<MemberDeclarationSyntax>(
                                 SyntaxFactory.PropertyDeclaration(
+                                    SyntaxFactory.Identifier("P"),
                                     SyntaxFactory.NullableType(
                                         SyntaxFactory.PredefinedType(
-                                            SyntaxFactory.Token(SyntaxKind.IntKeyword))),
-                                    SyntaxFactory.Identifier("P"))
+                                            SyntaxFactory.Token(SyntaxKind.IntKeyword)))
+                                    )
                                     .WithAccessorList(
                                         SyntaxFactory.AccessorList())))))
                 .NormalizeWhitespace();
@@ -506,9 +507,11 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
                         .WithMembers(
                             SyntaxFactory.SingletonList<MemberDeclarationSyntax>(
                                 SyntaxFactory.PropertyDeclaration(
+                                    SyntaxFactory.Identifier("P"),
                                     SyntaxFactory.NullableType(
-                                        SyntaxFactory.ParseTypeName("DateTime")),
-                                    SyntaxFactory.Identifier("P"))
+                                        SyntaxFactory.ParseTypeName("DateTime")
+                                    )
+                                    )
                                     .WithAccessorList(
                                         SyntaxFactory.AccessorList())))))
                 .NormalizeWhitespace();

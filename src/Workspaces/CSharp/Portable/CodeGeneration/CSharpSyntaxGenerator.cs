@@ -540,9 +540,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             return SyntaxFactory.EventDeclaration(
                 default,
                 AsModifierList(accessibility, modifiers, SyntaxKind.EventDeclaration),
-                (TypeSyntax)type,
                 null,
                 name.ToIdentifierToken(),
+                (TypeSyntax)type,
                 SyntaxFactory.AccessorList(SyntaxFactory.List(accessors)));
         }
 
