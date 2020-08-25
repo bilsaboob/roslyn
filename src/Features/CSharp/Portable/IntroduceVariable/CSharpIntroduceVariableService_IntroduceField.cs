@@ -49,8 +49,7 @@ namespace Microsoft.CodeAnalysis.CSharp.IntroduceVariable
                             null,
                             SyntaxFactory.EqualsValueClause(expression.WithoutTrivia())
                         )
-                    ),
-                    type
+                    )
                 )
             ).WithAdditionalAnnotations(Formatter.Annotation);
 

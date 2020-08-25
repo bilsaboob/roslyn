@@ -114,8 +114,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         AttributeGenerator.GenerateAttributeLists(@event.GetAttributes(), options),
                         GenerateModifiers(@event, destination, options),
                         SyntaxFactory.VariableDeclaration(
-                            SyntaxFactory.SingletonSeparatedList(SyntaxFactory.VariableDeclarator(@event.Name.ToIdentifierToken())),
-                            @event.Type.GenerateTypeSyntax()
+                            SyntaxFactory.SingletonSeparatedList(SyntaxFactory.VariableDeclarator(@event.Name.ToIdentifierToken(), @event.Type.GenerateTypeSyntax(), null, null))
                             )
                         )));
         }

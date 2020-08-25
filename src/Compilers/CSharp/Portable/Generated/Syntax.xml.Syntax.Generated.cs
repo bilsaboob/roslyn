@@ -5357,7 +5357,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     public sealed partial class VariableDeclarationSyntax : CSharpSyntaxNode
     {
         private SyntaxNode? variables;
-        private TypeSyntax? type;
 
         internal VariableDeclarationSyntax(InternalSyntax.CSharpSyntaxNode green, SyntaxNode? parent, int position)
           : base(green, parent, position)
@@ -5373,33 +5372,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             }
         }
 
-        public TypeSyntax Type => GetRed(ref this.type, 1)!;
+        internal override SyntaxNode? GetNodeSlot(int index) => index == 0 ? GetRedAtZero(ref this.variables)! : null;
 
-        internal override SyntaxNode? GetNodeSlot(int index)
-            => index switch
-            {
-                0 => GetRedAtZero(ref this.variables)!,
-                1 => GetRed(ref this.type, 1)!,
-                _ => null,
-            };
-
-        internal override SyntaxNode? GetCachedSlot(int index)
-            => index switch
-            {
-                0 => this.variables,
-                1 => this.type,
-                _ => null,
-            };
+        internal override SyntaxNode? GetCachedSlot(int index) => index == 0 ? this.variables : null;
 
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitVariableDeclaration(this);
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitVariableDeclaration(this);
 
-        public VariableDeclarationSyntax Update(SeparatedSyntaxList<VariableDeclaratorSyntax> variables, TypeSyntax type)
+        public VariableDeclarationSyntax Update(SeparatedSyntaxList<VariableDeclaratorSyntax> variables)
         {
-            if (variables != this.Variables || type != this.Type)
+            if (variables != this.Variables)
             {
-                var newNode = SyntaxFactory.VariableDeclaration(variables, type);
+                var newNode = SyntaxFactory.VariableDeclaration(variables);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -5407,8 +5392,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return this;
         }
 
-        public VariableDeclarationSyntax WithVariables(SeparatedSyntaxList<VariableDeclaratorSyntax> variables) => Update(variables, this.Type);
-        public VariableDeclarationSyntax WithType(TypeSyntax type) => Update(this.Variables, type);
+        public VariableDeclarationSyntax WithVariables(SeparatedSyntaxList<VariableDeclaratorSyntax> variables) => Update(variables);
 
         public VariableDeclarationSyntax AddVariables(params VariableDeclaratorSyntax[] items) => WithVariables(this.Variables.AddRange(items));
     }
@@ -6403,6 +6387,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
         internal override StatementSyntax AddAttributeListsCore(params AttributeListSyntax[] items) => AddAttributeLists(items);
         public new ForStatementSyntax AddAttributeLists(params AttributeListSyntax[] items) => WithAttributeLists(this.AttributeLists.AddRange(items));
+        public ForStatementSyntax AddDeclarationVariables(params VariableDeclaratorSyntax[] items)
+        {
+            var declaration = this.Declaration ?? SyntaxFactory.VariableDeclaration();
+            return WithDeclaration(declaration.WithVariables(declaration.Variables.AddRange(items)));
+        }
         public ForStatementSyntax AddInitializers(params ExpressionSyntax[] items) => WithInitializers(this.Initializers.AddRange(items));
         public ForStatementSyntax AddIncrementors(params ExpressionSyntax[] items) => WithIncrementors(this.Incrementors.AddRange(items));
     }
@@ -6730,6 +6719,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
         internal override StatementSyntax AddAttributeListsCore(params AttributeListSyntax[] items) => AddAttributeLists(items);
         public new UsingStatementSyntax AddAttributeLists(params AttributeListSyntax[] items) => WithAttributeLists(this.AttributeLists.AddRange(items));
+        public UsingStatementSyntax AddDeclarationVariables(params VariableDeclaratorSyntax[] items)
+        {
+            var declaration = this.Declaration ?? SyntaxFactory.VariableDeclaration();
+            return WithDeclaration(declaration.WithVariables(declaration.Variables.AddRange(items)));
+        }
     }
 
     public sealed partial class FixedStatementSyntax : StatementSyntax

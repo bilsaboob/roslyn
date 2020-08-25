@@ -531,8 +531,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq
                                         argumentList: null,
                                         SyntaxFactory.EqualsValueClause(expression)
                                     )
-                                ),
-                                typeSyntax
+                                )
                             )
                         ).WithAdditionalAnnotations(Simplifier.Annotation);
             }
@@ -707,8 +706,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq
                                     argumentList: null,
                                     SyntaxFactory.EqualsValueClause(expression)
                                 )
-                            ),
-                            forEachStatement.Type
+                            )
                         )
                     ),
                     forEachStatement.Statement).WithAdditionalAnnotations(Formatter.Annotation),

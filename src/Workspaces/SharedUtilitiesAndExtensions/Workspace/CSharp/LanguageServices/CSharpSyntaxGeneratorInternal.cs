@@ -50,8 +50,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                             name, t, argumentList: null,
                             expression == null ? null : SyntaxFactory.EqualsValueClause((ExpressionSyntax)expression)
                         )
-                    ),
-                    t
+                    )
                 );
         }
 

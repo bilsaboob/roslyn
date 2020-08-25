@@ -308,7 +308,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => InternalSyntaxFactory.LocalDeclarationStatement(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.AttributeListSyntax>(), null, null, new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.SyntaxToken>(), GenerateVariableDeclaration(), InternalSyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
         private static Syntax.InternalSyntax.VariableDeclarationSyntax GenerateVariableDeclaration()
-            => InternalSyntaxFactory.VariableDeclaration(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.VariableDeclaratorSyntax>(), GenerateIdentifierName());
+            => InternalSyntaxFactory.VariableDeclaration(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.VariableDeclaratorSyntax>());
 
         private static Syntax.InternalSyntax.VariableDeclaratorSyntax GenerateVariableDeclarator()
             => InternalSyntaxFactory.VariableDeclarator(InternalSyntaxFactory.Identifier("Identifier"), null, null, null);
@@ -1880,7 +1880,6 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             var node = GenerateVariableDeclaration();
 
             Assert.Equal(default, node.Variables);
-            Assert.NotNull(node.Type);
 
             AttachAndCheckDiagnostics(node);
         }
@@ -9773,7 +9772,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => SyntaxFactory.LocalDeclarationStatement(new SyntaxList<AttributeListSyntax>(), default(SyntaxToken), default(SyntaxToken), new SyntaxTokenList(), GenerateVariableDeclaration(), SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
         private static VariableDeclarationSyntax GenerateVariableDeclaration()
-            => SyntaxFactory.VariableDeclaration(new SeparatedSyntaxList<VariableDeclaratorSyntax>(), GenerateIdentifierName());
+            => SyntaxFactory.VariableDeclaration(new SeparatedSyntaxList<VariableDeclaratorSyntax>());
 
         private static VariableDeclaratorSyntax GenerateVariableDeclarator()
             => SyntaxFactory.VariableDeclarator(SyntaxFactory.Identifier("Identifier"), default(TypeSyntax), default(BracketedArgumentListSyntax), default(EqualsValueClauseSyntax));
@@ -11345,8 +11344,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             var node = GenerateVariableDeclaration();
 
             Assert.Equal(default, node.Variables);
-            Assert.NotNull(node.Type);
-            var newNode = node.WithVariables(node.Variables).WithType(node.Type);
+            var newNode = node.WithVariables(node.Variables);
             Assert.Equal(node, newNode);
         }
 

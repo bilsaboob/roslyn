@@ -2151,7 +2151,6 @@
   <Node Name="VariableDeclarationSyntax" Base="CSharpSyntaxNode">
     <Kind Name="VariableDeclaration"/>
     <Field Name="Variables" Type="SeparatedSyntaxList&lt;VariableDeclaratorSyntax&gt;" MinCount="1"/>
-    <Field Name="Type" Type="TypeSyntax"/>
   </Node>
 
   <Node Name="VariableDeclaratorSyntax" Base="CSharpSyntaxNode">

@@ -78,6 +78,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
         public Task<bool> TryAppendDiagnosticsForSpanAsync(Document document, TextSpan range, ArrayBuilder<DiagnosticData> diagnostics, bool includeSuppressedDiagnostics = false, CancellationToken cancellationToken = default)
         {
+#if DEBUG
+            // the cancellation token has too short lifetime when running in debug mode... so the intellisense breaks and we can't debug anything useful... so we let it run as long as we need to instead
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
             if (_map.TryGetValue(document.Project.Solution.Workspace, out var analyzer))
             {
                 // always make sure that analyzer is called on background thread.

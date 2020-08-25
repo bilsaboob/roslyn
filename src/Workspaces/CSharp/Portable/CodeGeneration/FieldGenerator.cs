@@ -105,8 +105,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 SyntaxFactory.VariableDeclaration(
                     SyntaxFactory.SingletonSeparatedList(
                         AddAnnotationsTo(field, SyntaxFactory.VariableDeclarator(field.Name.ToIdentifierToken(), type, null, initializer))
-                    ),
-                    type
+                    )
                 )
             );
 

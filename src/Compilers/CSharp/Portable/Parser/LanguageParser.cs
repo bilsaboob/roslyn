@@ -4534,7 +4534,7 @@ tryAgain:
 
                 return _syntaxFactory.FieldDeclaration(
                     attributes, modifiers.ToList(),
-                    _syntaxFactory.VariableDeclaration(variables, type),
+                    _syntaxFactory.VariableDeclaration(variables),
                     semicolon);
             }
             finally
@@ -4701,7 +4701,7 @@ tryAgain:
                 return _syntaxFactory.FieldDeclaration(
                     attributes,
                     modifiers.ToList(),
-                    _syntaxFactory.VariableDeclaration(variables, type),
+                    _syntaxFactory.VariableDeclaration(variables),
                     semicolon);
             }
             finally
@@ -4748,7 +4748,7 @@ tryAgain:
                     attributes,
                     modifiers.ToList(),
                     eventToken,
-                    _syntaxFactory.VariableDeclaration(variables, type),
+                    _syntaxFactory.VariableDeclaration(variables),
                     semicolon);
             }
             finally
@@ -4858,8 +4858,6 @@ tryAgain:
             SyntaxList<AttributeListSyntax> attributes,
             SyntaxList<SyntaxToken> mods,
             out LocalFunctionStatementSyntax localFunction,
-            out TypeSyntax type,
-            out bool isVar,
             bool canSkipSemiComma = false)
         {
             // parse the variable declarator... then possibly continue parsing more
@@ -4869,9 +4867,7 @@ tryAgain:
                 allowLocalFunctions: allowLocalFunctions,
                 attributes: attributes,
                 mods: mods,
-                localFunction: out localFunction,
-                type: out type,
-                isVar: out isVar
+                localFunction: out localFunction
             );
             variables.Add(firstVariableDeclarator);
 
@@ -4901,24 +4897,8 @@ tryAgain:
                         allowLocalFunctions: false,
                         attributes: attributes,
                         mods: mods,
-                        localFunction: out localFunction,
-                        type: out var varType,
-                        isVar: out var isVarDeclVarType
+                        localFunction: out localFunction
                     );
-
-                    // if at least one is a var type... we have a var type
-                    if (isVarDeclVarType)
-                        isVar = true;
-
-                    if (varType != null && type != null)
-                    {
-                        // error... all variables must have same type in single declaration
-                    }
-                    else if (varType != null)
-                    {
-                        // use the new var type
-                        type = varType;
-                    }
 
                     variables.Add(variableDeclarator);
                 }
@@ -4935,10 +4915,6 @@ tryAgain:
                     break;
                 }
             }
-
-            // if at least one variable has type, none can be var
-            if (type != null)
-                isVar = false;
         }
 
         private PostSkipAction SkipBadVariableListTokens(SeparatedSyntaxListBuilder<VariableDeclaratorSyntax> list, SyntaxKind expected)
@@ -5053,13 +5029,9 @@ tryAgain:
             SyntaxList<AttributeListSyntax> attributes,
             SyntaxList<SyntaxToken> mods,
             out LocalFunctionStatementSyntax localFunction,
-            out TypeSyntax type,
-            out bool isVar,
             bool isExpressionContext = false)
         {
             localFunction = null;
-            type = null;
-            isVar = false;
 
             if (this.IsIncrementalAndFactoryContextMatches && CanReuseVariableDeclarator(this.CurrentNode as CSharp.Syntax.VariableDeclaratorSyntax, flags, isFirst))
             {
@@ -5099,8 +5071,6 @@ tryAgain:
                         parseTypeAfterParams: true
                     );
 
-                    // set the type to the return type of the function
-                    type = localFunction?.ReturnType;
                     return null;
                 }
             }
@@ -5108,7 +5078,13 @@ tryAgain:
             // OK - it's not a function... so only variable decl remain!
 
             // try parsing the type - may or may not be available following the name
-            type = TryParseType();
+            var type = TryParseType();
+            var isFakeType = false;
+            if (type == null)
+            {
+                type = SyntaxFactory.FakeTypeIdentifier(_syntaxFactory);
+                isFakeType = true;
+            }
 
             SyntaxToken equals = null;
 
@@ -5118,11 +5094,11 @@ tryAgain:
                     equals = this.EatToken();
                     equals.RawKind = (int)SyntaxKind.EqualsToken;
                     equals.Text = ":=";
-                    isVar = true;
+                    if (isFakeType) type.IsVar = true;
                     goto default;
                 case SyntaxKind.EqualsToken:
                     equals = this.EatToken();
-                    if (equals.Text == ":=") isVar = true;
+                    if (equals.Text == ":=" && isFakeType) type.IsVar = true;
                     goto default;
                 default:
                     if (equals != null)
@@ -5491,7 +5467,7 @@ tryAgain:
                 return _syntaxFactory.FieldDeclaration(
                     attributes,
                     modifiers.ToList(),
-                    _syntaxFactory.VariableDeclaration(variables, type),
+                    _syntaxFactory.VariableDeclaration(variables),
                     semicolon);
             }
             finally
@@ -8911,7 +8887,7 @@ done:;
                     decl = ParseVariableDeclaration();
                     if (decl.Type.Kind == SyntaxKind.RefType)
                     {
-                        decl = decl.Update(decl.Variables, CheckFeatureAvailability(decl.Type, MessageID.IDS_FeatureRefFor));
+                        decl = decl.Update(decl.Variables/*, CheckFeatureAvailability(decl.Type, MessageID.IDS_FeatureRefFor)*/);
                     }
                 }
                 else if (this.CurrentToken.Kind != SyntaxKind.SemicolonToken)
@@ -9667,8 +9643,6 @@ tryAgain:
                     allowLocalFunctions: canParseAsLocalFunction,
                     attributes: attributes,
                     mods: mods.ToList(),
-                    type: out var type,
-                    isVar: out var isVar,
                     localFunction: out var localFunction);
 
                 if (localFunction != null)
@@ -9709,28 +9683,12 @@ tryAgain:
                     semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
                 }
 
-                // the type is actually part of the declarator from syntax perspective... but we want to share it with the variable declaration...
-                TypeSyntax varDeclTypeSyntax = null;
-                if (type == null)
-                {
-                    // always have a type
-                    varDeclTypeSyntax = SyntaxFactory.FakeTypeIdentifier();
-                }
-                else
-                {
-                    // when we share the type, we must make sure the system ignores it in certain "text operations"
-                    varDeclTypeSyntax = type.ShareAsFake();
-                }
-
-                // set explicitly wheter its a var or not
-                varDeclTypeSyntax.IsVar = isVar;
-
                 return _syntaxFactory.LocalDeclarationStatement(
                     attributes,
                     awaitKeyword,
                     usingKeyword,
                     mods.ToList(),
-                    _syntaxFactory.VariableDeclaration(variables, varDeclTypeSyntax),
+                    _syntaxFactory.VariableDeclaration(variables),
                     semicolon);
             }
             finally
@@ -9832,7 +9790,7 @@ tryAgain:
             LocalFunctionStatementSyntax localFunction;
             ParseLocalDeclaration(variables, false, attributes: default, mods: default, out type, out localFunction);
             Debug.Assert(localFunction == null);
-            var result = _syntaxFactory.VariableDeclaration(variables, type);
+            var result = _syntaxFactory.VariableDeclaration(variables);
             _pool.Free(variables);
             return result;
         }
@@ -9908,8 +9866,6 @@ tryAgain:
            bool allowLocalFunctions,
            SyntaxList<AttributeListSyntax> attributes,
            SyntaxList<SyntaxToken> mods,
-           out TypeSyntax type,
-           out bool isVar,
            out LocalFunctionStatementSyntax localFunction)
         {
             VariableFlags flags = VariableFlags.Local;
@@ -9929,8 +9885,6 @@ tryAgain:
                 attributes: attributes,
                 mods: mods,
                 localFunction: out localFunction,
-                type: out type,
-                isVar: out isVar,
                 canSkipSemiComma: true
              );
 

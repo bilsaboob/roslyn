@@ -104,8 +104,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertSwitchStatementToExpression
                                         argumentList: null,
                                         initializer: EqualsValueClause(switchExpression)
                                     )
-                        ),
-                        type: type
+                        )
                     )
                 );
             }

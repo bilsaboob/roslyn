@@ -118,7 +118,7 @@ modifier
   ;
 
 variable_declaration
-  : variable_declarator (',' variable_declarator)* type
+  : variable_declarator (',' variable_declarator)*
   ;
 
 variable_declarator

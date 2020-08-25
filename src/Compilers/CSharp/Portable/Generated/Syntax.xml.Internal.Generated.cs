@@ -12461,69 +12461,56 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
     internal sealed partial class VariableDeclarationSyntax : CSharpSyntaxNode
     {
         internal readonly GreenNode? variables;
-        internal readonly TypeSyntax type;
 
-        internal VariableDeclarationSyntax(SyntaxKind kind, GreenNode? variables, TypeSyntax type, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+        internal VariableDeclarationSyntax(SyntaxKind kind, GreenNode? variables, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
           : base(kind, diagnostics, annotations)
         {
-            this.SlotCount = 2;
+            this.SlotCount = 1;
             if (variables != null)
             {
                 this.AdjustFlagsAndWidth(variables);
                 this.variables = variables;
             }
-            this.AdjustFlagsAndWidth(type);
-            this.type = type;
         }
 
-        internal VariableDeclarationSyntax(SyntaxKind kind, GreenNode? variables, TypeSyntax type, SyntaxFactoryContext context)
+        internal VariableDeclarationSyntax(SyntaxKind kind, GreenNode? variables, SyntaxFactoryContext context)
           : base(kind)
         {
             this.SetFactoryContext(context);
-            this.SlotCount = 2;
+            this.SlotCount = 1;
             if (variables != null)
             {
                 this.AdjustFlagsAndWidth(variables);
                 this.variables = variables;
             }
-            this.AdjustFlagsAndWidth(type);
-            this.type = type;
         }
 
-        internal VariableDeclarationSyntax(SyntaxKind kind, GreenNode? variables, TypeSyntax type)
+        internal VariableDeclarationSyntax(SyntaxKind kind, GreenNode? variables)
           : base(kind)
         {
-            this.SlotCount = 2;
+            this.SlotCount = 1;
             if (variables != null)
             {
                 this.AdjustFlagsAndWidth(variables);
                 this.variables = variables;
             }
-            this.AdjustFlagsAndWidth(type);
-            this.type = type;
         }
 
         public Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<VariableDeclaratorSyntax> Variables => new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<VariableDeclaratorSyntax>(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<CSharpSyntaxNode>(this.variables));
-        public TypeSyntax Type => this.type;
 
         internal override GreenNode? GetSlot(int index)
-            => index switch
-            {
-                0 => this.variables,
-                1 => this.type,
-                _ => null,
-            };
+            => index == 0 ? this.variables : null;
 
         internal override SyntaxNode CreateRed(SyntaxNode? parent, int position) => new CSharp.Syntax.VariableDeclarationSyntax(this, parent, position);
 
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitVariableDeclaration(this);
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitVariableDeclaration(this);
 
-        public VariableDeclarationSyntax Update(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<VariableDeclaratorSyntax> variables, TypeSyntax type)
+        public VariableDeclarationSyntax Update(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<VariableDeclaratorSyntax> variables)
         {
-            if (variables != this.Variables || type != this.Type)
+            if (variables != this.Variables)
             {
-                var newNode = SyntaxFactory.VariableDeclaration(variables, type);
+                var newNode = SyntaxFactory.VariableDeclaration(variables);
                 var diags = GetDiagnostics();
                 if (diags?.Length > 0)
                     newNode = newNode.WithDiagnosticsGreen(diags);
@@ -12537,31 +12524,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
 
         internal override GreenNode SetDiagnostics(DiagnosticInfo[]? diagnostics)
-            => new VariableDeclarationSyntax(this.Kind, this.variables, this.type, diagnostics, GetAnnotations());
+            => new VariableDeclarationSyntax(this.Kind, this.variables, diagnostics, GetAnnotations());
 
         internal override GreenNode SetAnnotations(SyntaxAnnotation[]? annotations)
-            => new VariableDeclarationSyntax(this.Kind, this.variables, this.type, GetDiagnostics(), annotations);
+            => new VariableDeclarationSyntax(this.Kind, this.variables, GetDiagnostics(), annotations);
 
         internal VariableDeclarationSyntax(ObjectReader reader)
           : base(reader)
         {
-            this.SlotCount = 2;
+            this.SlotCount = 1;
             var variables = (GreenNode?)reader.ReadValue();
             if (variables != null)
             {
                 AdjustFlagsAndWidth(variables);
                 this.variables = variables;
             }
-            var type = (TypeSyntax)reader.ReadValue();
-            AdjustFlagsAndWidth(type);
-            this.type = type;
         }
 
         internal override void WriteTo(ObjectWriter writer)
         {
             base.WriteTo(writer);
             writer.WriteValue(this.variables);
-            writer.WriteValue(this.type);
         }
 
         static VariableDeclarationSyntax()
@@ -33178,7 +33161,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             => node.Update(VisitList(node.AttributeLists), (SyntaxToken)Visit(node.AwaitKeyword), (SyntaxToken)Visit(node.UsingKeyword), VisitList(node.Modifiers), (VariableDeclarationSyntax)Visit(node.Declaration), (SyntaxToken)Visit(node.SemicolonToken));
 
         public override CSharpSyntaxNode VisitVariableDeclaration(VariableDeclarationSyntax node)
-            => node.Update(VisitList(node.Variables), (TypeSyntax)Visit(node.Type));
+            => node.Update(VisitList(node.Variables));
 
         public override CSharpSyntaxNode VisitVariableDeclarator(VariableDeclaratorSyntax node)
             => node.Update((SyntaxToken)Visit(node.Identifier), (TypeSyntax)Visit(node.Type), (BracketedArgumentListSyntax)Visit(node.ArgumentList), (EqualsValueClauseSyntax)Visit(node.Initializer));
@@ -35729,17 +35712,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new LocalDeclarationStatementSyntax(SyntaxKind.LocalDeclarationStatement, attributeLists.Node, awaitKeyword, usingKeyword, modifiers.Node, declaration, semicolonToken, this.context);
         }
 
-        public VariableDeclarationSyntax VariableDeclaration(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<VariableDeclaratorSyntax> variables, TypeSyntax type)
+        public VariableDeclarationSyntax VariableDeclaration(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<VariableDeclaratorSyntax> variables)
         {
 #if DEBUG
-            if (type == null) throw new ArgumentNullException(nameof(type));
 #endif
 
             int hash;
-            var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.VariableDeclaration, variables.Node, type, this.context, out hash);
+            var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.VariableDeclaration, variables.Node, this.context, out hash);
             if (cached != null) return (VariableDeclarationSyntax)cached;
 
-            var result = new VariableDeclarationSyntax(SyntaxKind.VariableDeclaration, variables.Node, type, this.context);
+            var result = new VariableDeclarationSyntax(SyntaxKind.VariableDeclaration, variables.Node, this.context);
             if (hash >= 0)
             {
                 SyntaxNodeCache.AddNode(result, hash);
@@ -40472,17 +40454,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new LocalDeclarationStatementSyntax(SyntaxKind.LocalDeclarationStatement, attributeLists.Node, awaitKeyword, usingKeyword, modifiers.Node, declaration, semicolonToken);
         }
 
-        public static VariableDeclarationSyntax VariableDeclaration(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<VariableDeclaratorSyntax> variables, TypeSyntax type)
+        public static VariableDeclarationSyntax VariableDeclaration(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<VariableDeclaratorSyntax> variables)
         {
 #if DEBUG
-            if (type == null) throw new ArgumentNullException(nameof(type));
 #endif
 
             int hash;
-            var cached = SyntaxNodeCache.TryGetNode((int)SyntaxKind.VariableDeclaration, variables.Node, type, out hash);
+            var cached = SyntaxNodeCache.TryGetNode((int)SyntaxKind.VariableDeclaration, variables.Node, out hash);
             if (cached != null) return (VariableDeclarationSyntax)cached;
 
-            var result = new VariableDeclarationSyntax(SyntaxKind.VariableDeclaration, variables.Node, type);
+            var result = new VariableDeclarationSyntax(SyntaxKind.VariableDeclaration, variables.Node);
             if (hash >= 0)
             {
                 SyntaxNodeCache.AddNode(result, hash);

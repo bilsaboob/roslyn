@@ -115,8 +115,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExtractMethod
                         SyntaxFactory.LocalDeclarationStatement(
                             node.Modifiers,
                             SyntaxFactory.VariableDeclaration(
-                                SyntaxFactory.SeparatedList(list),
-                                node.Declaration.Type
+                                SyntaxFactory.SeparatedList(list)
                             ),
                             node.SemicolonToken.WithPrependedLeadingTrivia(triviaList)
                         );

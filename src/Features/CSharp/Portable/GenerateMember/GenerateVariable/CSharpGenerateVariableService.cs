@@ -188,8 +188,7 @@ namespace Microsoft.CodeAnalysis.CSharp.GenerateMember.GenerateVariable
                             SyntaxFactory.VariableDeclarator(token, t, null, SyntaxFactory.EqualsValueClause(
                                 assignExpression.OperatorToken, assignExpression.Right)
                             )
-                        ),
-                        t
+                        )
                     )
                 );
                 declarationStatement = declarationStatement.WithAdditionalAnnotations(Formatter.Annotation);

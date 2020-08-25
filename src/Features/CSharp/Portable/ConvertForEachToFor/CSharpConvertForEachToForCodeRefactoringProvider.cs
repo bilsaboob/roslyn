@@ -88,8 +88,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertForEachToFor
                             argumentList: null,
                             SyntaxFactory.EqualsValueClause((ExpressionSyntax)generator.LiteralExpression(0))
                         )
-                    ),
-                    type
+                    )
                 ),
                 SyntaxFactory.SeparatedList<ExpressionSyntax>(),
                 (ExpressionSyntax)generator.LessThanExpression(

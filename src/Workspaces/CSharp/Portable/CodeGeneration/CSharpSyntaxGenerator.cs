@@ -185,10 +185,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     SyntaxFactory.SingletonSeparatedList(
                         SyntaxFactory.VariableDeclarator(
                             name.ToIdentifierToken(),
+                            (TypeSyntax)type,
                             null,
-                            null,
-                            initializer != null ? SyntaxFactory.EqualsValueClause((ExpressionSyntax)initializer) : null)),
-                        (TypeSyntax)type
+                            initializer != null ? SyntaxFactory.EqualsValueClause((ExpressionSyntax)initializer) : null))
                     )
                 );
         }
@@ -501,9 +500,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 AsModifierList(accessibility, modifiers, SyntaxKind.EventFieldDeclaration),
                 SyntaxFactory.VariableDeclaration(
                     SyntaxFactory.SingletonSeparatedList(
-                        SyntaxFactory.VariableDeclarator(name)
-                    ),
-                    (TypeSyntax)type
+                        SyntaxFactory.VariableDeclarator(SyntaxFactory.Identifier(name), (TypeSyntax)type, null, null)
+                    )
                 )
             );
         }

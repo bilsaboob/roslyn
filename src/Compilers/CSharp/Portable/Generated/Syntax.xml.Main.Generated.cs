@@ -1901,7 +1901,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update(VisitList(node.AttributeLists), VisitToken(node.AwaitKeyword), VisitToken(node.UsingKeyword), VisitList(node.Modifiers), (VariableDeclarationSyntax?)Visit(node.Declaration) ?? throw new ArgumentNullException("declaration"), VisitToken(node.SemicolonToken));
 
         public override SyntaxNode? VisitVariableDeclaration(VariableDeclarationSyntax node)
-            => node.Update(VisitList(node.Variables), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"));
+            => node.Update(VisitList(node.Variables));
 
         public override SyntaxNode? VisitVariableDeclarator(VariableDeclaratorSyntax node)
             => node.Update(VisitToken(node.Identifier), (TypeSyntax?)Visit(node.Type), (BracketedArgumentListSyntax?)Visit(node.ArgumentList), (EqualsValueClauseSyntax?)Visit(node.Initializer));
@@ -3111,11 +3111,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         public static ArgumentListSyntax ArgumentList(SeparatedSyntaxList<ArgumentSyntax> arguments, ParenthesizedLambdaExpressionSyntax? trailingLambdaBlock)
             => SyntaxFactory.ArgumentList(SyntaxFactory.Token(SyntaxKind.OpenParenToken), arguments, SyntaxFactory.Token(SyntaxKind.CloseParenToken), trailingLambdaBlock);
 
+#pragma warning disable RS0027
         /// <summary>Creates a new ArgumentListSyntax instance.</summary>
-#pragma warning disable RS0027 // Public API with optional parameter(s) should have the most parameters amongst its public overloads.
         public static ArgumentListSyntax ArgumentList(SeparatedSyntaxList<ArgumentSyntax> arguments = default)
             => SyntaxFactory.ArgumentList(SyntaxFactory.Token(SyntaxKind.OpenParenToken), arguments, SyntaxFactory.Token(SyntaxKind.CloseParenToken), default);
-#pragma warning restore RS0027 // Public API with optional parameter(s) should have the most parameters amongst its public overloads.
+#pragma warning restore RS0027
 
         /// <summary>Creates a new BracketedArgumentListSyntax instance.</summary>
         public static BracketedArgumentListSyntax BracketedArgumentList(SyntaxToken openBracketToken, SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeBracketToken)
@@ -3950,20 +3950,21 @@ namespace Microsoft.CodeAnalysis.CSharp
         public static LocalDeclarationStatementSyntax LocalDeclarationStatement(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, VariableDeclarationSyntax declaration)
             => SyntaxFactory.LocalDeclarationStatement(attributeLists, default, default, modifiers, declaration, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
+#pragma warning disable RS0027
         /// <summary>Creates a new LocalDeclarationStatementSyntax instance.</summary>
-        public static LocalDeclarationStatementSyntax LocalDeclarationStatement(VariableDeclarationSyntax declaration)
-            => SyntaxFactory.LocalDeclarationStatement(default, default, default, default(SyntaxTokenList), declaration, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+        public static LocalDeclarationStatementSyntax LocalDeclarationStatement(VariableDeclarationSyntax? declaration = default)
+            => SyntaxFactory.LocalDeclarationStatement(default, default, default, default(SyntaxTokenList), declaration ?? SyntaxFactory.VariableDeclaration(), SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+#pragma warning restore RS0027
 
         /// <summary>Creates a new VariableDeclarationSyntax instance.</summary>
-        public static VariableDeclarationSyntax VariableDeclaration(SeparatedSyntaxList<VariableDeclaratorSyntax> variables, TypeSyntax type)
+        public static VariableDeclarationSyntax VariableDeclaration(SeparatedSyntaxList<VariableDeclaratorSyntax> variables)
         {
-            if (type == null) throw new ArgumentNullException(nameof(type));
-            return (VariableDeclarationSyntax)Syntax.InternalSyntax.SyntaxFactory.VariableDeclaration(variables.Node.ToGreenSeparatedList<Syntax.InternalSyntax.VariableDeclaratorSyntax>(), (Syntax.InternalSyntax.TypeSyntax)type.Green).CreateRed();
+            return (VariableDeclarationSyntax)Syntax.InternalSyntax.SyntaxFactory.VariableDeclaration(variables.Node.ToGreenSeparatedList<Syntax.InternalSyntax.VariableDeclaratorSyntax>()).CreateRed();
         }
 
         /// <summary>Creates a new VariableDeclarationSyntax instance.</summary>
-        public static VariableDeclarationSyntax VariableDeclaration(TypeSyntax type)
-            => SyntaxFactory.VariableDeclaration(default, type);
+        public static VariableDeclarationSyntax VariableDeclaration()
+            => SyntaxFactory.VariableDeclaration(default);
 
         /// <summary>Creates a new VariableDeclaratorSyntax instance.</summary>
         public static VariableDeclaratorSyntax VariableDeclarator(SyntaxToken identifier, TypeSyntax? type, BracketedArgumentListSyntax? argumentList, EqualsValueClauseSyntax? initializer)
@@ -4371,8 +4372,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.FixedStatement(attributeLists, SyntaxFactory.Token(SyntaxKind.FixedKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), declaration, SyntaxFactory.Token(SyntaxKind.CloseParenToken), statement);
 
         /// <summary>Creates a new FixedStatementSyntax instance.</summary>
-        public static FixedStatementSyntax FixedStatement(VariableDeclarationSyntax declaration, StatementSyntax statement)
-            => SyntaxFactory.FixedStatement(default, SyntaxFactory.Token(SyntaxKind.FixedKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), declaration, SyntaxFactory.Token(SyntaxKind.CloseParenToken), statement);
+        public static FixedStatementSyntax FixedStatement(StatementSyntax statement)
+            => SyntaxFactory.FixedStatement(default, SyntaxFactory.Token(SyntaxKind.FixedKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), SyntaxFactory.VariableDeclaration(), SyntaxFactory.Token(SyntaxKind.CloseParenToken), statement);
 
         /// <summary>Creates a new CheckedStatementSyntax instance.</summary>
         public static CheckedStatementSyntax CheckedStatement(SyntaxKind kind, SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken keyword, BlockSyntax block)
@@ -5170,9 +5171,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         public static FieldDeclarationSyntax FieldDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, VariableDeclarationSyntax declaration)
             => SyntaxFactory.FieldDeclaration(attributeLists, modifiers, declaration, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
+#pragma warning disable RS0027
         /// <summary>Creates a new FieldDeclarationSyntax instance.</summary>
-        public static FieldDeclarationSyntax FieldDeclaration(VariableDeclarationSyntax declaration)
-            => SyntaxFactory.FieldDeclaration(default, default(SyntaxTokenList), declaration, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+        public static FieldDeclarationSyntax FieldDeclaration(VariableDeclarationSyntax? declaration = default)
+            => SyntaxFactory.FieldDeclaration(default, default(SyntaxTokenList), declaration ?? SyntaxFactory.VariableDeclaration(), SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+#pragma warning restore RS0027
 
         /// <summary>Creates a new EventFieldDeclarationSyntax instance.</summary>
         public static EventFieldDeclarationSyntax EventFieldDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken eventKeyword, VariableDeclarationSyntax declaration, SyntaxToken semicolonToken)
@@ -5187,9 +5190,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         public static EventFieldDeclarationSyntax EventFieldDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, VariableDeclarationSyntax declaration)
             => SyntaxFactory.EventFieldDeclaration(attributeLists, modifiers, SyntaxFactory.Token(SyntaxKind.EventKeyword), declaration, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
+#pragma warning disable RS0027
         /// <summary>Creates a new EventFieldDeclarationSyntax instance.</summary>
-        public static EventFieldDeclarationSyntax EventFieldDeclaration(VariableDeclarationSyntax declaration)
-            => SyntaxFactory.EventFieldDeclaration(default, default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.EventKeyword), declaration, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+        public static EventFieldDeclarationSyntax EventFieldDeclaration(VariableDeclarationSyntax? declaration = default)
+            => SyntaxFactory.EventFieldDeclaration(default, default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.EventKeyword), declaration ?? SyntaxFactory.VariableDeclaration(), SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+#pragma warning restore RS0027
 
         /// <summary>Creates a new ExplicitInterfaceSpecifierSyntax instance.</summary>
         public static ExplicitInterfaceSpecifierSyntax ExplicitInterfaceSpecifier(NameSyntax name, SyntaxToken dotToken)
