@@ -134,7 +134,8 @@ argument
   ;
 
 equals_value_clause
-  : '=' expression
+  : ':=' expression
+  | '=' expression
   ;
 
 field_declaration
@@ -190,7 +191,7 @@ destructor_declaration
   ;
 
 method_declaration
-  : attribute_list* modifier* type explicit_interface_specifier? identifier_token type_parameter_list? parameter_list type_parameter_constraint_clause* (block | (arrow_expression_clause ';'))
+  : attribute_list* modifier* explicit_interface_specifier? identifier_token type_parameter_list? parameter_list type type_parameter_constraint_clause* (block | (arrow_expression_clause ';'))
   ;
 
 explicit_interface_specifier
@@ -244,7 +245,7 @@ base_property_declaration
   ;
 
 event_declaration
-  : attribute_list* modifier* 'event' type explicit_interface_specifier? identifier_token (accessor_list | ';')
+  : attribute_list* modifier* 'event' explicit_interface_specifier? identifier_token type (accessor_list | ';')
   ;
 
 accessor_list
@@ -256,7 +257,7 @@ accessor_declaration
   ;
 
 indexer_declaration
-  : attribute_list* modifier* type explicit_interface_specifier? 'this' bracketed_parameter_list (accessor_list | (arrow_expression_clause ';'))
+  : attribute_list* modifier* explicit_interface_specifier? 'this' bracketed_parameter_list type (accessor_list | (arrow_expression_clause ';'))
   ;
 
 bracketed_parameter_list
@@ -264,7 +265,7 @@ bracketed_parameter_list
   ;
 
 property_declaration
-  : attribute_list* modifier* type explicit_interface_specifier? identifier_token (accessor_list | ((arrow_expression_clause | equals_value_clause) ';'))
+  : attribute_list* modifier* explicit_interface_specifier? identifier_token type (accessor_list | ((arrow_expression_clause | equals_value_clause) ';'))
   ;
 
 base_type_declaration
