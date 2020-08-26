@@ -5140,9 +5140,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     public sealed partial class LocalFunctionStatementSyntax : StatementSyntax
     {
         private SyntaxNode? attributeLists;
-        private TypeSyntax? returnType;
         private TypeParameterListSyntax? typeParameterList;
         private ParameterListSyntax? parameterList;
+        private TypeSyntax? returnType;
         private SyntaxNode? constraintClauses;
         private BlockSyntax? body;
         private ArrowExpressionClauseSyntax? expressionBody;
@@ -5163,14 +5163,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             }
         }
 
-        public TypeSyntax ReturnType => GetRed(ref this.returnType, 2)!;
-
         /// <summary>Gets the identifier.</summary>
-        public SyntaxToken Identifier => new SyntaxToken(this, ((Syntax.InternalSyntax.LocalFunctionStatementSyntax)this.Green).identifier, GetChildPosition(3), GetChildIndex(3));
+        public SyntaxToken Identifier => new SyntaxToken(this, ((Syntax.InternalSyntax.LocalFunctionStatementSyntax)this.Green).identifier, GetChildPosition(2), GetChildIndex(2));
 
-        public TypeParameterListSyntax? TypeParameterList => GetRed(ref this.typeParameterList, 4);
+        public TypeParameterListSyntax? TypeParameterList => GetRed(ref this.typeParameterList, 3);
 
-        public ParameterListSyntax ParameterList => GetRed(ref this.parameterList, 5)!;
+        public ParameterListSyntax ParameterList => GetRed(ref this.parameterList, 4)!;
+
+        public TypeSyntax ReturnType => GetRed(ref this.returnType, 5)!;
 
         public SyntaxList<TypeParameterConstraintClauseSyntax> ConstraintClauses => new SyntaxList<TypeParameterConstraintClauseSyntax>(GetRed(ref this.constraintClauses, 6));
 
@@ -5192,9 +5192,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             => index switch
             {
                 0 => GetRedAtZero(ref this.attributeLists)!,
-                2 => GetRed(ref this.returnType, 2)!,
-                4 => GetRed(ref this.typeParameterList, 4),
-                5 => GetRed(ref this.parameterList, 5)!,
+                3 => GetRed(ref this.typeParameterList, 3),
+                4 => GetRed(ref this.parameterList, 4)!,
+                5 => GetRed(ref this.returnType, 5)!,
                 6 => GetRed(ref this.constraintClauses, 6)!,
                 7 => GetRed(ref this.body, 7),
                 8 => GetRed(ref this.expressionBody, 8),
@@ -5205,9 +5205,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             => index switch
             {
                 0 => this.attributeLists,
-                2 => this.returnType,
-                4 => this.typeParameterList,
-                5 => this.parameterList,
+                3 => this.typeParameterList,
+                4 => this.parameterList,
+                5 => this.returnType,
                 6 => this.constraintClauses,
                 7 => this.body,
                 8 => this.expressionBody,
@@ -5218,11 +5218,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitLocalFunctionStatement(this);
 
-        public LocalFunctionStatementSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, TypeSyntax returnType, SyntaxToken identifier, TypeParameterListSyntax? typeParameterList, ParameterListSyntax parameterList, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, BlockSyntax? body, ArrowExpressionClauseSyntax? expressionBody, SyntaxToken semicolonToken)
+        public LocalFunctionStatementSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken identifier, TypeParameterListSyntax? typeParameterList, ParameterListSyntax parameterList, TypeSyntax returnType, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, BlockSyntax? body, ArrowExpressionClauseSyntax? expressionBody, SyntaxToken semicolonToken)
         {
-            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || returnType != this.ReturnType || identifier != this.Identifier || typeParameterList != this.TypeParameterList || parameterList != this.ParameterList || constraintClauses != this.ConstraintClauses || body != this.Body || expressionBody != this.ExpressionBody || semicolonToken != this.SemicolonToken)
+            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || identifier != this.Identifier || typeParameterList != this.TypeParameterList || parameterList != this.ParameterList || returnType != this.ReturnType || constraintClauses != this.ConstraintClauses || body != this.Body || expressionBody != this.ExpressionBody || semicolonToken != this.SemicolonToken)
             {
-                var newNode = SyntaxFactory.LocalFunctionStatement(attributeLists, modifiers, returnType, identifier, typeParameterList, parameterList, constraintClauses, body, expressionBody, semicolonToken);
+                var newNode = SyntaxFactory.LocalFunctionStatement(attributeLists, modifiers, identifier, typeParameterList, parameterList, returnType, constraintClauses, body, expressionBody, semicolonToken);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -5231,16 +5231,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         }
 
         internal override StatementSyntax WithAttributeListsCore(SyntaxList<AttributeListSyntax> attributeLists) => WithAttributeLists(attributeLists);
-        public new LocalFunctionStatementSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
-        public LocalFunctionStatementSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
-        public LocalFunctionStatementSyntax WithReturnType(TypeSyntax returnType) => Update(this.AttributeLists, this.Modifiers, returnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
-        public LocalFunctionStatementSyntax WithIdentifier(SyntaxToken identifier) => Update(this.AttributeLists, this.Modifiers, this.ReturnType, identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
-        public LocalFunctionStatementSyntax WithTypeParameterList(TypeParameterListSyntax? typeParameterList) => Update(this.AttributeLists, this.Modifiers, this.ReturnType, this.Identifier, typeParameterList, this.ParameterList, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
-        public LocalFunctionStatementSyntax WithParameterList(ParameterListSyntax parameterList) => Update(this.AttributeLists, this.Modifiers, this.ReturnType, this.Identifier, this.TypeParameterList, parameterList, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
-        public LocalFunctionStatementSyntax WithConstraintClauses(SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses) => Update(this.AttributeLists, this.Modifiers, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, constraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
-        public LocalFunctionStatementSyntax WithBody(BlockSyntax? body) => Update(this.AttributeLists, this.Modifiers, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, body, this.ExpressionBody, this.SemicolonToken);
-        public LocalFunctionStatementSyntax WithExpressionBody(ArrowExpressionClauseSyntax? expressionBody) => Update(this.AttributeLists, this.Modifiers, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.Body, expressionBody, this.SemicolonToken);
-        public LocalFunctionStatementSyntax WithSemicolonToken(SyntaxToken semicolonToken) => Update(this.AttributeLists, this.Modifiers, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.Body, this.ExpressionBody, semicolonToken);
+        public new LocalFunctionStatementSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
+        public LocalFunctionStatementSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
+        public LocalFunctionStatementSyntax WithIdentifier(SyntaxToken identifier) => Update(this.AttributeLists, this.Modifiers, identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
+        public LocalFunctionStatementSyntax WithTypeParameterList(TypeParameterListSyntax? typeParameterList) => Update(this.AttributeLists, this.Modifiers, this.Identifier, typeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
+        public LocalFunctionStatementSyntax WithParameterList(ParameterListSyntax parameterList) => Update(this.AttributeLists, this.Modifiers, this.Identifier, this.TypeParameterList, parameterList, this.ReturnType, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
+        public LocalFunctionStatementSyntax WithReturnType(TypeSyntax returnType) => Update(this.AttributeLists, this.Modifiers, this.Identifier, this.TypeParameterList, this.ParameterList, returnType, this.ConstraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
+        public LocalFunctionStatementSyntax WithConstraintClauses(SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses) => Update(this.AttributeLists, this.Modifiers, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, constraintClauses, this.Body, this.ExpressionBody, this.SemicolonToken);
+        public LocalFunctionStatementSyntax WithBody(BlockSyntax? body) => Update(this.AttributeLists, this.Modifiers, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, body, this.ExpressionBody, this.SemicolonToken);
+        public LocalFunctionStatementSyntax WithExpressionBody(ArrowExpressionClauseSyntax? expressionBody) => Update(this.AttributeLists, this.Modifiers, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.Body, expressionBody, this.SemicolonToken);
+        public LocalFunctionStatementSyntax WithSemicolonToken(SyntaxToken semicolonToken) => Update(this.AttributeLists, this.Modifiers, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.Body, this.ExpressionBody, semicolonToken);
 
         internal override StatementSyntax AddAttributeListsCore(params AttributeListSyntax[] items) => AddAttributeLists(items);
         public new LocalFunctionStatementSyntax AddAttributeLists(params AttributeListSyntax[] items) => WithAttributeLists(this.AttributeLists.AddRange(items));

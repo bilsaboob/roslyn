@@ -9967,10 +9967,10 @@ tryAgain:
             return _syntaxFactory.LocalFunctionStatement(
                 attributes,
                 modifiers,
-                type,
                 identifier,
                 typeParameterListOpt,
                 paramList,
+                type,
                 constraints,
                 blockBody,
                 expressionBody,
