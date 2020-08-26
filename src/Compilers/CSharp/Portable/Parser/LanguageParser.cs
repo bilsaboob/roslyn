@@ -3149,10 +3149,10 @@ parse_member_name:;
             var isTrailingLambdaBlock = expressionBody?.Expression is InvocationExpressionSyntax invocationExprSyntax && invocationExprSyntax.ArgumentList?.TrailingLambdaBlock != null;
             var semicolonRequired = (expressionBody != null || blockBody == null) && !isTrailingLambdaBlock;
 
-            if (!semiCommaOptional) semicolonRequired = false;
+            if (semiCommaOptional) semicolonRequired = false;
 
             // if it looks like we are at the end of a member declaration... then allow ending without semi comma
-            if (hasArrowToken && IsProbablyMemberDeclarationEnd()) semicolonRequired = false;
+            if (IsProbablyMemberDeclarationEnd()) semicolonRequired = false;
 
             semicolon = null;
             // Expression-bodies need semicolons and native behavior
@@ -3163,7 +3163,12 @@ parse_member_name:;
             }
             else if (isTrailingLambdaBlock)
             {
-                // always at least 
+                // always skip for trailing lambda blocks
+                semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+            }
+            else if (IsCurrentTokenOnNewline)
+            {
+                // if at newline, then we can skip token
                 semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
             }
         }
