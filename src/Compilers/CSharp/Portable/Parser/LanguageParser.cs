@@ -5123,7 +5123,7 @@ tryAgain:
             // it could actually be a local function declaration!
             if (allowLocalFunctions)
             {
-                if (IsPossibleMethodDeclarationStart(checkAtIdentifier: true))
+                if (IsPossibleMethodDeclarationStart(checkAtIdentifier: false))
                 {
                     localFunction = TryParseLocalFunctionStatementBody(
                         attributes: attributes,
@@ -5131,7 +5131,7 @@ tryAgain:
                         identifier: name
                     );
 
-                    return null;
+                    if (localFunction != null) return null;
                 }
             }
 
@@ -7633,36 +7633,149 @@ done:;
 
             if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken)
             {
+                if (CurrentToken.Text == "usersList")
+                {
+
+                }
+
                 // there is special assignment type with ":="
                 var nextToken = this.PeekToken(1);
                 switch (nextToken.Kind)
                 {
                     case SyntaxKind.ColonEqualsToken:
                         return true;
-                    case SyntaxKind.EqualsToken:
-                        {
-                            if (nextToken.Text == ":=")
-                            {
-                                return true;
-                            }
-
-                            break;
-                        }
                 }
 
-                // finally check if followed by a type
+                // check if followed by a type
                 var resetPoint = GetResetPoint();
                 this.EatToken();
+                var hasWhitespaceAfterName = IsCurrentTokenAfterWhitespace;
 
-                var result = IsPossibleFirstTypedIdentifierInLocaDeclarationStatement(isGlobalScriptLevel, checkVariableName: false);
+                try
+                {
+                    var couldBeMethod = IsPossibleMethodDeclarationStart(checkAtIdentifier: false);
+                    if (couldBeMethod)
+                    {
+                        // if we have a closing parenth... it
+                        if (this.PeekToken(1).Kind == SyntaxKind.CloseParenToken)
+                        {
+                            switch (this.PeekToken(2).Kind)
+                            {
+                                case SyntaxKind.OpenBraceToken:
+                                case SyntaxKind.EqualsGreaterThanToken:
+                                case SyntaxKind.WhereClause:
+                                    return true;
+                            }
 
-                Reset(ref resetPoint);
-                Release(ref resetPoint);
+                            this.EatToken();
 
-                return result;
+                            // following the parameters there could be a return type
+                            TypeSyntax returnType = null;
+                            if (!IsCurrentTokenOnNewline) returnType = TryParseType();
+                            if (returnType != null)
+                            {
+                                switch (this.CurrentToken.Kind)
+                                {
+                                    case SyntaxKind.OpenBraceToken:
+                                    case SyntaxKind.EqualsGreaterThanToken:
+                                    case SyntaxKind.WhereClause:
+                                        return true;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // try parsing parameters
+                            var parameters = ParseParenthesizedParameterList();
+                            var hasValidParam = false;
+                            var hasAllValidParams = parameters.Parameters.Count > 0;
+                            for (var i = 0; i < parameters.Parameters.Count; ++i)
+                            {
+                                var p = parameters.Parameters[i];
+
+                                // if it looks like a real parameter, then it sure is a method
+                                if (p.AttributeLists.Count > 0) return true;
+
+                                if (p.Identifier.IsMissing) continue;
+
+                                if (p.Type?.Width > 0 || p.Default != null)
+                                {
+                                    hasValidParam = true;
+                                }
+                                else
+                                {
+                                    hasAllValidParams = false;
+                                }
+                            }
+
+                            switch (this.CurrentToken.Kind)
+                            {
+                                case SyntaxKind.EqualsGreaterThanToken:
+                                case SyntaxKind.WhereClause:
+                                    return true;
+                                case SyntaxKind.OpenBraceToken:
+                                    return hasAllValidParams;
+                            }
+
+                            // following the parameters there could be a return type
+                            TypeSyntax returnType = null;
+                            if (!IsCurrentTokenOnNewline) returnType = TryParseType();
+                            if (returnType != null)
+                            {
+                                switch (this.CurrentToken.Kind)
+                                {
+                                    case SyntaxKind.EqualsGreaterThanToken:
+                                    case SyntaxKind.WhereClause:
+                                        return true;
+                                    case SyntaxKind.OpenBraceToken:
+                                        return hasAllValidParams;
+                                }
+                            }
+                            else
+                            {
+                                // its probably a tuple declaration
+                                if (hasWhitespaceAfterName)
+                                {
+                                    if (IsProbablyStatementEnd()) return true;
+
+                                    if (this.CurrentToken.Kind == SyntaxKind.ColonEqualsToken) return true;
+
+                                    return true;
+                                }
+                            }
+                        }
+
+                        return false;
+                    }
+
+                    var type = TryParseType();
+
+                    if (type != null)
+                    {
+                        // if we have a tuple it it was not possibly a method, then it could be a tuple type in a local variable declaration
+                        if (type is TupleTypeSyntax && hasWhitespaceAfterName && IsProbablyStatementEnd())
+                        {
+                            return true;
+                        }
+
+                        // check if followed by ; or :=
+                        switch (this.CurrentToken.Kind)
+                        {
+                            case SyntaxKind.ColonEqualsToken:
+                            case SyntaxKind.SemicolonToken:
+                                return true;
+                        }
+                    }
+                }
+                finally
+                {
+                    Reset(ref resetPoint);
+                    Release(ref resetPoint);
+                }
             }
 
-            return IsPossibleFirstTypedIdentifierInLocaDeclarationStatement(isGlobalScriptLevel);
+            //return IsPossibleFirstTypedIdentifierInLocaDeclarationStatement(isGlobalScriptLevel); 
+            return false;
         }
 
         private bool IsPossibleFirstTypedIdentifierInLocaDeclarationStatement(bool isGlobalScriptLevel, int tokenIndex = 0, bool checkVariableName = true)
@@ -9756,7 +9869,7 @@ tryAgain:
             var resetPoint = this.GetResetPoint();
 
             // Indicates this must be parsed as a local function, even if there's no body
-            bool forceLocalFunc = identifier.ContextualKind != SyntaxKind.AwaitKeyword;
+            bool forceLocalFunc = false;
 
             bool parentScopeIsInAsync = IsInAsync;
             IsInAsync = false;
@@ -9768,10 +9881,8 @@ tryAgain:
                 {
                     case SyntaxKind.AsyncKeyword:
                         IsInAsync = true;
-                        forceLocalFunc = true;
                         continue;
                     case SyntaxKind.UnsafeKeyword:
-                        forceLocalFunc = true;
                         continue;
                     case SyntaxKind.ReadOnlyKeyword:
                     case SyntaxKind.VolatileKeyword:
