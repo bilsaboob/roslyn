@@ -120,12 +120,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // instance). Constraints are checked in AfterAddingTypeMembersChecks.
             var signatureBinder = withTypeParamsBinder.WithAdditionalFlagsAndContainingMemberOrLambda(BinderFlags.SuppressConstraintChecks, this);
 
+            _lazyParameters = ImmutableArray<ParameterSymbol>.Empty;
+
             ImmutableArray<ParameterSymbol> parameters = ParameterHelpers.MakeParameters(
                 signatureBinder, this, syntax.ParameterList, out arglistToken,
                 allowRefOrOut: true,
                 allowThis: true,
                 addRefReadOnlyModifier: IsVirtual || IsAbstract,
                 diagnostics: diagnostics);
+
+            // set the real parameters
+            _lazyParameters = parameters;
 
             _lazyIsVararg = (arglistToken.Kind() == SyntaxKind.ArgListKeyword);
             RefKind refKind;
@@ -140,9 +145,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var bodyBinder = TryGetBodyBinder();
                 if (bodyBinder != null)
                 {
-                    // set the parameters before evaluating method body ... it may try to access the parameters ...
-                    _lazyParameters = parameters;
-
                     // evaluate method body
                     var bodyDiagnostics = new DiagnosticBag();
                     var boundBody = bodyBinder.BindMethodBody(syntax, bodyDiagnostics);

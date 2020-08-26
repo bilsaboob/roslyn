@@ -318,7 +318,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 if (!_lazyParameters.IsDefault)
                 {
                     int result = _lazyParameters.Length;
-                    Debug.Assert(result == GetParameterCountFromSyntax());
+                    // Debug.Assert(result == GetParameterCountFromSyntax());
                     return result;
                 }
 
