@@ -38,6 +38,10 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
 
         private async Task AnalyzeDocumentForKindAsync(TextDocument document, AnalysisKind kind, CancellationToken cancellationToken)
         {
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
+
             try
             {
                 if (!AnalysisEnabled(document))

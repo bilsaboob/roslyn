@@ -105,6 +105,10 @@ namespace Microsoft.CodeAnalysis.Remote
         {
             Contract.ThrowIfFalse(_startedListening);
 
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
+
             // if this end-point is already disconnected do not log more errors:
             var logError = _disconnectedReason == null;
 
@@ -126,6 +130,10 @@ namespace Microsoft.CodeAnalysis.Remote
         {
             Contract.ThrowIfFalse(_startedListening);
 
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
+
             if (_rpc.IsDisposed)
             {
                 return;
@@ -144,6 +152,10 @@ namespace Microsoft.CodeAnalysis.Remote
         public async Task<T> InvokeAsync<T>(string targetName, IReadOnlyList<object?> arguments, CancellationToken cancellationToken)
         {
             Contract.ThrowIfFalse(_startedListening);
+
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
 
             // if this end-point is already disconnected do not log more errors:
             var logError = _disconnectedReason == null;
