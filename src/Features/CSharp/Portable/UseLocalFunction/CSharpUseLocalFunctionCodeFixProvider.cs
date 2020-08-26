@@ -229,7 +229,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseLocalFunction
                 : default;
 
             return SyntaxFactory.LocalFunctionStatement(
-                modifiers, returnType, identifier, typeParameterList, parameterList,
+                modifiers, identifier, typeParameterList, parameterList, returnType,
                 constraintClauses, body, expressionBody, semicolonToken);
         }
 

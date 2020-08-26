@@ -7696,7 +7696,11 @@ done:;
                                 // if it looks like a real parameter, then it sure is a method
                                 if (p.AttributeLists.Count > 0) return true;
 
-                                if (p.Identifier.IsMissing) continue;
+                                if (p.Identifier.IsMissing)
+                                {
+                                    hasAllValidParams = false;
+                                    continue;
+                                }
 
                                 if (p.Type?.Width > 0 || p.Default != null)
                                 {

@@ -2339,7 +2339,7 @@ public class C
             Assert.Equal("x", Generator.GetExpression(method).ToString());
 
             // expression bodied local functions
-            var local = SyntaxFactory.LocalFunctionStatement(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), "p");
+            var local = SyntaxFactory.LocalFunctionStatement("p", SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)));
             local = local.WithBody(null).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
             local = local.WithExpressionBody(SyntaxFactory.ArrowExpressionClause((ExpressionSyntax)Generator.IdentifierName("x")));
 
@@ -2375,7 +2375,7 @@ public class C
             Assert.Equal("y", Generator.GetExpression(Generator.WithExpression(method, Generator.IdentifierName("y"))).ToString());
 
             // expression bodied local functions
-            var local = SyntaxFactory.LocalFunctionStatement(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), "p");
+            var local = SyntaxFactory.LocalFunctionStatement("p", SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)));
             local = local.WithBody(null).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
             local = local.WithExpressionBody(SyntaxFactory.ArrowExpressionClause((ExpressionSyntax)Generator.IdentifierName("x")));
 
