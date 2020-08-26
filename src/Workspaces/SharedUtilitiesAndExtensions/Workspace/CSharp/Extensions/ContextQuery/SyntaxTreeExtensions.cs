@@ -816,11 +816,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             }
 
             return
-                syntaxTree.IsAfterKeyword(position, SyntaxKind.ConstKeyword, cancellationToken) ||
-                syntaxTree.IsAfterKeyword(position, SyntaxKind.RefKeyword, cancellationToken) ||
-                syntaxTree.IsAfterKeyword(position, SyntaxKind.ReadOnlyKeyword, cancellationToken) ||
+                //syntaxTree.IsAfterKeyword(position, SyntaxKind.ConstKeyword, cancellationToken) ||
+                //syntaxTree.IsAfterKeyword(position, SyntaxKind.RefKeyword, cancellationToken) ||
+                //syntaxTree.IsAfterKeyword(position, SyntaxKind.ReadOnlyKeyword, cancellationToken) ||
                 syntaxTree.IsAfterKeyword(position, SyntaxKind.CaseKeyword, cancellationToken) ||
-                syntaxTree.IsAfterKeyword(position, SyntaxKind.EventKeyword, cancellationToken) ||
+                //syntaxTree.IsAfterKeyword(position, SyntaxKind.EventKeyword, cancellationToken) ||
                 syntaxTree.IsAfterKeyword(position, SyntaxKind.StackAllocKeyword, cancellationToken) ||
                 syntaxTree.IsAttributeNameContext(position, cancellationToken) ||
                 syntaxTree.IsBaseClassOrInterfaceContext(position, cancellationToken) ||
@@ -1216,7 +1216,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             var token = tokenOnLeftOfPosition;
             token = token.GetPreviousTokenIfTouchingWord(position);
 
-            if (token.IsKind(SyntaxKind.DelegateKeyword) &&
+            // public delegate MyDelegate() |$
+
+            if (token.IsKind(SyntaxKind.CloseParenToken) &&
                 token.Parent.IsKind(SyntaxKind.DelegateDeclaration))
             {
                 return true;
@@ -1883,15 +1885,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             this SyntaxTree syntaxTree, int position, SyntaxToken tokenOnLeftOfPosition)
         {
             // cases:
-            //  fixed (var
+            //  fixed (some $|
 
             var token = tokenOnLeftOfPosition;
-            token = token.GetPreviousTokenIfTouchingWord(position);
-
-            if (token.IsKind(SyntaxKind.OpenParenToken) &&
-                token.GetPreviousToken(includeSkipped: true).IsKind(SyntaxKind.FixedKeyword))
+            if (token.Parent is VariableDeclaratorSyntax varDeclarator)
             {
-                return true;
+                if (varDeclarator.Identifier == token) return true;
             }
 
             return false;
