@@ -303,6 +303,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
+        protected bool IsCurrentTokenAfterWhitespace
+        {
+            get
+            {
+                if (_prevTokenTrailingTrivia != null && _prevTokenTrailingTrivia.RawKind == (int)SyntaxKind.WhitespaceTrivia) return true;
+                if (CurrentToken.LeadingTrivia.Any((int)SyntaxKind.WhitespaceTrivia)) return true;
+                var prevToken = PeekPrevToken(1);
+                if (prevToken != null && prevToken.TrailingTrivia.Any((int)SyntaxKind.WhitespaceTrivia)) return true;
+                return false;
+            }
+        }
+
         private SyntaxToken FetchCurrentToken()
         {
             if (_tokenOffset >= _tokenCount)

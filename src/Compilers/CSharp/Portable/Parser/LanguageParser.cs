@@ -2612,9 +2612,62 @@ parse_member_name:;
             {
                 case SyntaxKind.OpenBraceToken:
                 case SyntaxKind.EqualsGreaterThanToken:
-                    result = this.ParsePropertyDeclaration(attributes, modifiers, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt);
+                    result = this.ParsePropertyDeclaration(attributes, modifiers, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt, type: SyntaxFactory.FakeTypeIdentifier(_syntaxFactory));
                     return true;
+                default:
+                    {
+                        // could be a type following the name
+                        var resetPoint = GetResetPoint();
+
+                        var couldBeMethod = IsPossibleMethodDeclarationStart(checkAtIdentifier: false);
+                        var hasWhitespaceAfterName = IsCurrentTokenAfterWhitespace;
+
+                        try
+                        {
+                            var couldBeProperty = true;
+                            var type = TryParseType();
+                            if (type != null)
+                            {
+                                if (couldBeMethod)
+                                {
+                                    if (this.CurrentToken.Kind == SyntaxKind.WhereKeyword)
+                                    {
+                                        // property can't have where clause after type... must be method
+                                        couldBeProperty = false;
+                                    }
+
+                                    // a tuple type could have actually been parameter declarations!
+                                    if (type is TupleTypeSyntax)
+                                    {
+                                        // only ok as tuple if there was whitespace between!
+                                        if (!hasWhitespaceAfterName)
+                                            couldBeProperty = false;
+                                    }
+                                }
+
+                                if (couldBeProperty)
+                                {
+                                    switch (this.CurrentToken.Kind)
+                                    {
+                                        case SyntaxKind.OpenBraceToken:
+                                        case SyntaxKind.EqualsGreaterThanToken:
+                                            result = this.ParsePropertyDeclaration(attributes, modifiers, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt, type: type);
+                                            return true;
+                                    }
+                                }
+
+                                Reset(ref resetPoint);
+                            }
+                        }
+                        finally
+                        {
+                            Release(ref resetPoint);
+                        }
+
+                        break;
+                    }
             }
+
 
             result = null;
             return false;
@@ -2885,8 +2938,36 @@ parse_member_name:;
                     return false;
                 case SyntaxKind.OpenParenToken:             // Goo(     method
                     return isEvent;
-                default:
-                    return true;
+            }
+
+            // could be a type after and still not be a field... if it looks like a property
+            var resetPoint = GetResetPoint();
+
+            try
+            {
+                // skip the name
+                this.EatToken();
+
+                // try parsing type
+                var type = TryParseType();
+                if (type != null)
+                {
+                    // check if it looks like a property
+                    switch (this.CurrentToken.Kind)
+                    {
+                        case SyntaxKind.EqualsGreaterThanToken:
+                        case SyntaxKind.OpenBraceToken:
+                            return false;
+                    }
+                }
+
+                // it should be a type
+                return true;
+            }
+            finally
+            {
+                this.Reset(ref resetPoint);
+                this.Release(ref resetPoint);
             }
         }
 
@@ -3484,7 +3565,8 @@ parse_member_name:;
             SyntaxListBuilder modifiers,
             ExplicitInterfaceSpecifierSyntax explicitInterfaceOpt,
             SyntaxToken identifier,
-            TypeParameterListSyntax typeParameterList)
+            TypeParameterListSyntax typeParameterList,
+            TypeSyntax type = null)
         {
             // check to see if the user tried to create a generic property.
             if (typeParameterList != null)
@@ -3494,7 +3576,7 @@ parse_member_name:;
             }
 
             // try parsing a type
-            var type = TryParseType();
+            if (type == null) type = TryParseType();
             type ??= SyntaxFactory.FakeTypeIdentifier(_syntaxFactory);
 
             // We know we are parsing a property because we have seen either an
@@ -4594,7 +4676,7 @@ tryAgain:
             {
                 accessorList = this.ParseAccessorList(isEvent: true);
             }
-            else if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
+            else if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken || !IsCurrentTokenOnNewline)
             {
                 semicolon = this.EatToken(SyntaxKind.SemicolonToken);
             }
@@ -4644,7 +4726,7 @@ tryAgain:
                 this.ParseVariableDeclarators(flags: 0, variables: variables, parentKind: parentKind);
 
                 SyntaxToken semicolon = null;
-                if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
+                if (CurrentToken.Kind == SyntaxKind.SemicolonToken || !IsCurrentTokenOnNewline)
                 {
                     semicolon = this.EatToken(SyntaxKind.SemicolonToken);
                 }
@@ -4698,7 +4780,7 @@ tryAgain:
                 }
 
                 SyntaxToken semicolon;
-                if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
+                if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken || !IsCurrentTokenOnNewline)
                 {
                     semicolon = this.EatToken(SyntaxKind.SemicolonToken);
                 }
@@ -5163,7 +5245,7 @@ tryAgain:
                 this.ParseVariableDeclarators(VariableFlags.Const, variables, parentKind);
 
                 SyntaxToken semicolon = null;
-                if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
+                if (CurrentToken.Kind == SyntaxKind.SemicolonToken || !IsCurrentTokenOnNewline)
                 {
                     semicolon = this.EatToken(SyntaxKind.SemicolonToken);
                 }
