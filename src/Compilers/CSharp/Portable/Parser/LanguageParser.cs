@@ -6812,8 +6812,17 @@ done:
             FirstElementOfPossibleTupleLiteral,
         }
 
-        private TypeSyntax TryParseType(ParseTypeMode mode = ParseTypeMode.Normal)
+        private TypeSyntax TryParseType(ParseTypeMode mode = ParseTypeMode.Normal, bool allowVoid = true)
         {
+            if (allowVoid)
+            {
+                if (this.CurrentToken.Kind == SyntaxKind.VoidKeyword && this.PeekToken(1).Kind != SyntaxKind.AsteriskToken)
+                {
+                    // Must be 'void' type, so create such a type node and return it.
+                    return _syntaxFactory.PredefinedType(this.EatToken());
+                }
+            }
+
             TypeSyntax type = null;
             var resetPoint = GetResetPoint();
             var parsedType = ParseType(mode);
