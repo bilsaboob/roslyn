@@ -9175,6 +9175,8 @@ tryAgain:
             if (this.CurrentToken.Kind != SyntaxKind.SemicolonToken)
             {
                 arg = this.ParsePossibleRefExpression();
+                // returns are just optional
+                if (arg.IsMissing) arg = null;
             }
 
             SyntaxToken semicolon = null;
