@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
-
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis.Text;
@@ -43,7 +43,17 @@ namespace Microsoft.CodeAnalysis.Editor
 
         internal void InitializeTrackingSpans(ITextSnapshot textSnapshot)
         {
-            this.TrackingSpans = this.Spans.Select(s => textSnapshot.CreateTrackingSpan(s.ToSpan(), SpanTrackingMode.EdgeExclusive)).ToList();
+            this.TrackingSpans = this.Spans.Select(s => {
+                try
+                {
+                    var span = s.ToSpan();
+                    return textSnapshot.CreateTrackingSpan(span, SpanTrackingMode.EdgeExclusive);
+                }
+                catch(Exception e)
+                {
+                    return null;
+                }
+            }).WhereNotNull().ToList();
 
             if (this.ChildItems != null)
             {

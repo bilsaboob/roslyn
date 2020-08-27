@@ -28,7 +28,7 @@ namespace Microsoft.CodeAnalysis
 
         internal const int ListKind = 1;
 
-        private readonly ushort _kind;
+        private ushort _kind;
         protected NodeFlags flags;
         private byte _slotCount;
         private int _fullWidth;
@@ -114,10 +114,13 @@ namespace Microsoft.CodeAnalysis
 
         public abstract string Language { get; }
 
+        public bool IsFake { get; set; }
+
         #region Kind 
         public int RawKind
         {
             get { return _kind; }
+            set { _kind = (ushort)value; }
         }
 
         public bool IsList
@@ -377,7 +380,7 @@ namespace Microsoft.CodeAnalysis
                 return _fullWidth;
             }
 
-            protected set
+            protected internal set
             {
                 _fullWidth = value;
             }
@@ -387,6 +390,7 @@ namespace Microsoft.CodeAnalysis
         {
             get
             {
+                if (_fullWidth == 0) return 0;
                 return _fullWidth - this.GetLeadingTriviaWidth() - this.GetTrailingTriviaWidth();
             }
         }
@@ -675,6 +679,8 @@ namespace Microsoft.CodeAnalysis
                     var currentNode = current.node;
                     var currentLeading = current.leading;
                     var currentTrailing = current.trailing;
+
+                    if (currentNode.IsFake) continue;
 
                     if (currentNode.IsToken)
                     {

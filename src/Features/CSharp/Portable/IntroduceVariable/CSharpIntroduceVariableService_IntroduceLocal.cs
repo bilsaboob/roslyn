@@ -38,14 +38,18 @@ namespace Microsoft.CodeAnalysis.CSharp.IntroduceVariable
                 ? SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ConstKeyword))
                 : default;
 
+            var type = GetTypeSyntax(document, expression, cancellationToken);
             var declarationStatement = SyntaxFactory.LocalDeclarationStatement(
                 modifiers,
                 SyntaxFactory.VariableDeclaration(
-                    GetTypeSyntax(document, expression, cancellationToken),
                     SyntaxFactory.SingletonSeparatedList(SyntaxFactory.VariableDeclarator(
                         newLocalNameToken.WithAdditionalAnnotations(RenameAnnotation.Create()),
+                        type,
                         null,
-                        SyntaxFactory.EqualsValueClause(expression.WithoutTrivia())))));
+                        SyntaxFactory.EqualsValueClause(expression.WithoutTrivia()))
+                    )
+                )
+            );
 
             // If we're inserting into a multi-line parent, then add a newline after the local-var
             // we're adding.  That way we don't end up having it and the starting statement be on

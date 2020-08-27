@@ -27,9 +27,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Organizing.Organizers
             return syntax.Update(syntax.AttributeLists,
                 ModifiersOrganizer.Organize(syntax.Modifiers),
                 syntax.EventKeyword,
-                syntax.Type,
                 syntax.ExplicitInterfaceSpecifier,
                 syntax.Identifier,
+                syntax.Type,
                 syntax.AccessorList,
                 syntax.SemicolonToken);
         }

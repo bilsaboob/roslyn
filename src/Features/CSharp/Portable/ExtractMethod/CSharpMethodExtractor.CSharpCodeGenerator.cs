@@ -404,8 +404,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ExtractMethod
                         yield return SyntaxFactory.LocalDeclarationStatement(
                             declarationStatement.Modifiers,
                             SyntaxFactory.VariableDeclaration(
-                                declarationStatement.Declaration.Type,
-                                SyntaxFactory.SeparatedList(list)),
+                                SyntaxFactory.SeparatedList(list)
+                            ),
                             declarationStatement.SemicolonToken.WithPrependedLeadingTrivia(triviaList));
                         triviaList.Clear();
                     }
@@ -629,7 +629,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExtractMethod
                 var equalsValueClause = initialValue == null ? null : SyntaxFactory.EqualsValueClause(value: initialValue);
 
                 return SyntaxFactory.LocalDeclarationStatement(
-                    SyntaxFactory.VariableDeclaration(typeNode)
+                    SyntaxFactory.VariableDeclaration().WithType(typeNode)
                           .AddVariables(SyntaxFactory.VariableDeclarator(SyntaxFactory.Identifier(variable.Name)).WithInitializer(equalsValueClause)));
             }
 

@@ -223,7 +223,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         public void AddEmptySyntaxList()
         {
             var attributes = new AttributeListSyntax[0];
-            var newMethodDeclaration = SyntaxFactory.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), "M");
+            var newMethodDeclaration = SyntaxFactory.MethodDeclaration("M", SyntaxFactory.ParseTypeName("void"));
             newMethodDeclaration.AddAttributeLists(attributes);
         }
 

@@ -105,6 +105,10 @@ namespace Microsoft.CodeAnalysis.Remote
         {
             Contract.ThrowIfFalse(_startedListening);
 
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
+
             // if this end-point is already disconnected do not log more errors:
             var logError = _disconnectedReason == null;
 
@@ -126,6 +130,10 @@ namespace Microsoft.CodeAnalysis.Remote
         {
             Contract.ThrowIfFalse(_startedListening);
 
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
+
             if (_rpc.IsDisposed)
             {
                 return;
@@ -144,6 +152,10 @@ namespace Microsoft.CodeAnalysis.Remote
         public async Task<T> InvokeAsync<T>(string targetName, IReadOnlyList<object?> arguments, CancellationToken cancellationToken)
         {
             Contract.ThrowIfFalse(_startedListening);
+
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
 
             // if this end-point is already disconnected do not log more errors:
             var logError = _disconnectedReason == null;
@@ -180,6 +192,10 @@ namespace Microsoft.CodeAnalysis.Remote
             var logError = _disconnectedReason == null;
 
             using var linkedCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var linkedCancellationToken = linkedCancellationSource.Token;
+#if DEBUG
+            linkedCancellationToken = new CancellationTokenSource().Token;
+#endif
 
             var pipeName = Guid.NewGuid().ToString();
 
@@ -197,17 +213,17 @@ namespace Microsoft.CodeAnalysis.Remote
                 RaiseCancellationIfInvokeFailed(task, linkedCancellationSource, cancellationToken);
 
                 // wait for asset source to respond
-                await pipe.WaitForConnectionAsync(linkedCancellationSource.Token).ConfigureAwait(false);
+                await pipe.WaitForConnectionAsync(linkedCancellationToken).ConfigureAwait(false);
 
                 // run user task with direct stream
-                var result = await dataReader(stream, linkedCancellationSource.Token).ConfigureAwait(false);
+                var result = await dataReader(stream, linkedCancellationToken).ConfigureAwait(false);
 
                 // wait task to finish
                 await task.ConfigureAwait(false);
 
                 return result;
             }
-            catch (Exception ex) when (!logError || ReportUnlessCanceled(ex, linkedCancellationSource.Token, cancellationToken))
+            catch (Exception ex) when (!logError || ReportUnlessCanceled(ex, linkedCancellationToken, cancellationToken))
             {
                 // Remote call may fail with different exception even when our cancellation token is signaled
                 // (e.g. on shutdown if the connection is dropped).

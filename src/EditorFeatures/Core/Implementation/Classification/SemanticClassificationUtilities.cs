@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Classification;
 using Microsoft.CodeAnalysis.Editor.Shared.Extensions;
@@ -127,6 +128,11 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Classification
                 var snapshot = snapshotSpan.Snapshot;
 
                 var cancellationToken = context.CancellationToken;
+
+#if DEBUG
+                cancellationToken = new CancellationTokenSource().Token;
+#endif
+
                 using (Logger.LogBlock(FunctionId.Tagger_SemanticClassification_TagProducer_ProduceTags, cancellationToken))
                 {
                     var classifiedSpans = ClassificationUtilities.GetOrCreateClassifiedSpanList();

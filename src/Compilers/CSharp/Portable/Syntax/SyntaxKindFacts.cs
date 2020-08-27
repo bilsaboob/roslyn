@@ -1275,6 +1275,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return "+";
                 case SyntaxKind.EqualsToken:
                     return "=";
+                case SyntaxKind.ColonEqualsToken:
+                    return ":=";
                 case SyntaxKind.OpenBraceToken:
                     return "{";
                 case SyntaxKind.CloseBraceToken:

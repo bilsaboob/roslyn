@@ -34,7 +34,9 @@ namespace Microsoft.CodeAnalysis
                 if (change != fullSpan)
                 {
                     // Find the lowest node in the tree that contains the changed region.
-                    node = root.DescendantNodes(n => n.FullSpan.Contains(change)).LastOrDefault();
+                    node = root
+                        .DescendantNodes(n => n.FullSpan.Contains(change))
+                        .LastOrDefault(n => n.FullSpan.Contains(change));
                 }
             }
 

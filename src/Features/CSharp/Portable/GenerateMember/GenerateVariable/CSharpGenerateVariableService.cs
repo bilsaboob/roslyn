@@ -181,12 +181,16 @@ namespace Microsoft.CodeAnalysis.CSharp.GenerateMember.GenerateVariable
                 var assignExpression = (AssignmentExpressionSyntax)node.Parent;
                 var expressionStatement = (StatementSyntax)assignExpression.Parent;
 
+                var t = type.GenerateTypeSyntax();
                 var declarationStatement = SyntaxFactory.LocalDeclarationStatement(
                     SyntaxFactory.VariableDeclaration(
-                        type.GenerateTypeSyntax(),
                         SyntaxFactory.SingletonSeparatedList(
-                            SyntaxFactory.VariableDeclarator(token, null, SyntaxFactory.EqualsValueClause(
-                                assignExpression.OperatorToken, assignExpression.Right)))));
+                            SyntaxFactory.VariableDeclarator(token, t, null, SyntaxFactory.EqualsValueClause(
+                                assignExpression.OperatorToken, assignExpression.Right)
+                            )
+                        )
+                    )
+                );
                 declarationStatement = declarationStatement.WithAdditionalAnnotations(Formatter.Annotation);
 
                 var root = token.GetAncestor<CompilationUnitSyntax>();

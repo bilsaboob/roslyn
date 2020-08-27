@@ -182,12 +182,14 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 default,
                 AsModifierList(accessibility, modifiers, SyntaxKind.FieldDeclaration),
                 SyntaxFactory.VariableDeclaration(
-                    (TypeSyntax)type,
                     SyntaxFactory.SingletonSeparatedList(
                         SyntaxFactory.VariableDeclarator(
                             name.ToIdentifierToken(),
+                            (TypeSyntax)type,
                             null,
-                            initializer != null ? SyntaxFactory.EqualsValueClause((ExpressionSyntax)initializer) : null))));
+                            initializer != null ? SyntaxFactory.EqualsValueClause((ExpressionSyntax)initializer) : null))
+                    )
+                );
         }
 
         public override SyntaxNode ParameterDeclaration(string name, SyntaxNode type, SyntaxNode initializer, RefKind refKind)
@@ -497,9 +499,11 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 default,
                 AsModifierList(accessibility, modifiers, SyntaxKind.EventFieldDeclaration),
                 SyntaxFactory.VariableDeclaration(
-                    (TypeSyntax)type,
                     SyntaxFactory.SingletonSeparatedList(
-                        SyntaxFactory.VariableDeclarator(name))));
+                        SyntaxFactory.VariableDeclarator(SyntaxFactory.Identifier(name), (TypeSyntax)type, null, null)
+                    )
+                )
+            );
         }
 
         public override SyntaxNode CustomEventDeclaration(
@@ -536,9 +540,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             return SyntaxFactory.EventDeclaration(
                 default,
                 AsModifierList(accessibility, modifiers, SyntaxKind.EventDeclaration),
-                (TypeSyntax)type,
                 null,
                 name.ToIdentifierToken(),
+                (TypeSyntax)type,
                 SyntaxFactory.AccessorList(SyntaxFactory.List(accessors)));
         }
 

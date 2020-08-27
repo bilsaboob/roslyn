@@ -776,6 +776,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             // we want to treat the declaration as an explicitly typed declaration.
 
             TypeWithAnnotations declType = BindTypeOrVarKeyword(typeSyntax.SkipRef(out _), diagnostics, out isVar, out alias);
+
+            if ((!declType.HasType || declType.Type.IsErrorType() == true) && !isVar)
+            {
+                // check if it's a new type of declaration using the ":=" syntax... then treat this as a "var"
+                if (declarationNode is VariableDeclarationSyntax varDecl)
+                {
+                    var colonEqualsToken = varDecl.Variables.FirstOrDefault(v => v != null && v.Initializer != null && v.Initializer.EqualsToken.Text == ":=");
+                    if (colonEqualsToken != null)
+                    {
+                        isVar = true;
+                    }
+                }
+            }
+
             Debug.Assert(declType.HasType || isVar);
 
             if (isVar)

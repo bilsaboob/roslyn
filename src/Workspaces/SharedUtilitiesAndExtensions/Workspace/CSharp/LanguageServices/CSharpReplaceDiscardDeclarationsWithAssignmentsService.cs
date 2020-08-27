@@ -218,7 +218,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ReplaceDiscardDeclarationsWithAssignment
                 if (_currentNonDiscardVariables.Count > 0)
                 {
                     var statement = SyntaxFactory.LocalDeclarationStatement(
-                                        SyntaxFactory.VariableDeclaration(_localDeclarationStatement.Declaration.Type, _currentNonDiscardVariables))
+                                        SyntaxFactory.VariableDeclaration(_currentNonDiscardVariables))
                                     .WithAdditionalAnnotations(Formatter.Annotation);
                     _statementsBuilder.Add(statement);
                     _currentNonDiscardVariables = new SeparatedSyntaxList<VariableDeclaratorSyntax>();

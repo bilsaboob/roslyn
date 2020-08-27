@@ -630,6 +630,10 @@ namespace Microsoft.CodeAnalysis
             // operation should only be performed on documents that support syntax trees
             RoslynDebug.Assert(_treeSource != null);
 
+#if DEBUG
+            cancellationToken = new CancellationTokenSource().Token;
+#endif
+
             var treeAndVersion = await _treeSource.GetValueAsync(cancellationToken).ConfigureAwait(false);
 
             // make sure there is an association between this tree and this doc id before handing it out

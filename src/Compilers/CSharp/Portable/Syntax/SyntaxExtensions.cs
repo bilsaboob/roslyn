@@ -278,10 +278,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             return syntax.Update(
                 attributeLists,
                 modifiers,
-                type,
                 explicitInterfaceSpecifier,
                 thisKeyword,
                 parameterList,
+                type,
                 accessorList,
                 expressionBody: null,
                 semicolonToken: default);
@@ -326,11 +326,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             return syntax.Update(
                 attributeLists,
                 modifiers,
-                returnType,
                 explicitInterfaceSpecifier,
                 identifier,
                 typeParameterList,
                 parameterList,
+                returnType,
                 constraintClauses,
                 block,
                 expressionBody: null,

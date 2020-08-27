@@ -524,12 +524,16 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq
                     : VarNameIdentifier;
                 return SyntaxFactory.LocalDeclarationStatement(
                             SyntaxFactory.VariableDeclaration(
-                                typeSyntax,
                                 SyntaxFactory.SingletonSeparatedList(
                                     SyntaxFactory.VariableDeclarator(
                                         identifier,
+                                        typeSyntax,
                                         argumentList: null,
-                                        SyntaxFactory.EqualsValueClause(expression))))).WithAdditionalAnnotations(Simplifier.Annotation);
+                                        SyntaxFactory.EqualsValueClause(expression)
+                                    )
+                                )
+                            )
+                        ).WithAdditionalAnnotations(Simplifier.Annotation);
             }
 
             private bool TryReplaceWithLocalFunction(QueryExpressionProcessingInfo queryExpressionProcessingInfo, out DocumentUpdateInfo documentUpdateInfo)
@@ -695,13 +699,19 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq
                 var statements = GenerateStatements(
                     expression => AddToBlockTop(SyntaxFactory.LocalDeclarationStatement(
                         SyntaxFactory.VariableDeclaration(
-                            forEachStatement.Type,
                             SyntaxFactory.SingletonSeparatedList(
                                 SyntaxFactory.VariableDeclarator(
                                     forEachStatement.Identifier,
+                                    forEachStatement.Type,
                                     argumentList: null,
-                                    SyntaxFactory.EqualsValueClause(expression))))),
-                                        forEachStatement.Statement).WithAdditionalAnnotations(Formatter.Annotation), queryExpressionProcessingInfo);
+                                    SyntaxFactory.EqualsValueClause(expression)
+                                )
+                            )
+                        )
+                    ),
+                    forEachStatement.Statement).WithAdditionalAnnotations(Formatter.Annotation),
+                    queryExpressionProcessingInfo
+                );
                 return new DocumentUpdateInfo(forEachStatement, statements);
             }
 

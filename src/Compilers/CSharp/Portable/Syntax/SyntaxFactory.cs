@@ -2440,9 +2440,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             return SyntaxFactory.PropertyDeclaration(
                 attributeLists,
                 modifiers,
-                type,
                 explicitInterfaceSpecifier,
                 identifier,
+                type,
                 accessorList,
                 expressionBody: null,
                 initializer: null);
@@ -2463,8 +2463,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 modifiers: modifiers,
                 implicitOrExplicitKeyword: implicitOrExplicitKeyword,
                 operatorKeyword: operatorKeyword,
-                type: type,
                 parameterList: parameterList,
+                type: type,
                 body: body,
                 expressionBody: null,
                 semicolonToken: semicolonToken);
@@ -2534,13 +2534,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>Creates a new EventDeclarationSyntax instance.</summary>
         public static EventDeclarationSyntax EventDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken eventKeyword, TypeSyntax type, ExplicitInterfaceSpecifierSyntax explicitInterfaceSpecifier, SyntaxToken identifier, AccessorListSyntax accessorList)
         {
-            return EventDeclaration(attributeLists, modifiers, eventKeyword, type, explicitInterfaceSpecifier, identifier, accessorList, semicolonToken: default);
+            return EventDeclaration(attributeLists, modifiers, eventKeyword, explicitInterfaceSpecifier, identifier, type, accessorList, semicolonToken: default);
         }
 
         /// <summary>Creates a new EventDeclarationSyntax instance.</summary>
         public static EventDeclarationSyntax EventDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken eventKeyword, TypeSyntax type, ExplicitInterfaceSpecifierSyntax explicitInterfaceSpecifier, SyntaxToken identifier, SyntaxToken semicolonToken)
         {
-            return EventDeclaration(attributeLists, modifiers, eventKeyword, type, explicitInterfaceSpecifier, identifier, accessorList: null, semicolonToken);
+            return EventDeclaration(attributeLists, modifiers, eventKeyword, explicitInterfaceSpecifier, identifier, type, accessorList: null, semicolonToken);
         }
 
         /// <summary>Creates a new SwitchStatementSyntax instance.</summary>

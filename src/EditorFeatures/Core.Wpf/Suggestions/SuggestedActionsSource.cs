@@ -1161,6 +1161,10 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Suggestions
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 var linkedToken = linkedTokenSource.Token;
 
+#if DEBUG
+                linkedToken = new CancellationTokenSource().Token;
+#endif
+
                 var errorTask = Task.Run(
                     () => GetFixLevelAsync(provider, document, range, linkedToken), linkedToken);
 

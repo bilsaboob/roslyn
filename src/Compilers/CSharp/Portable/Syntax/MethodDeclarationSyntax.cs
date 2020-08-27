@@ -47,11 +47,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             return SyntaxFactory.MethodDeclaration(
                 attributeLists,
                 modifiers,
-                returnType,
                 explicitInterfaceSpecifier,
                 identifier,
                 typeParameterList,
                 parameterList,
+                returnType,
                 constraintClauses,
                 body,
                 null,
