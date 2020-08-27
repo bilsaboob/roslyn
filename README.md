@@ -1,6 +1,6 @@
 # Welcome to the "rapid sharp" fork of the .NET Compiler Platform ("Roslyn")
 
-This fork is an experiment changing the syntax of c# into something more similar to Kotlin / Scala / Go - but generally a mix syntax features from many other languages.
+This fork is an experiment of changing the syntax of c# into something more similar to Kotlin / Scala / Go - but generally a mix of syntax features from many other languages.
 
 The aim of this is to achieve syntax enabling writing "fluent dsl" - with no regard to backwards compatibility with standard c# 8-9 onward.
 
