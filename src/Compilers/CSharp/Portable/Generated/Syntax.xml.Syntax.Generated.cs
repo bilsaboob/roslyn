@@ -6461,18 +6461,32 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
         public override SyntaxToken ForEachKeyword => new SyntaxToken(this, ((Syntax.InternalSyntax.ForEachStatementSyntax)this.Green).forEachKeyword, GetChildPosition(2), GetChildIndex(2));
 
-        public override SyntaxToken OpenParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.ForEachStatementSyntax)this.Green).openParenToken, GetChildPosition(3), GetChildIndex(3));
-
-        public TypeSyntax Type => GetRed(ref this.type, 4)!;
+        public override SyntaxToken OpenParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.ForEachStatementSyntax)this.Green).openParenToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(3), GetChildIndex(3)) : default;
+            }
+        }
 
         /// <summary>Gets the identifier.</summary>
-        public SyntaxToken Identifier => new SyntaxToken(this, ((Syntax.InternalSyntax.ForEachStatementSyntax)this.Green).identifier, GetChildPosition(5), GetChildIndex(5));
+        public SyntaxToken Identifier => new SyntaxToken(this, ((Syntax.InternalSyntax.ForEachStatementSyntax)this.Green).identifier, GetChildPosition(4), GetChildIndex(4));
+
+        public TypeSyntax Type => GetRed(ref this.type, 5)!;
 
         public override SyntaxToken InKeyword => new SyntaxToken(this, ((Syntax.InternalSyntax.ForEachStatementSyntax)this.Green).inKeyword, GetChildPosition(6), GetChildIndex(6));
 
         public override ExpressionSyntax Expression => GetRed(ref this.expression, 7)!;
 
-        public override SyntaxToken CloseParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.ForEachStatementSyntax)this.Green).closeParenToken, GetChildPosition(8), GetChildIndex(8));
+        public override SyntaxToken CloseParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.ForEachStatementSyntax)this.Green).closeParenToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(8), GetChildIndex(8)) : default;
+            }
+        }
 
         public override StatementSyntax Statement => GetRed(ref this.statement, 9)!;
 
@@ -6480,7 +6494,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             => index switch
             {
                 0 => GetRedAtZero(ref this.attributeLists)!,
-                4 => GetRed(ref this.type, 4)!,
+                5 => GetRed(ref this.type, 5)!,
                 7 => GetRed(ref this.expression, 7)!,
                 9 => GetRed(ref this.statement, 9)!,
                 _ => null,
@@ -6490,7 +6504,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             => index switch
             {
                 0 => this.attributeLists,
-                4 => this.type,
+                5 => this.type,
                 7 => this.expression,
                 9 => this.statement,
                 _ => null,
@@ -6500,11 +6514,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitForEachStatement(this);
 
-        public ForEachStatementSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, TypeSyntax type, SyntaxToken identifier, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, StatementSyntax statement)
+        public ForEachStatementSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, StatementSyntax statement)
         {
-            if (attributeLists != this.AttributeLists || awaitKeyword != this.AwaitKeyword || forEachKeyword != this.ForEachKeyword || openParenToken != this.OpenParenToken || type != this.Type || identifier != this.Identifier || inKeyword != this.InKeyword || expression != this.Expression || closeParenToken != this.CloseParenToken || statement != this.Statement)
+            if (attributeLists != this.AttributeLists || awaitKeyword != this.AwaitKeyword || forEachKeyword != this.ForEachKeyword || openParenToken != this.OpenParenToken || identifier != this.Identifier || type != this.Type || inKeyword != this.InKeyword || expression != this.Expression || closeParenToken != this.CloseParenToken || statement != this.Statement)
             {
-                var newNode = SyntaxFactory.ForEachStatement(attributeLists, awaitKeyword, forEachKeyword, openParenToken, type, identifier, inKeyword, expression, closeParenToken, statement);
+                var newNode = SyntaxFactory.ForEachStatement(attributeLists, awaitKeyword, forEachKeyword, openParenToken, identifier, type, inKeyword, expression, closeParenToken, statement);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -6513,23 +6527,23 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         }
 
         internal override StatementSyntax WithAttributeListsCore(SyntaxList<AttributeListSyntax> attributeLists) => WithAttributeLists(attributeLists);
-        public new ForEachStatementSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Type, this.Identifier, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
+        public new ForEachStatementSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Identifier, this.Type, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
         internal override CommonForEachStatementSyntax WithAwaitKeywordCore(SyntaxToken awaitKeyword) => WithAwaitKeyword(awaitKeyword);
-        public new ForEachStatementSyntax WithAwaitKeyword(SyntaxToken awaitKeyword) => Update(this.AttributeLists, awaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Type, this.Identifier, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
+        public new ForEachStatementSyntax WithAwaitKeyword(SyntaxToken awaitKeyword) => Update(this.AttributeLists, awaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Identifier, this.Type, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
         internal override CommonForEachStatementSyntax WithForEachKeywordCore(SyntaxToken forEachKeyword) => WithForEachKeyword(forEachKeyword);
-        public new ForEachStatementSyntax WithForEachKeyword(SyntaxToken forEachKeyword) => Update(this.AttributeLists, this.AwaitKeyword, forEachKeyword, this.OpenParenToken, this.Type, this.Identifier, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
+        public new ForEachStatementSyntax WithForEachKeyword(SyntaxToken forEachKeyword) => Update(this.AttributeLists, this.AwaitKeyword, forEachKeyword, this.OpenParenToken, this.Identifier, this.Type, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
         internal override CommonForEachStatementSyntax WithOpenParenTokenCore(SyntaxToken openParenToken) => WithOpenParenToken(openParenToken);
-        public new ForEachStatementSyntax WithOpenParenToken(SyntaxToken openParenToken) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, openParenToken, this.Type, this.Identifier, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
-        public ForEachStatementSyntax WithType(TypeSyntax type) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, type, this.Identifier, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
-        public ForEachStatementSyntax WithIdentifier(SyntaxToken identifier) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Type, identifier, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
+        public new ForEachStatementSyntax WithOpenParenToken(SyntaxToken openParenToken) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, openParenToken, this.Identifier, this.Type, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
+        public ForEachStatementSyntax WithIdentifier(SyntaxToken identifier) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, identifier, this.Type, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
+        public ForEachStatementSyntax WithType(TypeSyntax type) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Identifier, type, this.InKeyword, this.Expression, this.CloseParenToken, this.Statement);
         internal override CommonForEachStatementSyntax WithInKeywordCore(SyntaxToken inKeyword) => WithInKeyword(inKeyword);
-        public new ForEachStatementSyntax WithInKeyword(SyntaxToken inKeyword) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Type, this.Identifier, inKeyword, this.Expression, this.CloseParenToken, this.Statement);
+        public new ForEachStatementSyntax WithInKeyword(SyntaxToken inKeyword) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Identifier, this.Type, inKeyword, this.Expression, this.CloseParenToken, this.Statement);
         internal override CommonForEachStatementSyntax WithExpressionCore(ExpressionSyntax expression) => WithExpression(expression);
-        public new ForEachStatementSyntax WithExpression(ExpressionSyntax expression) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Type, this.Identifier, this.InKeyword, expression, this.CloseParenToken, this.Statement);
+        public new ForEachStatementSyntax WithExpression(ExpressionSyntax expression) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Identifier, this.Type, this.InKeyword, expression, this.CloseParenToken, this.Statement);
         internal override CommonForEachStatementSyntax WithCloseParenTokenCore(SyntaxToken closeParenToken) => WithCloseParenToken(closeParenToken);
-        public new ForEachStatementSyntax WithCloseParenToken(SyntaxToken closeParenToken) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Type, this.Identifier, this.InKeyword, this.Expression, closeParenToken, this.Statement);
+        public new ForEachStatementSyntax WithCloseParenToken(SyntaxToken closeParenToken) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Identifier, this.Type, this.InKeyword, this.Expression, closeParenToken, this.Statement);
         internal override CommonForEachStatementSyntax WithStatementCore(StatementSyntax statement) => WithStatement(statement);
-        public new ForEachStatementSyntax WithStatement(StatementSyntax statement) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Type, this.Identifier, this.InKeyword, this.Expression, this.CloseParenToken, statement);
+        public new ForEachStatementSyntax WithStatement(StatementSyntax statement) => Update(this.AttributeLists, this.AwaitKeyword, this.ForEachKeyword, this.OpenParenToken, this.Identifier, this.Type, this.InKeyword, this.Expression, this.CloseParenToken, statement);
 
         internal override StatementSyntax AddAttributeListsCore(params AttributeListSyntax[] items) => AddAttributeLists(items);
         public new ForEachStatementSyntax AddAttributeLists(params AttributeListSyntax[] items) => WithAttributeLists(this.AttributeLists.AddRange(items));
@@ -6560,7 +6574,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
         public override SyntaxToken ForEachKeyword => new SyntaxToken(this, ((Syntax.InternalSyntax.ForEachVariableStatementSyntax)this.Green).forEachKeyword, GetChildPosition(2), GetChildIndex(2));
 
-        public override SyntaxToken OpenParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.ForEachVariableStatementSyntax)this.Green).openParenToken, GetChildPosition(3), GetChildIndex(3));
+        public override SyntaxToken OpenParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.ForEachVariableStatementSyntax)this.Green).openParenToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(3), GetChildIndex(3)) : default;
+            }
+        }
 
         /// <summary>
         /// The variable(s) of the loop. In correct code this is a tuple
@@ -6574,7 +6595,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
         public override ExpressionSyntax Expression => GetRed(ref this.expression, 6)!;
 
-        public override SyntaxToken CloseParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.ForEachVariableStatementSyntax)this.Green).closeParenToken, GetChildPosition(7), GetChildIndex(7));
+        public override SyntaxToken CloseParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.ForEachVariableStatementSyntax)this.Green).closeParenToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(7), GetChildIndex(7)) : default;
+            }
+        }
 
         public override StatementSyntax Statement => GetRed(ref this.statement, 8)!;
 
