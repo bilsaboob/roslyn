@@ -3728,7 +3728,7 @@ parse_member_name:;
             return false;
         }
 
-        private bool IsProbablyStatementEnd()
+        private bool IsProbablyStatementEnd(bool continueStatementOnIndentedNewline = false)
         {
             // semi comma usually means end of the statement
             if (CurrentToken.Kind == SyntaxKind.SemicolonToken) return true;
@@ -3738,6 +3738,8 @@ parse_member_name:;
 
             // we must be at a new line at least for the remaining checks
             if (!IsCurrentTokenOnNewline) return false;
+
+            if (continueStatementOnIndentedNewline && IsCurrentLineIndented) return false;
 
             // if possibly a new statement
             if (IsPossibleStatement(acceptAccessibilityMods: false)) return true;
@@ -8921,17 +8923,123 @@ tryAgain:
                 @foreach = this.EatToken(SyntaxKind.ForEachKeyword);
             }
 
-            var openParen = this.EatToken(SyntaxKind.OpenParenToken);
-
-            var variable = ParseExpressionOrDeclaration(ParseTypeMode.Normal, feature: MessageID.IDS_FeatureTuples, permitTupleDesignation: true);
-            var @in = this.EatToken(SyntaxKind.InKeyword, ErrorCode.ERR_InExpected);
-            if (!IsValidForeachVariable(variable))
+            SyntaxToken openParen = null;
+            var hasOpenParen = true;
+            if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken)
             {
-                @in = this.AddError(@in, ErrorCode.ERR_BadForeachDecl);
+                openParen = this.EatToken(SyntaxKind.OpenParenToken);
+            }
+            else
+            {
+                openParen = SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken);
+                hasOpenParen = false;
             }
 
-            var expression = this.ParseExpressionCore();
-            var closeParen = this.EatToken(SyntaxKind.CloseParenToken);
+            // check for simple variable case
+            SyntaxToken identifier = null;
+            ExpressionSyntax variable = null;
+            TypeSyntax type = null;
+            SyntaxToken @in = null;
+            var isMissingIn = false;
+
+            // parse either the variable declaration part
+            var nextToken = this.PeekToken(1);
+            if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken && nextToken.Kind == SyntaxKind.InKeyword)
+            {
+                identifier = this.EatToken();
+                type = SyntaxFactory.FakeTypeIdentifier();
+                type.IsVar = true;
+            }
+            else if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken && nextToken.Kind == SyntaxKind.IdentifierToken && nextToken.Text == "i" && this.PeekToken(2).Kind != SyntaxKind.InKeyword)
+            {
+                // probably on it's way typing "in" eg: foreach(x i)
+                identifier = this.EatToken();
+                type = SyntaxFactory.FakeTypeIdentifier();
+                type.IsVar = true;
+
+                var tokenLikeIn = this.EatToken();
+                tokenLikeIn = this.AddError(tokenLikeIn, ErrorCode.ERR_InExpected, SyntaxFacts.GetText(SyntaxKind.InKeyword), tokenLikeIn.Text);
+                @in = ConvertToMissingWithTrailingTrivia(tokenLikeIn, SyntaxKind.InKeyword);
+                isMissingIn = true;
+            }
+            else
+            {
+                variable = ParseDeclarationExpression(ParseTypeMode.Normal, feature: MessageID.IDS_FeatureTuples);
+            }
+
+            // parse the "in" part
+            if (@in == null)
+            {
+                if (CurrentToken.Kind != SyntaxKind.OpenBraceToken)
+                {
+                    @in = this.EatTokenAsKind(SyntaxKind.InKeyword);
+                }
+            }
+
+            if (@in == null)
+            {
+                @in = SyntaxFactory.FakeToken(SyntaxKind.InKeyword);
+                isMissingIn = true;
+            }
+
+            if (variable == null && identifier == null)
+            {
+                if (!isMissingIn)
+                {
+                    @in = this.AddError(@in, ErrorCode.ERR_BadForeachDecl);
+                }
+                else
+                {
+                    @foreach = this.AddError(@foreach, ErrorCode.ERR_BadForeachDecl);
+                }
+            }
+
+            if (variable != null && !IsValidForeachVariable(variable))
+            {
+                if (!isMissingIn)
+                {
+                    @in = this.AddError(@in, ErrorCode.ERR_BadForeachDecl);
+                }
+                else
+                {
+                    @foreach = this.AddError(@foreach, ErrorCode.ERR_BadForeachDecl);
+                }
+            }
+
+            ExpressionSyntax expression = null;
+            // parse the "in expression" for everything following the "in" until newline or "{"
+            if (CurrentToken.Kind == SyntaxKind.OpenBraceToken || IsProbablyStatementEnd(continueStatementOnIndentedNewline: true))
+            {
+                // can't be expression part if it's a:
+                // 1. '{' ... it must be the foreach statement block
+                // 2. probable end of statement ... like on newline without indentation ...
+                expression = SyntaxFactory.FakeIdentifier(_syntaxFactory);
+            }
+            else
+            {
+                var wasSimpleExpr = IsSimpleExpression;
+                IsSimpleExpression = true;
+                expression = this.ParseExpressionCore();
+                IsSimpleExpression = wasSimpleExpr;
+            }
+
+            SyntaxToken closeParen = null;
+            if (hasOpenParen)
+            {
+                closeParen = this.EatToken(SyntaxKind.CloseParenToken);
+            }
+            else
+            {
+                if (this.CurrentToken.Kind == SyntaxKind.CloseParenToken)
+                {
+                    closeParen = this.AddError(this.EatToken(SyntaxKind.CloseParenToken), ErrorCode.ERR_UnexpectedToken);
+                }
+                else
+                {
+                    closeParen = SyntaxFactory.FakeToken(SyntaxKind.CloseParenToken);
+                }
+            }
+
             var statement = this.ParseEmbeddedStatement();
 
             if (variable is DeclarationExpressionSyntax decl)
@@ -8947,7 +9055,6 @@ tryAgain:
                 if (decl.designation.Kind != SyntaxKind.ParenthesizedVariableDesignation)
                 {
                     // if we see a foreach declaration that isn't a deconstruction, we use the old form of foreach syntax node.
-                    SyntaxToken identifier;
                     switch (decl.designation.Kind)
                     {
                         case SyntaxKind.SingleVariableDesignation:
@@ -8963,11 +9070,18 @@ tryAgain:
                             throw ExceptionUtilities.UnexpectedValue(decl.designation.Kind);
                     }
 
-                    return _syntaxFactory.ForEachStatement(attributes, awaitTokenOpt, @foreach, openParen, decl.Type, identifier, @in, expression, closeParen, statement);
+                    type = decl.Type;
                 }
             }
 
-            return _syntaxFactory.ForEachVariableStatement(attributes, awaitTokenOpt, @foreach, openParen, variable, @in, expression, closeParen, statement);
+            if (identifier != null)
+            {
+                return _syntaxFactory.ForEachStatement(attributes, awaitTokenOpt, @foreach, openParen, identifier, type, @in, expression, closeParen, statement);
+            }
+            else
+            {
+                return _syntaxFactory.ForEachVariableStatement(attributes, awaitTokenOpt, @foreach, openParen, variable, @in, expression, closeParen, statement);
+            }
         }
 
         //
@@ -9086,7 +9200,8 @@ tryAgain:
                     return true;
                 case SyntaxKind.IdentifierName:
                     // e.g. `foreach (_ in e)`
-                    return ((IdentifierNameSyntax)variable).Identifier.ContextualKind == SyntaxKind.UnderscoreToken;
+                    // e.g. `foreach (x in e)`
+                    return true;
                 default:
                     return false;
             }
@@ -10775,10 +10890,10 @@ tryAgain:
                         // check for special case lambdas:
                         // 1. async { ... }
                         // 2. async => ...
-                        if(this.CurrentToken.ContextualKind == SyntaxKind.AsyncKeyword)
+                        if (this.CurrentToken.ContextualKind == SyntaxKind.AsyncKeyword)
                         {
                             var peekIndex = 1;
-                            
+
                             if(this.PeekToken(peekIndex).Kind == SyntaxKind.StaticKeyword)
                                 peekIndex = 2;
 
@@ -10958,6 +11073,8 @@ tryAgain:
             return this.PeekToken(tokenIndex).Kind == SyntaxKind.DelegateKeyword;
         }
 
+        internal bool IsSimpleExpression { get; set; }
+
         private ExpressionSyntax ParsePostFixExpression(ExpressionSyntax expr)
         {
             Debug.Assert(expr != null);
@@ -10972,6 +11089,7 @@ tryAgain:
                         break;
 
                     case SyntaxKind.OpenBraceToken:
+                        if (IsSimpleExpression) return expr;
                         if (expr is InvocationExpressionSyntax) return expr;
                         var openToken = SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken, "(");
                         var closeToken = SyntaxFactory.FakeToken(SyntaxKind.CloseParenToken, ")");
@@ -11778,7 +11896,7 @@ tryAgain:
             int peekIndex;
             bool seenStatic;
             bool seenAsync;
-            
+
             if (this.CurrentToken.Kind == SyntaxKind.StaticKeyword)
             {
                 peekIndex = 1;
