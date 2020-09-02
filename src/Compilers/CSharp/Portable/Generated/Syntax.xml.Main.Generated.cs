@@ -1739,7 +1739,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update((IdentifierNameSyntax?)Visit(node.Name) ?? throw new ArgumentNullException("name"), VisitToken(node.ColonToken));
 
         public override SyntaxNode? VisitDeclarationExpression(DeclarationExpressionSyntax node)
-            => node.Update((TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"), (VariableDesignationSyntax?)Visit(node.Designation) ?? throw new ArgumentNullException("designation"));
+            => node.Update((VariableDesignationSyntax?)Visit(node.Designation) ?? throw new ArgumentNullException("designation"), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"));
 
         public override SyntaxNode? VisitCastExpression(CastExpressionSyntax node)
             => node.Update(VisitToken(node.OpenParenToken), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"), VisitToken(node.CloseParenToken), (ExpressionSyntax?)Visit(node.Expression) ?? throw new ArgumentNullException("expression"));
@@ -3163,11 +3163,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.NameColon(SyntaxFactory.IdentifierName(name), SyntaxFactory.Token(SyntaxKind.ColonToken));
 
         /// <summary>Creates a new DeclarationExpressionSyntax instance.</summary>
-        public static DeclarationExpressionSyntax DeclarationExpression(TypeSyntax type, VariableDesignationSyntax designation)
+        public static DeclarationExpressionSyntax DeclarationExpression(VariableDesignationSyntax designation, TypeSyntax type)
         {
-            if (type == null) throw new ArgumentNullException(nameof(type));
             if (designation == null) throw new ArgumentNullException(nameof(designation));
-            return (DeclarationExpressionSyntax)Syntax.InternalSyntax.SyntaxFactory.DeclarationExpression((Syntax.InternalSyntax.TypeSyntax)type.Green, (Syntax.InternalSyntax.VariableDesignationSyntax)designation.Green).CreateRed();
+            if (type == null) throw new ArgumentNullException(nameof(type));
+            return (DeclarationExpressionSyntax)Syntax.InternalSyntax.SyntaxFactory.DeclarationExpression((Syntax.InternalSyntax.VariableDesignationSyntax)designation.Green, (Syntax.InternalSyntax.TypeSyntax)type.Green).CreateRed();
         }
 
         /// <summary>Creates a new CastExpressionSyntax instance.</summary>

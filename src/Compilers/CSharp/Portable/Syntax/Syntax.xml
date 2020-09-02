@@ -1218,12 +1218,12 @@
   </Node>
   <Node Name="DeclarationExpressionSyntax" Base="ExpressionSyntax">
     <Kind Name="DeclarationExpression"/>
-    <Field Name="Type" Type="TypeSyntax"/>
     <Field Name="Designation" Type="VariableDesignationSyntax">
       <PropertyComment>
         <summary>Declaration representing the variable declared in an out parameter or deconstruction.</summary>
       </PropertyComment>
     </Field>
+    <Field Name="Type" Type="TypeSyntax"/>
     <TypeComment>
       <summary>Class which represents the syntax node for the variable declaration in an out var declaration or a deconstruction declaration.</summary>
     </TypeComment>

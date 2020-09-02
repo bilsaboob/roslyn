@@ -2295,32 +2295,32 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     /// <summary>Class which represents the syntax node for the variable declaration in an out var declaration or a deconstruction declaration.</summary>
     public sealed partial class DeclarationExpressionSyntax : ExpressionSyntax
     {
-        private TypeSyntax? type;
         private VariableDesignationSyntax? designation;
+        private TypeSyntax? type;
 
         internal DeclarationExpressionSyntax(InternalSyntax.CSharpSyntaxNode green, SyntaxNode? parent, int position)
           : base(green, parent, position)
         {
         }
 
-        public TypeSyntax Type => GetRedAtZero(ref this.type)!;
-
         /// <summary>Declaration representing the variable declared in an out parameter or deconstruction.</summary>
-        public VariableDesignationSyntax Designation => GetRed(ref this.designation, 1)!;
+        public VariableDesignationSyntax Designation => GetRedAtZero(ref this.designation)!;
+
+        public TypeSyntax Type => GetRed(ref this.type, 1)!;
 
         internal override SyntaxNode? GetNodeSlot(int index)
             => index switch
             {
-                0 => GetRedAtZero(ref this.type)!,
-                1 => GetRed(ref this.designation, 1)!,
+                0 => GetRedAtZero(ref this.designation)!,
+                1 => GetRed(ref this.type, 1)!,
                 _ => null,
             };
 
         internal override SyntaxNode? GetCachedSlot(int index)
             => index switch
             {
-                0 => this.type,
-                1 => this.designation,
+                0 => this.designation,
+                1 => this.type,
                 _ => null,
             };
 
@@ -2328,11 +2328,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitDeclarationExpression(this);
 
-        public DeclarationExpressionSyntax Update(TypeSyntax type, VariableDesignationSyntax designation)
+        public DeclarationExpressionSyntax Update(VariableDesignationSyntax designation, TypeSyntax type)
         {
-            if (type != this.Type || designation != this.Designation)
+            if (designation != this.Designation || type != this.Type)
             {
-                var newNode = SyntaxFactory.DeclarationExpression(type, designation);
+                var newNode = SyntaxFactory.DeclarationExpression(designation, type);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -2340,8 +2340,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return this;
         }
 
-        public DeclarationExpressionSyntax WithType(TypeSyntax type) => Update(type, this.Designation);
-        public DeclarationExpressionSyntax WithDesignation(VariableDesignationSyntax designation) => Update(this.Type, designation);
+        public DeclarationExpressionSyntax WithDesignation(VariableDesignationSyntax designation) => Update(designation, this.Type);
+        public DeclarationExpressionSyntax WithType(TypeSyntax type) => Update(this.Designation, type);
     }
 
     /// <summary>Class which represents the syntax node for cast expression.</summary>

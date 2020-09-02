@@ -79,10 +79,11 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq.ConvertForEachToLinqQuery
                     SyntaxFactory.SeparatedList(identifiers.Select(
                         identifier => SyntaxFactory.Argument(SyntaxFactory.IdentifierName(identifier)))));
                 var declaration = SyntaxFactory.DeclarationExpression(
-                    VarNameIdentifier,
                     SyntaxFactory.ParenthesizedVariableDesignation(
                         SyntaxFactory.SeparatedList<VariableDesignationSyntax>(identifiers.Select(
-                            identifier => SyntaxFactory.SingleVariableDesignation(identifier)))));
+                            identifier => SyntaxFactory.SingleVariableDesignation(identifier)))),
+                        VarNameIdentifier
+                    );
 
                 // Generate foreach(var (a,b) ... select (a, b))
                 return SyntaxFactory.ForEachVariableStatement(

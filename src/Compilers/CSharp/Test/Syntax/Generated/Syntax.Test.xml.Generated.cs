@@ -146,7 +146,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => InternalSyntaxFactory.NameColon(GenerateIdentifierName(), InternalSyntaxFactory.Token(SyntaxKind.ColonToken));
 
         private static Syntax.InternalSyntax.DeclarationExpressionSyntax GenerateDeclarationExpression()
-            => InternalSyntaxFactory.DeclarationExpression(GenerateIdentifierName(), GenerateSingleVariableDesignation());
+            => InternalSyntaxFactory.DeclarationExpression(GenerateSingleVariableDesignation(), GenerateIdentifierName());
 
         private static Syntax.InternalSyntax.CastExpressionSyntax GenerateCastExpression()
             => InternalSyntaxFactory.CastExpression(InternalSyntaxFactory.Token(SyntaxKind.OpenParenToken), GenerateIdentifierName(), InternalSyntaxFactory.Token(SyntaxKind.CloseParenToken), GenerateIdentifierName());
@@ -1222,8 +1222,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             var node = GenerateDeclarationExpression();
 
-            Assert.NotNull(node.Type);
             Assert.NotNull(node.Designation);
+            Assert.NotNull(node.Type);
 
             AttachAndCheckDiagnostics(node);
         }
@@ -9610,7 +9610,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => SyntaxFactory.NameColon(GenerateIdentifierName(), SyntaxFactory.Token(SyntaxKind.ColonToken));
 
         private static DeclarationExpressionSyntax GenerateDeclarationExpression()
-            => SyntaxFactory.DeclarationExpression(GenerateIdentifierName(), GenerateSingleVariableDesignation());
+            => SyntaxFactory.DeclarationExpression(GenerateSingleVariableDesignation(), GenerateIdentifierName());
 
         private static CastExpressionSyntax GenerateCastExpression()
             => SyntaxFactory.CastExpression(SyntaxFactory.Token(SyntaxKind.OpenParenToken), GenerateIdentifierName(), SyntaxFactory.Token(SyntaxKind.CloseParenToken), GenerateIdentifierName());
@@ -10686,9 +10686,9 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             var node = GenerateDeclarationExpression();
 
-            Assert.NotNull(node.Type);
             Assert.NotNull(node.Designation);
-            var newNode = node.WithType(node.Type).WithDesignation(node.Designation);
+            Assert.NotNull(node.Type);
+            var newNode = node.WithDesignation(node.Designation).WithType(node.Type);
             Assert.Equal(node, newNode);
         }
 

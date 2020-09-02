@@ -5386,49 +5386,49 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
     /// <summary>Class which represents the syntax node for the variable declaration in an out var declaration or a deconstruction declaration.</summary>
     internal sealed partial class DeclarationExpressionSyntax : ExpressionSyntax
     {
-        internal readonly TypeSyntax type;
         internal readonly VariableDesignationSyntax designation;
+        internal readonly TypeSyntax type;
 
-        internal DeclarationExpressionSyntax(SyntaxKind kind, TypeSyntax type, VariableDesignationSyntax designation, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+        internal DeclarationExpressionSyntax(SyntaxKind kind, VariableDesignationSyntax designation, TypeSyntax type, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
           : base(kind, diagnostics, annotations)
         {
             this.SlotCount = 2;
-            this.AdjustFlagsAndWidth(type);
-            this.type = type;
             this.AdjustFlagsAndWidth(designation);
             this.designation = designation;
+            this.AdjustFlagsAndWidth(type);
+            this.type = type;
         }
 
-        internal DeclarationExpressionSyntax(SyntaxKind kind, TypeSyntax type, VariableDesignationSyntax designation, SyntaxFactoryContext context)
+        internal DeclarationExpressionSyntax(SyntaxKind kind, VariableDesignationSyntax designation, TypeSyntax type, SyntaxFactoryContext context)
           : base(kind)
         {
             this.SetFactoryContext(context);
             this.SlotCount = 2;
-            this.AdjustFlagsAndWidth(type);
-            this.type = type;
             this.AdjustFlagsAndWidth(designation);
             this.designation = designation;
+            this.AdjustFlagsAndWidth(type);
+            this.type = type;
         }
 
-        internal DeclarationExpressionSyntax(SyntaxKind kind, TypeSyntax type, VariableDesignationSyntax designation)
+        internal DeclarationExpressionSyntax(SyntaxKind kind, VariableDesignationSyntax designation, TypeSyntax type)
           : base(kind)
         {
             this.SlotCount = 2;
-            this.AdjustFlagsAndWidth(type);
-            this.type = type;
             this.AdjustFlagsAndWidth(designation);
             this.designation = designation;
+            this.AdjustFlagsAndWidth(type);
+            this.type = type;
         }
 
-        public TypeSyntax Type => this.type;
         /// <summary>Declaration representing the variable declared in an out parameter or deconstruction.</summary>
         public VariableDesignationSyntax Designation => this.designation;
+        public TypeSyntax Type => this.type;
 
         internal override GreenNode? GetSlot(int index)
             => index switch
             {
-                0 => this.type,
-                1 => this.designation,
+                0 => this.designation,
+                1 => this.type,
                 _ => null,
             };
 
@@ -5437,11 +5437,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitDeclarationExpression(this);
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitDeclarationExpression(this);
 
-        public DeclarationExpressionSyntax Update(TypeSyntax type, VariableDesignationSyntax designation)
+        public DeclarationExpressionSyntax Update(VariableDesignationSyntax designation, TypeSyntax type)
         {
-            if (type != this.Type || designation != this.Designation)
+            if (designation != this.Designation || type != this.Type)
             {
-                var newNode = SyntaxFactory.DeclarationExpression(type, designation);
+                var newNode = SyntaxFactory.DeclarationExpression(designation, type);
                 var diags = GetDiagnostics();
                 if (diags?.Length > 0)
                     newNode = newNode.WithDiagnosticsGreen(diags);
@@ -5455,28 +5455,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
 
         internal override GreenNode SetDiagnostics(DiagnosticInfo[]? diagnostics)
-            => new DeclarationExpressionSyntax(this.Kind, this.type, this.designation, diagnostics, GetAnnotations());
+            => new DeclarationExpressionSyntax(this.Kind, this.designation, this.type, diagnostics, GetAnnotations());
 
         internal override GreenNode SetAnnotations(SyntaxAnnotation[]? annotations)
-            => new DeclarationExpressionSyntax(this.Kind, this.type, this.designation, GetDiagnostics(), annotations);
+            => new DeclarationExpressionSyntax(this.Kind, this.designation, this.type, GetDiagnostics(), annotations);
 
         internal DeclarationExpressionSyntax(ObjectReader reader)
           : base(reader)
         {
             this.SlotCount = 2;
-            var type = (TypeSyntax)reader.ReadValue();
-            AdjustFlagsAndWidth(type);
-            this.type = type;
             var designation = (VariableDesignationSyntax)reader.ReadValue();
             AdjustFlagsAndWidth(designation);
             this.designation = designation;
+            var type = (TypeSyntax)reader.ReadValue();
+            AdjustFlagsAndWidth(type);
+            this.type = type;
         }
 
         internal override void WriteTo(ObjectWriter writer)
         {
             base.WriteTo(writer);
-            writer.WriteValue(this.type);
             writer.WriteValue(this.designation);
+            writer.WriteValue(this.type);
         }
 
         static DeclarationExpressionSyntax()
@@ -33047,7 +33047,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             => node.Update((IdentifierNameSyntax)Visit(node.Name), (SyntaxToken)Visit(node.ColonToken));
 
         public override CSharpSyntaxNode VisitDeclarationExpression(DeclarationExpressionSyntax node)
-            => node.Update((TypeSyntax)Visit(node.Type), (VariableDesignationSyntax)Visit(node.Designation));
+            => node.Update((VariableDesignationSyntax)Visit(node.Designation), (TypeSyntax)Visit(node.Type));
 
         public override CSharpSyntaxNode VisitCastExpression(CastExpressionSyntax node)
             => node.Update((SyntaxToken)Visit(node.OpenParenToken), (TypeSyntax)Visit(node.Type), (SyntaxToken)Visit(node.CloseParenToken), (ExpressionSyntax)Visit(node.Expression));
@@ -34693,18 +34693,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return result;
         }
 
-        public DeclarationExpressionSyntax DeclarationExpression(TypeSyntax type, VariableDesignationSyntax designation)
+        public DeclarationExpressionSyntax DeclarationExpression(VariableDesignationSyntax designation, TypeSyntax type)
         {
 #if DEBUG
-            if (type == null) throw new ArgumentNullException(nameof(type));
             if (designation == null) throw new ArgumentNullException(nameof(designation));
+            if (type == null) throw new ArgumentNullException(nameof(type));
 #endif
 
             int hash;
-            var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.DeclarationExpression, type, designation, this.context, out hash);
+            var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.DeclarationExpression, designation, type, this.context, out hash);
             if (cached != null) return (DeclarationExpressionSyntax)cached;
 
-            var result = new DeclarationExpressionSyntax(SyntaxKind.DeclarationExpression, type, designation, this.context);
+            var result = new DeclarationExpressionSyntax(SyntaxKind.DeclarationExpression, designation, type, this.context);
             if (hash >= 0)
             {
                 SyntaxNodeCache.AddNode(result, hash);
@@ -39468,18 +39468,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return result;
         }
 
-        public static DeclarationExpressionSyntax DeclarationExpression(TypeSyntax type, VariableDesignationSyntax designation)
+        public static DeclarationExpressionSyntax DeclarationExpression(VariableDesignationSyntax designation, TypeSyntax type)
         {
 #if DEBUG
-            if (type == null) throw new ArgumentNullException(nameof(type));
             if (designation == null) throw new ArgumentNullException(nameof(designation));
+            if (type == null) throw new ArgumentNullException(nameof(type));
 #endif
 
             int hash;
-            var cached = SyntaxNodeCache.TryGetNode((int)SyntaxKind.DeclarationExpression, type, designation, out hash);
+            var cached = SyntaxNodeCache.TryGetNode((int)SyntaxKind.DeclarationExpression, designation, type, out hash);
             if (cached != null) return (DeclarationExpressionSyntax)cached;
 
-            var result = new DeclarationExpressionSyntax(SyntaxKind.DeclarationExpression, type, designation);
+            var result = new DeclarationExpressionSyntax(SyntaxKind.DeclarationExpression, designation, type);
             if (hash >= 0)
             {
                 SyntaxNodeCache.AddNode(result, hash);

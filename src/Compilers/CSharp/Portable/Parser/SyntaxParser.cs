@@ -320,54 +320,51 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             get
             {
                 var i = 0;
-                SyntaxToken token = null;
 
                 // find the closest newline, so we can calculate the "current line indentation level"
-                var currentLineIndent = GetLineIndent(ref i, ref token);
+                var currentLineIndent = GetLineIndent(ref i);
                 if (currentLineIndent == null) return false;
 
                 // now find the next closest newline, which is the previous newline
-                var prevLineIndent = GetLineIndent(ref i, ref token);
+                var prevLineIndent = GetLineIndent(ref i);
 
                 return (currentLineIndent ?? 0) > (prevLineIndent ?? 0);
             }
         }
 
-        private int? GetLineIndent(ref int i, ref SyntaxToken nextToken)
+        private int? GetLineIndent(ref int i)
         {
             int? indent = null;
 
+            SyntaxToken prevToken = null;
             SyntaxToken token = null;
             while (true)
             {
-                token = PeekPrevToken(++i);
+                token = PeekPrevToken(i);
                 if (token == null) break;
+                ++i;
 
-                var eolLeadingTrivia = token.LeadingTrivia.LastOrDefault(n => n.Kind == SyntaxKind.EndOfLineTrivia);
-                if (eolLeadingTrivia != null)
+                // check if current token has newline before
+                var eolLeadingTriviaIndent = token.LeadingTrivia.GetFullWidthAfterLast(n => n.Kind == SyntaxKind.EndOfLineTrivia);
+                if (eolLeadingTriviaIndent != null)
                 {
-                    indent = token.LeadingTrivia.GetFullWidthAfter(eolLeadingTrivia);
+                    indent = eolLeadingTriviaIndent;
                     break;
                 }
 
-                // after the first token checked, we can check the trailing trivia too
-                if (nextToken == null)
-                {
-                    nextToken = token;
-                    continue;
-                }
+                // if we are not, the check if the previous token has newline after
+                prevToken = PeekPrevToken(i);
+                if (prevToken == null) break;
 
-                var eolTrailingTrivia = token.TrailingTrivia.FirstOrDefault(n => n.Kind == SyntaxKind.EndOfLineTrivia);
-                if (eolTrailingTrivia != null)
+                var eolTrivia = prevToken.TrailingTrivia.FirstOrDefault(n => n.Kind == SyntaxKind.EndOfLineTrivia);
+                if (eolTrivia != null)
                 {
-                    indent = token.TrailingTrivia.GetFullWidthAfter(eolTrailingTrivia) + nextToken.GetLeadingTriviaWidth();
+                    // since previous token has newline after... the indentation is all the whitespace before the token
+                    indent = token.LeadingTrivia.GetFullWidth(n => n.Kind == SyntaxKind.EndOfLineTrivia);
                     break;
                 }
-
-                nextToken = token;
             }
 
-            nextToken = token;
             return indent;
         }
 
@@ -524,7 +521,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 if (token != null) return token;
                 var firstToken = _blendedTokens[_tokenOffset - n].Node.GetFirstToken();
                 if (firstToken == default) return null;
-                return new SyntaxToken((SyntaxKind)firstToken.RawKind, firstToken.Width);
+                return firstToken.Node as SyntaxToken;
             }
             else
             {
@@ -950,6 +947,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         protected TNode AddTrailingSkippedSyntax<TNode>(TNode node, GreenNode skippedSyntax) where TNode : CSharpSyntaxNode
         {
+            if (skippedSyntax == null) return node;
             var token = node as SyntaxToken;
             if (token != null)
             {

@@ -790,7 +790,7 @@ conditional_expression
   ;
 
 declaration_expression
-  : type variable_designation
+  : variable_designation type
   ;
 
 default_expression

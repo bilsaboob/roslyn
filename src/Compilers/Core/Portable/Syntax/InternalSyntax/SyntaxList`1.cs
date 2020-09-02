@@ -106,6 +106,64 @@ namespace Microsoft.CodeAnalysis.Syntax.InternalSyntax
             return last;
         }
 
+        public int? GetFullWidth(Func<TNode?, bool> resetPredicate)
+        {
+            int? width = null;
+
+            foreach (var element in this)
+            {
+                width = width ?? 0;
+                width += element.FullWidth;
+
+                if (resetPredicate?.Invoke(element) == true)
+                {
+                    width = 0;
+                }
+            }
+
+            return width;
+        }
+
+        public int? GetFullWidthAfterLast(Func<TNode?, bool> predicate)
+        {
+            int? width = null;
+            var appendWidth = false;
+
+            foreach (var element in this)
+            {
+                if (appendWidth)
+                    width += element.FullWidth;
+
+                if (predicate(element))
+                {
+                    appendWidth = true;
+                    width = 0;
+                }
+            }
+
+            return width;
+        }
+
+        public int? GetFullWidthAfterFirst(Func<TNode?, bool> predicate)
+        {
+            int? width = null;
+            var appendWidth = false;
+
+            foreach (var element in this)
+            {
+                if (appendWidth)
+                    width = width + element.FullWidth;
+
+                if (predicate(element))
+                {
+                    appendWidth = true;
+                    width = width ?? 0;
+                }
+            }
+
+            return width;
+        }
+
         public int GetFullWidthAfter(TNode node)
         {
             int width = 0;
