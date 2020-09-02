@@ -57,6 +57,8 @@ static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.ArgumentList(Microsoft.CodeAn
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.DefaultConstraint() -> Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.DefaultConstraint(Microsoft.CodeAnalysis.SyntaxToken defaultKeyword) -> Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.EventFieldDeclaration(Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclarationSyntax declaration = null) -> Microsoft.CodeAnalysis.CSharp.Syntax.EventFieldDeclarationSyntax
+static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.FakeToken(Microsoft.CodeAnalysis.CSharp.SyntaxKind kind, string value = null, bool allowTrivia = false) -> Microsoft.CodeAnalysis.SyntaxToken
+static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.FakeTypeIdentifier() -> Microsoft.CodeAnalysis.CSharp.Syntax.IdentifierNameSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.FieldDeclaration(Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclarationSyntax declaration = null) -> Microsoft.CodeAnalysis.CSharp.Syntax.FieldDeclarationSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.FixedStatement(Microsoft.CodeAnalysis.CSharp.Syntax.StatementSyntax statement) -> Microsoft.CodeAnalysis.CSharp.Syntax.FixedStatementSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.LocalDeclarationStatement(Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclarationSyntax declaration = null) -> Microsoft.CodeAnalysis.CSharp.Syntax.LocalDeclarationStatementSyntax

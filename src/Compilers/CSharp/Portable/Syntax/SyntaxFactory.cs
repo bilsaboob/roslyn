@@ -300,6 +300,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new SyntaxToken(Syntax.InternalSyntax.SyntaxFactory.Identifier(ElasticMarker.UnderlyingNode, text, ElasticMarker.UnderlyingNode));
         }
 
+        public static SyntaxToken FakeToken(SyntaxKind kind, string value = null, bool allowTrivia = false)
+        {
+            return new SyntaxToken(Syntax.InternalSyntax.SyntaxFactory.FakeToken(kind, value, allowTrivia));
+        }
+
+        public static IdentifierNameSyntax FakeTypeIdentifier()
+        {
+            return IdentifierName(new SyntaxToken(Syntax.InternalSyntax.SyntaxFactory.Token(SyntaxKind.IdentifierToken)));
+        }
+
         /// <summary>
         /// Creates a token with kind IdentifierToken containing the specified text.
         /// </summary>

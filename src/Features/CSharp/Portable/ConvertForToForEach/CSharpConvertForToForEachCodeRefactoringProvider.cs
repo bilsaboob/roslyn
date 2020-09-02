@@ -129,8 +129,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertForToForEach
             return SyntaxFactory.ForEachStatement(
                 SyntaxFactory.Token(SyntaxKind.ForEachKeyword).WithTriviaFrom(forStatement.ForKeyword),
                 forStatement.OpenParenToken,
-                typeNode,
                 foreachIdentifier,
+                typeNode,
                 SyntaxFactory.Token(SyntaxKind.InKeyword),
                 collectionExpression,
                 forStatement.CloseParenToken,

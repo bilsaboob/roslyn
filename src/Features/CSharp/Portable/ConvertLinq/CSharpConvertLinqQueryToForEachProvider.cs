@@ -145,8 +145,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq
                         }
 
                         return SyntaxFactory.ForEachStatement(
-                            fromClause.Type ?? VarNameIdentifier,
                             fromClause.Identifier,
+                            fromClause.Type ?? SyntaxFactory.FakeTypeIdentifier(),
                             expression1,
                             WrapWithBlock(statement));
                     case SyntaxKind.LetClause:
@@ -195,8 +195,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq
                             //      ...
                             return SyntaxFactory.Block(
                                 SyntaxFactory.ForEachStatement(
-                                    joinClause.Type ?? VarNameIdentifier,
                                     joinClause.Identifier,
+                                    joinClause.Type ?? SyntaxFactory.FakeTypeIdentifier(),
                                     expression2,
                                     SyntaxFactory.Block(
                                         SyntaxFactory.IfStatement(

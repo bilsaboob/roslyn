@@ -51,8 +51,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq.ConvertForEachToLinqQuery
             {
                 // Generate foreach(var _ ... select new {})
                 return SyntaxFactory.ForEachStatement(
-                    VarNameIdentifier,
                     SyntaxFactory.Identifier("_"),
+                    SyntaxFactory.FakeTypeIdentifier(),
                     CreateQueryExpressionOrLinqInvocation(
                         SyntaxFactory.AnonymousObjectCreationExpression(),
                         Enumerable.Empty<SyntaxToken>(),
@@ -64,8 +64,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq.ConvertForEachToLinqQuery
             {
                 // Generate foreach(var singleIdentifier from ... select singleIdentifier)
                 return SyntaxFactory.ForEachStatement(
-                    VarNameIdentifier,
                     identifiers.Single(),
+                    SyntaxFactory.FakeTypeIdentifier(),
                     CreateQueryExpressionOrLinqInvocation(
                         SyntaxFactory.IdentifierName(identifiers.Single()),
                         Enumerable.Empty<SyntaxToken>(),
