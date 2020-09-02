@@ -315,6 +315,62 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
+        protected bool IsCurrentLineIndented
+        {
+            get
+            {
+                var i = 0;
+                SyntaxToken token = null;
+
+                // find the closest newline, so we can calculate the "current line indentation level"
+                var currentLineIndent = GetLineIndent(ref i, ref token);
+                if (currentLineIndent == null) return false;
+
+                // now find the next closest newline, which is the previous newline
+                var prevLineIndent = GetLineIndent(ref i, ref token);
+
+                return (currentLineIndent ?? 0) > (prevLineIndent ?? 0);
+            }
+        }
+
+        private int? GetLineIndent(ref int i, ref SyntaxToken nextToken)
+        {
+            int? indent = null;
+
+            SyntaxToken token = null;
+            while (true)
+            {
+                token = PeekPrevToken(++i);
+                if (token == null) break;
+
+                var eolLeadingTrivia = token.LeadingTrivia.LastOrDefault(n => n.Kind == SyntaxKind.EndOfLineTrivia);
+                if (eolLeadingTrivia != null)
+                {
+                    indent = token.LeadingTrivia.GetFullWidthAfter(eolLeadingTrivia);
+                    break;
+                }
+
+                // after the first token checked, we can check the trailing trivia too
+                if (nextToken == null)
+                {
+                    nextToken = token;
+                    continue;
+                }
+
+                var eolTrailingTrivia = token.TrailingTrivia.FirstOrDefault(n => n.Kind == SyntaxKind.EndOfLineTrivia);
+                if (eolTrailingTrivia != null)
+                {
+                    indent = token.TrailingTrivia.GetFullWidthAfter(eolTrailingTrivia) + nextToken.GetLeadingTriviaWidth();
+                    break;
+                }
+
+                nextToken = token;
+            }
+
+            nextToken = token;
+            return indent;
+        }
+
         private SyntaxToken FetchCurrentToken()
         {
             if (_tokenOffset >= _tokenCount)
@@ -464,7 +520,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             if (_blendedTokens != null)
             {
-                return _blendedTokens[_tokenOffset - n].Token;
+                var token = _blendedTokens[_tokenOffset - n].Token;
+                if (token != null) return token;
+                var firstToken = _blendedTokens[_tokenOffset - n].Node.GetFirstToken();
+                if (firstToken == default) return null;
+                return new SyntaxToken((SyntaxKind)firstToken.RawKind, firstToken.Width);
             }
             else
             {
