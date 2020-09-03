@@ -8897,8 +8897,7 @@ tryAgain:
                 expected);
         }
 
-        private CommonForEachStatementSyntax ParseForEachStatement(
-            SyntaxList<AttributeListSyntax> attributes, SyntaxToken awaitTokenOpt)
+        private CommonForEachStatementSyntax ParseForEachStatement(SyntaxList<AttributeListSyntax> attributes, SyntaxToken awaitTokenOpt)
         {
             // Can be a 'for' keyword if the user typed: 'for (SomeType t in'
             Debug.Assert(this.CurrentToken.Kind == SyntaxKind.ForEachKeyword || this.CurrentToken.Kind == SyntaxKind.ForKeyword);
@@ -9857,7 +9856,7 @@ tryAgain:
             }
         }
 
-        private VariableDesignationSyntax ParseDesignation(bool forPattern)
+        private VariableDesignationSyntax ParseDesignation(bool forPattern, bool multiDesignatorCanSkipParenthesis = true)
         {
             // the two forms of designation are
             // (1) identifier
@@ -9866,44 +9865,78 @@ tryAgain:
             VariableDesignationSyntax result;
             if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken)
             {
-                var openParen = this.EatToken(SyntaxKind.OpenParenToken);
-                var listOfDesignations = _pool.AllocateSeparated<VariableDesignationSyntax>();
-
-                bool done = false;
-                if (forPattern)
-                {
-                    done = (this.CurrentToken.Kind == SyntaxKind.CloseParenToken);
-                }
-                else
-                {
-                    listOfDesignations.Add(ParseDesignation(forPattern));
-                    listOfDesignations.AddSeparator(EatToken(SyntaxKind.CommaToken));
-                }
-
-                if (!done)
-                {
-                    while (true)
-                    {
-                        listOfDesignations.Add(ParseDesignation(forPattern));
-                        if (this.CurrentToken.Kind == SyntaxKind.CommaToken)
-                        {
-                            listOfDesignations.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                var closeParen = this.EatToken(SyntaxKind.CloseParenToken);
-                result = _syntaxFactory.ParenthesizedVariableDesignation(openParen, listOfDesignations, closeParen);
-                _pool.Free(listOfDesignations);
+                result = ParseParenthesizedDesignation(forPattern);
             }
             else
             {
                 result = ParseSimpleDesignation();
+
+                // if we have a comma following the simple designation, we will treat it as a parenthesized designation without parenhtesis
+                if (multiDesignatorCanSkipParenthesis && this.CurrentToken.Kind == SyntaxKind.CommaToken)
+                {
+                    result = ParseParenthesizedDesignation(forPattern, requiresParenthesis: false, firstDesignation: result);
+                }
             }
+
+            return result;
+        }
+
+        private ParenthesizedVariableDesignationSyntax ParseParenthesizedDesignation(bool forPattern, bool requiresParenthesis = true, VariableDesignationSyntax firstDesignation = null)
+        {
+            ParenthesizedVariableDesignationSyntax result;
+
+            SyntaxToken openParen = null;
+            SyntaxToken closeParen = null;
+
+            // consume the parenthesis
+            if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken || requiresParenthesis)
+                openParen = this.EatToken(SyntaxKind.OpenParenToken);
+
+            var listOfDesignations = _pool.AllocateSeparated<VariableDesignationSyntax>();
+
+            bool done = false;
+            if (forPattern)
+            {
+                done = (this.CurrentToken.Kind == SyntaxKind.CloseParenToken);
+            }
+            else
+            {
+                if(firstDesignation != null)
+                {
+                    listOfDesignations.Add(firstDesignation);
+                    listOfDesignations.AddSeparator(EatToken(SyntaxKind.CommaToken));
+                }
+                else
+                {
+                    listOfDesignations.Add(ParseDesignation(forPattern, multiDesignatorCanSkipParenthesis: false));
+                    listOfDesignations.AddSeparator(EatToken(SyntaxKind.CommaToken));
+                }
+            }
+
+            if (!done)
+            {
+                while (true)
+                {
+                    listOfDesignations.Add(ParseDesignation(forPattern, multiDesignatorCanSkipParenthesis: false));
+                    if (this.CurrentToken.Kind == SyntaxKind.CommaToken)
+                    {
+                        listOfDesignations.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (this.CurrentToken.Kind == SyntaxKind.CloseParenToken || requiresParenthesis)
+                closeParen = this.EatToken(SyntaxKind.CloseParenToken);
+
+            openParen ??= SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken, "(");
+            closeParen ??= SyntaxFactory.FakeToken(SyntaxKind.CloseParenToken, ")");
+
+            result = _syntaxFactory.ParenthesizedVariableDesignation(openParen, listOfDesignations, closeParen);
+            _pool.Free(listOfDesignations);
 
             return result;
         }
