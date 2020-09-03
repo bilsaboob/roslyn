@@ -44,13 +44,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             Binder binder = delegateType.GetBinder(syntax.ParameterList);
             RefKind refKind;
             TypeSyntax returnTypeSyntax = syntax.ReturnType.SkipRef(out refKind);
-            var returnType = binder.BindType(returnTypeSyntax, diagnostics);
 
             // reuse types to avoid reporting duplicate errors if missing:
             var voidType = TypeWithAnnotations.Create(binder.GetSpecialType(SpecialType.System_Void, diagnostics, syntax));
             // https://github.com/dotnet/roslyn/issues/30079: Should the 'object', IAsyncResult and AsyncCallback parameters be considered nullable or not nullable?
             var objectType = TypeWithAnnotations.Create(binder.GetSpecialType(SpecialType.System_Object, diagnostics, syntax));
             var intPtrType = TypeWithAnnotations.Create(binder.GetSpecialType(SpecialType.System_IntPtr, diagnostics, syntax));
+
+            var returnType = binder.BindType(returnTypeSyntax, diagnostics);
+            if (returnType.Type?.IsErrorType() == true && !syntax.HasExplicitReturnType())
+            {
+                // set void as default return type when no type syntax is available
+                returnType = voidType;
+            }
 
             if (returnType.IsRestrictedType(ignoreSpanLikeTypes: true))
             {
