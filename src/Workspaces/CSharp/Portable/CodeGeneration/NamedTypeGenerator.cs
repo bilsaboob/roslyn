@@ -175,10 +175,10 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             return SyntaxFactory.DelegateDeclaration(
                 GenerateAttributeDeclarations(namedType, options),
                 GenerateModifiers(namedType, destination, options),
-                invokeMethod.ReturnType.GenerateTypeSyntax(),
                 namedType.Name.ToIdentifierToken(),
                 TypeParameterGenerator.GenerateTypeParameterList(namedType.TypeParameters, options),
                 ParameterGenerator.GenerateParameterList(invokeMethod.Parameters, isExplicit: false, options: options),
+                invokeMethod.ReturnType.GenerateTypeSyntax(),
                 namedType.TypeParameters.GenerateConstraintClauses());
         }
 
