@@ -268,7 +268,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.ForEachStatement:
                     {
                         var forEachSyntax = (ForEachStatementSyntax)original.Syntax;
-                        iterationVarDeclSpan = TextSpan.FromBounds(forEachSyntax.Type.SpanStart, forEachSyntax.Identifier.Span.End);
+                        iterationVarDeclSpan = TextSpan.FromBounds(forEachSyntax.Identifier.SpanStart, forEachSyntax.Type.Span.End);
                         break;
                     }
                 case SyntaxKind.ForEachVariableStatement:
