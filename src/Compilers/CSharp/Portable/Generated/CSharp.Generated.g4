@@ -322,7 +322,7 @@ struct_declaration
   ;
 
 delegate_declaration
-  : attribute_list* modifier* 'delegate' type identifier_token type_parameter_list? parameter_list type_parameter_constraint_clause* ';'
+  : attribute_list* modifier* 'delegate' identifier_token type_parameter_list? parameter_list type type_parameter_constraint_clause* ';'?
   ;
 
 global_statement

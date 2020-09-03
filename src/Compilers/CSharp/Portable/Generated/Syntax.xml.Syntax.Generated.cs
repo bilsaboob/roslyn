@@ -9421,9 +9421,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     public sealed partial class DelegateDeclarationSyntax : MemberDeclarationSyntax
     {
         private SyntaxNode? attributeLists;
-        private TypeSyntax? returnType;
         private TypeParameterListSyntax? typeParameterList;
         private ParameterListSyntax? parameterList;
+        private TypeSyntax? returnType;
         private SyntaxNode? constraintClauses;
 
         internal DelegateDeclarationSyntax(InternalSyntax.CSharpSyntaxNode green, SyntaxNode? parent, int position)
@@ -9445,30 +9445,37 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         /// <summary>Gets the "delegate" keyword.</summary>
         public SyntaxToken DelegateKeyword => new SyntaxToken(this, ((Syntax.InternalSyntax.DelegateDeclarationSyntax)this.Green).delegateKeyword, GetChildPosition(2), GetChildIndex(2));
 
-        /// <summary>Gets the return type.</summary>
-        public TypeSyntax ReturnType => GetRed(ref this.returnType, 3)!;
-
         /// <summary>Gets the identifier.</summary>
-        public SyntaxToken Identifier => new SyntaxToken(this, ((Syntax.InternalSyntax.DelegateDeclarationSyntax)this.Green).identifier, GetChildPosition(4), GetChildIndex(4));
+        public SyntaxToken Identifier => new SyntaxToken(this, ((Syntax.InternalSyntax.DelegateDeclarationSyntax)this.Green).identifier, GetChildPosition(3), GetChildIndex(3));
 
-        public TypeParameterListSyntax? TypeParameterList => GetRed(ref this.typeParameterList, 5);
+        public TypeParameterListSyntax? TypeParameterList => GetRed(ref this.typeParameterList, 4);
 
         /// <summary>Gets the parameter list.</summary>
-        public ParameterListSyntax ParameterList => GetRed(ref this.parameterList, 6)!;
+        public ParameterListSyntax ParameterList => GetRed(ref this.parameterList, 5)!;
+
+        /// <summary>Gets the return type.</summary>
+        public TypeSyntax ReturnType => GetRed(ref this.returnType, 6)!;
 
         /// <summary>Gets the constraint clause list.</summary>
         public SyntaxList<TypeParameterConstraintClauseSyntax> ConstraintClauses => new SyntaxList<TypeParameterConstraintClauseSyntax>(GetRed(ref this.constraintClauses, 7));
 
         /// <summary>Gets the semicolon token.</summary>
-        public SyntaxToken SemicolonToken => new SyntaxToken(this, ((Syntax.InternalSyntax.DelegateDeclarationSyntax)this.Green).semicolonToken, GetChildPosition(8), GetChildIndex(8));
+        public SyntaxToken SemicolonToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.DelegateDeclarationSyntax)this.Green).semicolonToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(8), GetChildIndex(8)) : default;
+            }
+        }
 
         internal override SyntaxNode? GetNodeSlot(int index)
             => index switch
             {
                 0 => GetRedAtZero(ref this.attributeLists)!,
-                3 => GetRed(ref this.returnType, 3)!,
-                5 => GetRed(ref this.typeParameterList, 5),
-                6 => GetRed(ref this.parameterList, 6)!,
+                4 => GetRed(ref this.typeParameterList, 4),
+                5 => GetRed(ref this.parameterList, 5)!,
+                6 => GetRed(ref this.returnType, 6)!,
                 7 => GetRed(ref this.constraintClauses, 7)!,
                 _ => null,
             };
@@ -9477,9 +9484,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             => index switch
             {
                 0 => this.attributeLists,
-                3 => this.returnType,
-                5 => this.typeParameterList,
-                6 => this.parameterList,
+                4 => this.typeParameterList,
+                5 => this.parameterList,
+                6 => this.returnType,
                 7 => this.constraintClauses,
                 _ => null,
             };
@@ -9488,11 +9495,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitDelegateDeclaration(this);
 
-        public DelegateDeclarationSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken delegateKeyword, TypeSyntax returnType, SyntaxToken identifier, TypeParameterListSyntax? typeParameterList, ParameterListSyntax parameterList, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, SyntaxToken semicolonToken)
+        public DelegateDeclarationSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken delegateKeyword, SyntaxToken identifier, TypeParameterListSyntax? typeParameterList, ParameterListSyntax parameterList, TypeSyntax returnType, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, SyntaxToken semicolonToken)
         {
-            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || delegateKeyword != this.DelegateKeyword || returnType != this.ReturnType || identifier != this.Identifier || typeParameterList != this.TypeParameterList || parameterList != this.ParameterList || constraintClauses != this.ConstraintClauses || semicolonToken != this.SemicolonToken)
+            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || delegateKeyword != this.DelegateKeyword || identifier != this.Identifier || typeParameterList != this.TypeParameterList || parameterList != this.ParameterList || returnType != this.ReturnType || constraintClauses != this.ConstraintClauses || semicolonToken != this.SemicolonToken)
             {
-                var newNode = SyntaxFactory.DelegateDeclaration(attributeLists, modifiers, delegateKeyword, returnType, identifier, typeParameterList, parameterList, constraintClauses, semicolonToken);
+                var newNode = SyntaxFactory.DelegateDeclaration(attributeLists, modifiers, delegateKeyword, identifier, typeParameterList, parameterList, returnType, constraintClauses, semicolonToken);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -9501,16 +9508,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         }
 
         internal override MemberDeclarationSyntax WithAttributeListsCore(SyntaxList<AttributeListSyntax> attributeLists) => WithAttributeLists(attributeLists);
-        public new DelegateDeclarationSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.DelegateKeyword, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.SemicolonToken);
+        public new DelegateDeclarationSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.DelegateKeyword, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.SemicolonToken);
         internal override MemberDeclarationSyntax WithModifiersCore(SyntaxTokenList modifiers) => WithModifiers(modifiers);
-        public new DelegateDeclarationSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.DelegateKeyword, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.SemicolonToken);
-        public DelegateDeclarationSyntax WithDelegateKeyword(SyntaxToken delegateKeyword) => Update(this.AttributeLists, this.Modifiers, delegateKeyword, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.SemicolonToken);
-        public DelegateDeclarationSyntax WithReturnType(TypeSyntax returnType) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, returnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.SemicolonToken);
-        public DelegateDeclarationSyntax WithIdentifier(SyntaxToken identifier) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.ReturnType, identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, this.SemicolonToken);
-        public DelegateDeclarationSyntax WithTypeParameterList(TypeParameterListSyntax? typeParameterList) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.ReturnType, this.Identifier, typeParameterList, this.ParameterList, this.ConstraintClauses, this.SemicolonToken);
-        public DelegateDeclarationSyntax WithParameterList(ParameterListSyntax parameterList) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.ReturnType, this.Identifier, this.TypeParameterList, parameterList, this.ConstraintClauses, this.SemicolonToken);
-        public DelegateDeclarationSyntax WithConstraintClauses(SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, constraintClauses, this.SemicolonToken);
-        public DelegateDeclarationSyntax WithSemicolonToken(SyntaxToken semicolonToken) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.ReturnType, this.Identifier, this.TypeParameterList, this.ParameterList, this.ConstraintClauses, semicolonToken);
+        public new DelegateDeclarationSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.DelegateKeyword, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.SemicolonToken);
+        public DelegateDeclarationSyntax WithDelegateKeyword(SyntaxToken delegateKeyword) => Update(this.AttributeLists, this.Modifiers, delegateKeyword, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.SemicolonToken);
+        public DelegateDeclarationSyntax WithIdentifier(SyntaxToken identifier) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.SemicolonToken);
+        public DelegateDeclarationSyntax WithTypeParameterList(TypeParameterListSyntax? typeParameterList) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.Identifier, typeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, this.SemicolonToken);
+        public DelegateDeclarationSyntax WithParameterList(ParameterListSyntax parameterList) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.Identifier, this.TypeParameterList, parameterList, this.ReturnType, this.ConstraintClauses, this.SemicolonToken);
+        public DelegateDeclarationSyntax WithReturnType(TypeSyntax returnType) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.Identifier, this.TypeParameterList, this.ParameterList, returnType, this.ConstraintClauses, this.SemicolonToken);
+        public DelegateDeclarationSyntax WithConstraintClauses(SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, constraintClauses, this.SemicolonToken);
+        public DelegateDeclarationSyntax WithSemicolonToken(SyntaxToken semicolonToken) => Update(this.AttributeLists, this.Modifiers, this.DelegateKeyword, this.Identifier, this.TypeParameterList, this.ParameterList, this.ReturnType, this.ConstraintClauses, semicolonToken);
 
         internal override MemberDeclarationSyntax AddAttributeListsCore(params AttributeListSyntax[] items) => AddAttributeLists(items);
         public new DelegateDeclarationSyntax AddAttributeLists(params AttributeListSyntax[] items) => WithAttributeLists(this.AttributeLists.AddRange(items));
