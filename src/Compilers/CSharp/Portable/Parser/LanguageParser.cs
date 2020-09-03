@@ -3312,6 +3312,19 @@ parse_member_name:;
             return genericType != null;
         }
 
+        private TypeSyntax TryParseReturnType()
+        {
+            TypeSyntax type = null;
+            var resetPoint = GetResetPoint();
+            var parsedType = ParseReturnType();
+            if (parsedType == null || parsedType.IsMissing)
+                Reset(ref resetPoint);
+            else
+                type = parsedType;
+            Release(ref resetPoint);
+            return type;
+        }
+
         private TypeSyntax ParseReturnType()
         {
             var saveTerm = _termState;
@@ -5278,13 +5291,18 @@ tryAgain:
             Debug.Assert(this.CurrentToken.Kind == SyntaxKind.DelegateKeyword);
 
             var delegateToken = this.EatToken(SyntaxKind.DelegateKeyword);
-            var type = this.ParseReturnType();
+
             var saveTerm = _termState;
             _termState |= TerminatorState.IsEndOfMethodSignature;
             var name = this.ParseIdentifierToken();
             var typeParameters = this.ParseTypeParameterList();
             var parameterList = this.ParseParenthesizedParameterList();
+
+            var type = this.TryParseReturnType();
+            type ??= SyntaxFactory.FakeTypeIdentifier(_syntaxFactory);
+
             var constraints = default(SyntaxListBuilder<TypeParameterConstraintClauseSyntax>);
+
             try
             {
                 if (this.CurrentToken.ContextualKind == SyntaxKind.WhereKeyword)
@@ -5295,8 +5313,13 @@ tryAgain:
 
                 _termState = saveTerm;
 
-                var semicolon = this.EatToken(SyntaxKind.SemicolonToken);
-                return _syntaxFactory.DelegateDeclaration(attributes, modifiers.ToList(), delegateToken, type, name, typeParameters, parameterList, constraints, semicolon);
+                SyntaxToken semicolon;
+                if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken || !IsCurrentTokenOnNewline)
+                    semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+                else
+                    semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+
+                return _syntaxFactory.DelegateDeclaration(attributes, modifiers.ToList(), delegateToken, name, typeParameters, parameterList, type, constraints, semicolon);
             }
             finally
             {

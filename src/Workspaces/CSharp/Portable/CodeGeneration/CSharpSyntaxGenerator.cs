@@ -886,10 +886,10 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             return SyntaxFactory.DelegateDeclaration(
                 default,
                 AsModifierList(accessibility, modifiers),
-                returnType != null ? (TypeSyntax)returnType : SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
                 name.ToIdentifierToken(),
                 AsTypeParameterList(typeParameters),
                 AsParameterList(parameters),
+                returnType != null ? (TypeSyntax)returnType : SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
                 default);
         }
 
