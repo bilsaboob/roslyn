@@ -128,6 +128,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseDeconstruction
                 forEachStatement.InKeyword,
                 forEachStatement.Expression,
                 forEachStatement.CloseParenToken,
+                forEachStatement.EqualsGreaterThanToken,
                 forEachStatement.Statement);
         }
 

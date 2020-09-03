@@ -2426,6 +2426,9 @@
     <Field Name="CloseParenToken" Type="SyntaxToken" Optional="true">
       <Kind Name="CloseParenToken"/>
     </Field>
+    <Field Name="EqualsGreaterThanToken" Type="SyntaxToken" Optional="true">
+      <Kind Name="EqualsGreaterThanToken"/>
+    </Field>
     <Field Name="Statement" Type="StatementSyntax"/>
   </AbstractNode>
   <Node Name="ForEachStatementSyntax" Base="CommonForEachStatementSyntax">
@@ -2454,6 +2457,9 @@
     <Field Name="Expression" Type="ExpressionSyntax" Override="true"/>
     <Field Name="CloseParenToken" Type="SyntaxToken" Override="true" Optional="true">
       <Kind Name="CloseParenToken"/>
+    </Field>
+    <Field Name="EqualsGreaterThanToken" Type="SyntaxToken" Override="true" Optional="true">
+      <Kind Name="EqualsGreaterThanToken"/>
     </Field>
     <Field Name="Statement" Type="StatementSyntax" Override="true"/>
   </Node>
@@ -2488,6 +2494,9 @@
     <Field Name="Expression" Type="ExpressionSyntax" Override="true"/>
     <Field Name="CloseParenToken" Type="SyntaxToken" Override="true" Optional="true">
       <Kind Name="CloseParenToken"/>
+    </Field>
+    <Field Name="EqualsGreaterThanToken" Type="SyntaxToken" Override="true" Optional="true">
+      <Kind Name="EqualsGreaterThanToken"/>
     </Field>
     <Field Name="Statement" Type="StatementSyntax" Override="true"/>
   </Node>

@@ -445,11 +445,11 @@ common_for_each_statement
   ;
 
 for_each_statement
-  : attribute_list* 'await'? 'foreach' '('? identifier_token type 'in' expression ')'? statement
+  : attribute_list* 'await'? 'foreach' '('? identifier_token type 'in' expression ')'? '=>'? statement
   ;
 
 for_each_variable_statement
-  : attribute_list* 'await'? 'foreach' '('? expression 'in' expression ')'? statement
+  : attribute_list* 'await'? 'foreach' '('? expression 'in' expression ')'? '=>'? statement
   ;
 
 continue_statement

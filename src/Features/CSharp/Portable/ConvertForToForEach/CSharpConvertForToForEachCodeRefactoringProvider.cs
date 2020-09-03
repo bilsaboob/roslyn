@@ -134,6 +134,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertForToForEach
                 SyntaxFactory.Token(SyntaxKind.InKeyword),
                 collectionExpression,
                 forStatement.CloseParenToken,
+                default,
                 forStatement.Statement);
         }
 

@@ -8940,6 +8940,7 @@ tryAgain:
             TypeSyntax type = null;
             SyntaxToken @in = null;
             ExpressionSyntax variable = null;
+            SyntaxToken arrowToken = null;
             StatementSyntax statement = null;
 
             // parse either the variable declaration part
@@ -9019,7 +9020,10 @@ tryAgain:
                 else
                 {
                     // skip until either 'in' is found or until the '{' or newline
-                    var badTokensTrivia = SkipBadTokensUntil(() => CurrentToken.Kind == SyntaxKind.OpenBraceToken || CurrentToken.Kind == SyntaxKind.CloseParenToken || CurrentToken.Kind == SyntaxKind.InKeyword || IsCurrentTokenOnNewline, ErrorCode.ERR_UnexpectedToken);
+                    var badTokensTrivia = SkipBadTokensUntil(() =>
+                        CurrentToken.Kind == SyntaxKind.OpenBraceToken || CurrentToken.Kind == SyntaxKind.CloseParenToken || CurrentToken.Kind == SyntaxKind.EqualsGreaterThanToken || IsCurrentTokenOnNewline,
+                        ErrorCode.ERR_UnexpectedToken
+                    );
 
                     // add the unexpected tokens as error
                     if (type != null)
@@ -9049,7 +9053,7 @@ tryAgain:
 
             // parse the expression following the 'in' until newline or '{'
             ExpressionSyntax expression = null;
-            if (CurrentToken.Kind == SyntaxKind.OpenBraceToken || CurrentToken.Kind == SyntaxKind.CloseParenToken || IsProbablyStatementEnd(continueStatementOnIndentedNewline: true))
+            if (CurrentToken.Kind == SyntaxKind.OpenBraceToken || CurrentToken.Kind == SyntaxKind.CloseParenToken || CurrentToken.Kind == SyntaxKind.EqualsGreaterThanToken || IsProbablyStatementEnd(continueStatementOnIndentedNewline: true))
             {
                 // can't be expression part if it's a:
                 // 1. '{' ... it must be the foreach statement block
@@ -9063,9 +9067,17 @@ tryAgain:
             {
                 // we can attempt parshing an expression
                 var wasSimpleExpr = IsSimpleExpression;
+                var wasLambdaExpressionAllowed = AllowLambdaExpression;
+
+                // only simple expressions without lambdas
                 IsSimpleExpression = true;
+                AllowLambdaExpression = false;
+
                 expression = this.ParseExpressionCore();
+
+                // restore the parsing
                 IsSimpleExpression = wasSimpleExpr;
+                AllowLambdaExpression = wasLambdaExpressionAllowed;
             }
 
             SyntaxToken closeParen = null;
@@ -9086,9 +9098,12 @@ tryAgain:
             }
 
             // if we aren't at a "{" ... skip until the next '{' or 'newline' and mark those tokens with error
-            if (CurrentToken.Kind != SyntaxKind.OpenBraceToken)
+            if (CurrentToken.Kind != SyntaxKind.OpenBraceToken && CurrentToken.Kind != SyntaxKind.EqualsGreaterThanToken)
             {
-                var badTokensTrivia = SkipBadTokensUntil(() => CurrentToken.Kind == SyntaxKind.OpenBraceToken || CurrentToken.Kind == SyntaxKind.CloseParenToken || IsCurrentTokenOnNewline, ErrorCode.ERR_UnexpectedToken);
+                var badTokensTrivia = SkipBadTokensUntil(() =>
+                    CurrentToken.Kind == SyntaxKind.OpenBraceToken || CurrentToken.Kind == SyntaxKind.CloseParenToken || CurrentToken.Kind == SyntaxKind.EqualsGreaterThanToken || IsCurrentTokenOnNewline,
+                    ErrorCode.ERR_UnexpectedToken
+                );
                 expression = AddTrailingSkippedSyntax(expression, badTokensTrivia);
             }
 
@@ -9120,7 +9135,7 @@ tryAgain:
             }
 
             // parse the block following the 'foreach ... in ... {|}'
-            if (CurrentToken.Kind != SyntaxKind.OpenBraceToken)
+            if (CurrentToken.Kind != SyntaxKind.OpenBraceToken && CurrentToken.Kind != SyntaxKind.EqualsGreaterThanToken)
             {
                 // we don't have an opening '{' - so make sure that the following statement is indented if it starts on a newline
                 if (IsCurrentTokenOnNewline && !IsCurrentLineIndented)
@@ -9135,17 +9150,22 @@ tryAgain:
             }
             else
             {
+                // if there is an => arrow before the statement, we consume it as part of the foreach ... so that the statement doesn't become a lambda statement ...
+                if (CurrentToken.Kind == SyntaxKind.EqualsGreaterThanToken)
+                {
+                    arrowToken = this.EatToken(SyntaxKind.EqualsGreaterThanToken);
+                }
                 // ok, just parse the statement as is since we have an opening '{'
                 statement = this.ParseEmbeddedStatement();
             }
 
             if (identifier != null)
             {
-                return _syntaxFactory.ForEachStatement(attributes, awaitTokenOpt, @foreach, openParen, identifier, type, @in, expression, closeParen, statement);
+                return _syntaxFactory.ForEachStatement(attributes, awaitTokenOpt, @foreach, openParen, identifier, type, @in, expression, closeParen, arrowToken, statement);
             }
             else
             {
-                return _syntaxFactory.ForEachVariableStatement(attributes, awaitTokenOpt, @foreach, openParen, variable, @in, expression, closeParen, statement);
+                return _syntaxFactory.ForEachVariableStatement(attributes, awaitTokenOpt, @foreach, openParen, variable, @in, expression, closeParen, arrowToken, statement);
             }
         }
 
@@ -10950,6 +10970,8 @@ tryAgain:
         private ExpressionSyntax ParseTerm(Precedence precedence)
             => this.ParsePostFixExpression(ParseTermWithoutPostfix(precedence));
 
+        private bool AllowLambdaExpression { get; set; } = true;
+
         private ExpressionSyntax ParseTermWithoutPostfix(Precedence precedence)
         {
             var tk = this.CurrentToken.Kind;
@@ -11017,7 +11039,7 @@ tryAgain:
                         {
                             return this.ParseAnonymousMethodExpression();
                         }
-                        else if (this.IsPossibleLambdaExpression(precedence))
+                        else if (AllowLambdaExpression && this.IsPossibleLambdaExpression(precedence))
                         {
                             return this.ParseLambdaExpression();
                         }

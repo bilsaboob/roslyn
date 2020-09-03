@@ -10,11 +10,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 {
     public partial class ForEachStatementSyntax
     {
-        public ForEachStatementSyntax Update(SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, StatementSyntax statement)
-            => Update(awaitKeyword: default, forEachKeyword, openParenToken, identifier, type, inKeyword, expression, closeParenToken, statement);
+        public ForEachStatementSyntax Update(SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, SyntaxToken equalsGreaterThanToken, StatementSyntax statement)
+            => Update(awaitKeyword: default, forEachKeyword, openParenToken, identifier, type, inKeyword, expression, closeParenToken, equalsGreaterThanToken, statement);
 
-        public ForEachStatementSyntax Update(SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, StatementSyntax statement)
-            => Update(attributeLists: default, awaitKeyword, forEachKeyword, openParenToken, identifier, type, inKeyword, expression, closeParenToken, statement);
+        public ForEachStatementSyntax Update(SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, SyntaxToken equalsGreaterThanToken, StatementSyntax statement)
+            => Update(attributeLists: default, awaitKeyword, forEachKeyword, openParenToken, identifier, type, inKeyword, expression, closeParenToken, equalsGreaterThanToken, statement);
     }
 }
 
@@ -22,10 +22,10 @@ namespace Microsoft.CodeAnalysis.CSharp
 {
     public partial class SyntaxFactory
     {
-        public static ForEachStatementSyntax ForEachStatement(SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, StatementSyntax statement)
-            => ForEachStatement(awaitKeyword: default, forEachKeyword, openParenToken, identifier, type, inKeyword, expression, closeParenToken, statement);
+        public static ForEachStatementSyntax ForEachStatement(SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, SyntaxToken equalsGreaterThanToken, StatementSyntax statement)
+            => ForEachStatement(awaitKeyword: default, forEachKeyword, openParenToken, identifier, type, inKeyword, expression, closeParenToken, equalsGreaterThanToken, statement);
 
-        public static ForEachStatementSyntax ForEachStatement(SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, StatementSyntax statement)
-            => ForEachStatement(attributeLists: default, awaitKeyword, forEachKeyword, openParenToken, identifier, type, inKeyword, expression, closeParenToken, statement);
+        public static ForEachStatementSyntax ForEachStatement(SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, SyntaxToken equalsGreaterThanToken, StatementSyntax statement)
+            => ForEachStatement(attributeLists: default, awaitKeyword, forEachKeyword, openParenToken, identifier, type, inKeyword, expression, closeParenToken, equalsGreaterThanToken, statement);
     }
 }
