@@ -1739,7 +1739,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update((IdentifierNameSyntax?)Visit(node.Name) ?? throw new ArgumentNullException("name"), VisitToken(node.ColonToken));
 
         public override SyntaxNode? VisitDeclarationExpression(DeclarationExpressionSyntax node)
-            => node.Update((TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"), (VariableDesignationSyntax?)Visit(node.Designation) ?? throw new ArgumentNullException("designation"));
+            => node.Update((VariableDesignationSyntax?)Visit(node.Designation) ?? throw new ArgumentNullException("designation"), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"));
 
         public override SyntaxNode? VisitCastExpression(CastExpressionSyntax node)
             => node.Update(VisitToken(node.OpenParenToken), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"), VisitToken(node.CloseParenToken), (ExpressionSyntax?)Visit(node.Expression) ?? throw new ArgumentNullException("expression"));
@@ -1955,10 +1955,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update(VisitList(node.AttributeLists), VisitToken(node.ForKeyword), VisitToken(node.OpenParenToken), (VariableDeclarationSyntax?)Visit(node.Declaration), VisitList(node.Initializers), VisitToken(node.FirstSemicolonToken), (ExpressionSyntax?)Visit(node.Condition), VisitToken(node.SecondSemicolonToken), VisitList(node.Incrementors), VisitToken(node.CloseParenToken), (StatementSyntax?)Visit(node.Statement) ?? throw new ArgumentNullException("statement"));
 
         public override SyntaxNode? VisitForEachStatement(ForEachStatementSyntax node)
-            => node.Update(VisitList(node.AttributeLists), VisitToken(node.AwaitKeyword), VisitToken(node.ForEachKeyword), VisitToken(node.OpenParenToken), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"), VisitToken(node.Identifier), VisitToken(node.InKeyword), (ExpressionSyntax?)Visit(node.Expression) ?? throw new ArgumentNullException("expression"), VisitToken(node.CloseParenToken), (StatementSyntax?)Visit(node.Statement) ?? throw new ArgumentNullException("statement"));
+            => node.Update(VisitList(node.AttributeLists), VisitToken(node.AwaitKeyword), VisitToken(node.ForEachKeyword), VisitToken(node.OpenParenToken), VisitToken(node.Identifier), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"), VisitToken(node.InKeyword), (ExpressionSyntax?)Visit(node.Expression) ?? throw new ArgumentNullException("expression"), VisitToken(node.CloseParenToken), VisitToken(node.EqualsGreaterThanToken), (StatementSyntax?)Visit(node.Statement) ?? throw new ArgumentNullException("statement"));
 
         public override SyntaxNode? VisitForEachVariableStatement(ForEachVariableStatementSyntax node)
-            => node.Update(VisitList(node.AttributeLists), VisitToken(node.AwaitKeyword), VisitToken(node.ForEachKeyword), VisitToken(node.OpenParenToken), (ExpressionSyntax?)Visit(node.Variable) ?? throw new ArgumentNullException("variable"), VisitToken(node.InKeyword), (ExpressionSyntax?)Visit(node.Expression) ?? throw new ArgumentNullException("expression"), VisitToken(node.CloseParenToken), (StatementSyntax?)Visit(node.Statement) ?? throw new ArgumentNullException("statement"));
+            => node.Update(VisitList(node.AttributeLists), VisitToken(node.AwaitKeyword), VisitToken(node.ForEachKeyword), VisitToken(node.OpenParenToken), (ExpressionSyntax?)Visit(node.Variable) ?? throw new ArgumentNullException("variable"), VisitToken(node.InKeyword), (ExpressionSyntax?)Visit(node.Expression) ?? throw new ArgumentNullException("expression"), VisitToken(node.CloseParenToken), VisitToken(node.EqualsGreaterThanToken), (StatementSyntax?)Visit(node.Statement) ?? throw new ArgumentNullException("statement"));
 
         public override SyntaxNode? VisitUsingStatement(UsingStatementSyntax node)
             => node.Update(VisitList(node.AttributeLists), VisitToken(node.AwaitKeyword), VisitToken(node.UsingKeyword), VisitToken(node.OpenParenToken), (VariableDeclarationSyntax?)Visit(node.Declaration), (ExpressionSyntax?)Visit(node.Expression), VisitToken(node.CloseParenToken), (StatementSyntax?)Visit(node.Statement) ?? throw new ArgumentNullException("statement"));
@@ -3163,11 +3163,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.NameColon(SyntaxFactory.IdentifierName(name), SyntaxFactory.Token(SyntaxKind.ColonToken));
 
         /// <summary>Creates a new DeclarationExpressionSyntax instance.</summary>
-        public static DeclarationExpressionSyntax DeclarationExpression(TypeSyntax type, VariableDesignationSyntax designation)
+        public static DeclarationExpressionSyntax DeclarationExpression(VariableDesignationSyntax designation, TypeSyntax type)
         {
-            if (type == null) throw new ArgumentNullException(nameof(type));
             if (designation == null) throw new ArgumentNullException(nameof(designation));
-            return (DeclarationExpressionSyntax)Syntax.InternalSyntax.SyntaxFactory.DeclarationExpression((Syntax.InternalSyntax.TypeSyntax)type.Green, (Syntax.InternalSyntax.VariableDesignationSyntax)designation.Green).CreateRed();
+            if (type == null) throw new ArgumentNullException(nameof(type));
+            return (DeclarationExpressionSyntax)Syntax.InternalSyntax.SyntaxFactory.DeclarationExpression((Syntax.InternalSyntax.VariableDesignationSyntax)designation.Green, (Syntax.InternalSyntax.TypeSyntax)type.Green).CreateRed();
         }
 
         /// <summary>Creates a new CastExpressionSyntax instance.</summary>
@@ -4273,7 +4273,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.ForStatement(default, SyntaxFactory.Token(SyntaxKind.ForKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), default, default, SyntaxFactory.Token(SyntaxKind.SemicolonToken), default, SyntaxFactory.Token(SyntaxKind.SemicolonToken), default, SyntaxFactory.Token(SyntaxKind.CloseParenToken), statement);
 
         /// <summary>Creates a new ForEachStatementSyntax instance.</summary>
-        public static ForEachStatementSyntax ForEachStatement(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, TypeSyntax type, SyntaxToken identifier, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, StatementSyntax statement)
+        public static ForEachStatementSyntax ForEachStatement(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, SyntaxToken equalsGreaterThanToken, StatementSyntax statement)
         {
             switch (awaitKeyword.Kind())
             {
@@ -4282,30 +4282,46 @@ namespace Microsoft.CodeAnalysis.CSharp
                 default: throw new ArgumentException(nameof(awaitKeyword));
             }
             if (forEachKeyword.Kind() != SyntaxKind.ForEachKeyword) throw new ArgumentException(nameof(forEachKeyword));
-            if (openParenToken.Kind() != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
-            if (type == null) throw new ArgumentNullException(nameof(type));
+            switch (openParenToken.Kind())
+            {
+                case SyntaxKind.OpenParenToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(openParenToken));
+            }
             if (identifier.Kind() != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
+            if (type == null) throw new ArgumentNullException(nameof(type));
             if (inKeyword.Kind() != SyntaxKind.InKeyword) throw new ArgumentException(nameof(inKeyword));
             if (expression == null) throw new ArgumentNullException(nameof(expression));
-            if (closeParenToken.Kind() != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
+            switch (closeParenToken.Kind())
+            {
+                case SyntaxKind.CloseParenToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(closeParenToken));
+            }
+            switch (equalsGreaterThanToken.Kind())
+            {
+                case SyntaxKind.EqualsGreaterThanToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(equalsGreaterThanToken));
+            }
             if (statement == null) throw new ArgumentNullException(nameof(statement));
-            return (ForEachStatementSyntax)Syntax.InternalSyntax.SyntaxFactory.ForEachStatement(attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), (Syntax.InternalSyntax.SyntaxToken?)awaitKeyword.Node, (Syntax.InternalSyntax.SyntaxToken)forEachKeyword.Node!, (Syntax.InternalSyntax.SyntaxToken)openParenToken.Node!, (Syntax.InternalSyntax.TypeSyntax)type.Green, (Syntax.InternalSyntax.SyntaxToken)identifier.Node!, (Syntax.InternalSyntax.SyntaxToken)inKeyword.Node!, (Syntax.InternalSyntax.ExpressionSyntax)expression.Green, (Syntax.InternalSyntax.SyntaxToken)closeParenToken.Node!, (Syntax.InternalSyntax.StatementSyntax)statement.Green).CreateRed();
+            return (ForEachStatementSyntax)Syntax.InternalSyntax.SyntaxFactory.ForEachStatement(attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), (Syntax.InternalSyntax.SyntaxToken?)awaitKeyword.Node, (Syntax.InternalSyntax.SyntaxToken)forEachKeyword.Node!, (Syntax.InternalSyntax.SyntaxToken?)openParenToken.Node, (Syntax.InternalSyntax.SyntaxToken)identifier.Node!, (Syntax.InternalSyntax.TypeSyntax)type.Green, (Syntax.InternalSyntax.SyntaxToken)inKeyword.Node!, (Syntax.InternalSyntax.ExpressionSyntax)expression.Green, (Syntax.InternalSyntax.SyntaxToken?)closeParenToken.Node, (Syntax.InternalSyntax.SyntaxToken?)equalsGreaterThanToken.Node, (Syntax.InternalSyntax.StatementSyntax)statement.Green).CreateRed();
         }
 
         /// <summary>Creates a new ForEachStatementSyntax instance.</summary>
-        public static ForEachStatementSyntax ForEachStatement(SyntaxList<AttributeListSyntax> attributeLists, TypeSyntax type, SyntaxToken identifier, ExpressionSyntax expression, StatementSyntax statement)
-            => SyntaxFactory.ForEachStatement(attributeLists, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), type, identifier, SyntaxFactory.Token(SyntaxKind.InKeyword), expression, SyntaxFactory.Token(SyntaxKind.CloseParenToken), statement);
+        public static ForEachStatementSyntax ForEachStatement(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken identifier, TypeSyntax type, ExpressionSyntax expression, StatementSyntax statement)
+            => SyntaxFactory.ForEachStatement(attributeLists, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), default, identifier, type, SyntaxFactory.Token(SyntaxKind.InKeyword), expression, default, default, statement);
 
         /// <summary>Creates a new ForEachStatementSyntax instance.</summary>
-        public static ForEachStatementSyntax ForEachStatement(TypeSyntax type, SyntaxToken identifier, ExpressionSyntax expression, StatementSyntax statement)
-            => SyntaxFactory.ForEachStatement(default, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), type, identifier, SyntaxFactory.Token(SyntaxKind.InKeyword), expression, SyntaxFactory.Token(SyntaxKind.CloseParenToken), statement);
+        public static ForEachStatementSyntax ForEachStatement(SyntaxToken identifier, TypeSyntax type, ExpressionSyntax expression, StatementSyntax statement)
+            => SyntaxFactory.ForEachStatement(default, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), default, identifier, type, SyntaxFactory.Token(SyntaxKind.InKeyword), expression, default, default, statement);
 
         /// <summary>Creates a new ForEachStatementSyntax instance.</summary>
-        public static ForEachStatementSyntax ForEachStatement(TypeSyntax type, string identifier, ExpressionSyntax expression, StatementSyntax statement)
-            => SyntaxFactory.ForEachStatement(default, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), type, SyntaxFactory.Identifier(identifier), SyntaxFactory.Token(SyntaxKind.InKeyword), expression, SyntaxFactory.Token(SyntaxKind.CloseParenToken), statement);
+        public static ForEachStatementSyntax ForEachStatement(string identifier, TypeSyntax type, ExpressionSyntax expression, StatementSyntax statement)
+            => SyntaxFactory.ForEachStatement(default, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), default, SyntaxFactory.Identifier(identifier), type, SyntaxFactory.Token(SyntaxKind.InKeyword), expression, default, default, statement);
 
         /// <summary>Creates a new ForEachVariableStatementSyntax instance.</summary>
-        public static ForEachVariableStatementSyntax ForEachVariableStatement(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, ExpressionSyntax variable, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, StatementSyntax statement)
+        public static ForEachVariableStatementSyntax ForEachVariableStatement(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken awaitKeyword, SyntaxToken forEachKeyword, SyntaxToken openParenToken, ExpressionSyntax variable, SyntaxToken inKeyword, ExpressionSyntax expression, SyntaxToken closeParenToken, SyntaxToken equalsGreaterThanToken, StatementSyntax statement)
         {
             switch (awaitKeyword.Kind())
             {
@@ -4314,22 +4330,38 @@ namespace Microsoft.CodeAnalysis.CSharp
                 default: throw new ArgumentException(nameof(awaitKeyword));
             }
             if (forEachKeyword.Kind() != SyntaxKind.ForEachKeyword) throw new ArgumentException(nameof(forEachKeyword));
-            if (openParenToken.Kind() != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
+            switch (openParenToken.Kind())
+            {
+                case SyntaxKind.OpenParenToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(openParenToken));
+            }
             if (variable == null) throw new ArgumentNullException(nameof(variable));
             if (inKeyword.Kind() != SyntaxKind.InKeyword) throw new ArgumentException(nameof(inKeyword));
             if (expression == null) throw new ArgumentNullException(nameof(expression));
-            if (closeParenToken.Kind() != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
+            switch (closeParenToken.Kind())
+            {
+                case SyntaxKind.CloseParenToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(closeParenToken));
+            }
+            switch (equalsGreaterThanToken.Kind())
+            {
+                case SyntaxKind.EqualsGreaterThanToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(equalsGreaterThanToken));
+            }
             if (statement == null) throw new ArgumentNullException(nameof(statement));
-            return (ForEachVariableStatementSyntax)Syntax.InternalSyntax.SyntaxFactory.ForEachVariableStatement(attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), (Syntax.InternalSyntax.SyntaxToken?)awaitKeyword.Node, (Syntax.InternalSyntax.SyntaxToken)forEachKeyword.Node!, (Syntax.InternalSyntax.SyntaxToken)openParenToken.Node!, (Syntax.InternalSyntax.ExpressionSyntax)variable.Green, (Syntax.InternalSyntax.SyntaxToken)inKeyword.Node!, (Syntax.InternalSyntax.ExpressionSyntax)expression.Green, (Syntax.InternalSyntax.SyntaxToken)closeParenToken.Node!, (Syntax.InternalSyntax.StatementSyntax)statement.Green).CreateRed();
+            return (ForEachVariableStatementSyntax)Syntax.InternalSyntax.SyntaxFactory.ForEachVariableStatement(attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), (Syntax.InternalSyntax.SyntaxToken?)awaitKeyword.Node, (Syntax.InternalSyntax.SyntaxToken)forEachKeyword.Node!, (Syntax.InternalSyntax.SyntaxToken?)openParenToken.Node, (Syntax.InternalSyntax.ExpressionSyntax)variable.Green, (Syntax.InternalSyntax.SyntaxToken)inKeyword.Node!, (Syntax.InternalSyntax.ExpressionSyntax)expression.Green, (Syntax.InternalSyntax.SyntaxToken?)closeParenToken.Node, (Syntax.InternalSyntax.SyntaxToken?)equalsGreaterThanToken.Node, (Syntax.InternalSyntax.StatementSyntax)statement.Green).CreateRed();
         }
 
         /// <summary>Creates a new ForEachVariableStatementSyntax instance.</summary>
         public static ForEachVariableStatementSyntax ForEachVariableStatement(SyntaxList<AttributeListSyntax> attributeLists, ExpressionSyntax variable, ExpressionSyntax expression, StatementSyntax statement)
-            => SyntaxFactory.ForEachVariableStatement(attributeLists, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), variable, SyntaxFactory.Token(SyntaxKind.InKeyword), expression, SyntaxFactory.Token(SyntaxKind.CloseParenToken), statement);
+            => SyntaxFactory.ForEachVariableStatement(attributeLists, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), default, variable, SyntaxFactory.Token(SyntaxKind.InKeyword), expression, default, default, statement);
 
         /// <summary>Creates a new ForEachVariableStatementSyntax instance.</summary>
         public static ForEachVariableStatementSyntax ForEachVariableStatement(ExpressionSyntax variable, ExpressionSyntax expression, StatementSyntax statement)
-            => SyntaxFactory.ForEachVariableStatement(default, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), variable, SyntaxFactory.Token(SyntaxKind.InKeyword), expression, SyntaxFactory.Token(SyntaxKind.CloseParenToken), statement);
+            => SyntaxFactory.ForEachVariableStatement(default, default, SyntaxFactory.Token(SyntaxKind.ForEachKeyword), default, variable, SyntaxFactory.Token(SyntaxKind.InKeyword), expression, default, default, statement);
 
         /// <summary>Creates a new UsingStatementSyntax instance.</summary>
         public static UsingStatementSyntax UsingStatement(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken awaitKeyword, SyntaxToken usingKeyword, SyntaxToken openParenToken, VariableDeclarationSyntax? declaration, ExpressionSyntax? expression, SyntaxToken closeParenToken, StatementSyntax statement)

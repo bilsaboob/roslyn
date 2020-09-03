@@ -1218,12 +1218,12 @@
   </Node>
   <Node Name="DeclarationExpressionSyntax" Base="ExpressionSyntax">
     <Kind Name="DeclarationExpression"/>
-    <Field Name="Type" Type="TypeSyntax"/>
     <Field Name="Designation" Type="VariableDesignationSyntax">
       <PropertyComment>
         <summary>Declaration representing the variable declared in an out parameter or deconstruction.</summary>
       </PropertyComment>
     </Field>
+    <Field Name="Type" Type="TypeSyntax"/>
     <TypeComment>
       <summary>Class which represents the syntax node for the variable declaration in an out var declaration or a deconstruction declaration.</summary>
     </TypeComment>
@@ -2415,7 +2415,7 @@
     <Field Name="ForEachKeyword" Type="SyntaxToken">
       <Kind Name="ForEachKeyword"/>
     </Field>
-    <Field Name="OpenParenToken" Type="SyntaxToken">
+    <Field Name="OpenParenToken" Type="SyntaxToken" Optional="true">
       <Kind Name="OpenParenToken"/>
     </Field>
     <!-- At this point one of two declaration forms appears -->
@@ -2423,8 +2423,11 @@
       <Kind Name="InKeyword"/>
     </Field>
     <Field Name="Expression" Type="ExpressionSyntax"/>
-    <Field Name="CloseParenToken" Type="SyntaxToken">
+    <Field Name="CloseParenToken" Type="SyntaxToken" Optional="true">
       <Kind Name="CloseParenToken"/>
+    </Field>
+    <Field Name="EqualsGreaterThanToken" Type="SyntaxToken" Optional="true">
+      <Kind Name="EqualsGreaterThanToken"/>
     </Field>
     <Field Name="Statement" Type="StatementSyntax"/>
   </AbstractNode>
@@ -2438,22 +2441,25 @@
     <Field Name="ForEachKeyword" Type="SyntaxToken" Override="true">
       <Kind Name="ForEachKeyword"/>
     </Field>
-    <Field Name="OpenParenToken" Type="SyntaxToken" Override="true">
+    <Field Name="OpenParenToken" Type="SyntaxToken" Override="true" Optional="true">
       <Kind Name="OpenParenToken"/>
     </Field>
-    <Field Name="Type" Type="TypeSyntax"/>
     <Field Name="Identifier" Type="SyntaxToken">
       <PropertyComment>
         <summary>Gets the identifier.</summary>
       </PropertyComment>
       <Kind Name="IdentifierToken"/>
     </Field>
+    <Field Name="Type" Type="TypeSyntax" />
     <Field Name="InKeyword" Type="SyntaxToken" Override="true">
       <Kind Name="InKeyword"/>
     </Field>
     <Field Name="Expression" Type="ExpressionSyntax" Override="true"/>
-    <Field Name="CloseParenToken" Type="SyntaxToken" Override="true">
+    <Field Name="CloseParenToken" Type="SyntaxToken" Override="true" Optional="true">
       <Kind Name="CloseParenToken"/>
+    </Field>
+    <Field Name="EqualsGreaterThanToken" Type="SyntaxToken" Override="true" Optional="true">
+      <Kind Name="EqualsGreaterThanToken"/>
     </Field>
     <Field Name="Statement" Type="StatementSyntax" Override="true"/>
   </Node>
@@ -2469,7 +2475,7 @@
     <Field Name="ForEachKeyword" Type="SyntaxToken" Override="true">
       <Kind Name="ForEachKeyword"/>
     </Field>
-    <Field Name="OpenParenToken" Type="SyntaxToken" Override="true">
+    <Field Name="OpenParenToken" Type="SyntaxToken" Override="true" Optional="true">
       <Kind Name="OpenParenToken"/>
     </Field>
     <Field Name="Variable" Type="ExpressionSyntax">
@@ -2486,8 +2492,11 @@
       <Kind Name="InKeyword"/>
     </Field>
     <Field Name="Expression" Type="ExpressionSyntax" Override="true"/>
-    <Field Name="CloseParenToken" Type="SyntaxToken" Override="true">
+    <Field Name="CloseParenToken" Type="SyntaxToken" Override="true" Optional="true">
       <Kind Name="CloseParenToken"/>
+    </Field>
+    <Field Name="EqualsGreaterThanToken" Type="SyntaxToken" Override="true" Optional="true">
+      <Kind Name="EqualsGreaterThanToken"/>
     </Field>
     <Field Name="Statement" Type="StatementSyntax" Override="true"/>
   </Node>

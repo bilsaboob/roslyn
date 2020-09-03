@@ -94,6 +94,121 @@ namespace Microsoft.CodeAnalysis.Syntax.InternalSyntax
             return false;
         }
 
+        public TNode? LastOrDefault(Func<TNode?, bool> predicate)
+        {
+            TNode? last = null;
+            foreach (var element in this)
+            {
+                if (predicate(element))
+                    last = element;
+            }
+
+            return last;
+        }
+
+        public int? GetFullWidth(Func<TNode?, bool> resetPredicate)
+        {
+            int? width = null;
+
+            foreach (var element in this)
+            {
+                width = width ?? 0;
+                width += element.FullWidth;
+
+                if (resetPredicate?.Invoke(element) == true)
+                {
+                    width = 0;
+                }
+            }
+
+            return width;
+        }
+
+        public int? GetFullWidthAfterLast(Func<TNode?, bool> predicate)
+        {
+            int? width = null;
+            var appendWidth = false;
+
+            foreach (var element in this)
+            {
+                if (appendWidth)
+                    width += element.FullWidth;
+
+                if (predicate(element))
+                {
+                    appendWidth = true;
+                    width = 0;
+                }
+            }
+
+            return width;
+        }
+
+        public int? GetFullWidthAfterFirst(Func<TNode?, bool> predicate)
+        {
+            int? width = null;
+            var appendWidth = false;
+
+            foreach (var element in this)
+            {
+                if (appendWidth)
+                    width = width + element.FullWidth;
+
+                if (predicate(element))
+                {
+                    appendWidth = true;
+                    width = width ?? 0;
+                }
+            }
+
+            return width;
+        }
+
+        public int GetFullWidthAfter(TNode node)
+        {
+            int width = 0;
+            var appendWidth = false;
+
+            foreach (var element in this)
+            {
+                if (appendWidth)
+                {
+                    width += element.FullWidth;
+                }
+
+                if (node == element)
+                {
+                    appendWidth = true;
+                }
+            }
+
+            return width;
+        }
+
+        public int GetFullWidthBefore(TNode node)
+        {
+            int width = 0;
+
+            foreach (var element in this)
+            {
+                if (node == element) break;
+
+                width += element.FullWidth;
+            }
+
+            return width;
+        }
+
+        public TNode? FirstOrDefault(Func<TNode?, bool> predicate)
+        {
+            foreach (var element in this)
+            {
+                if (predicate(element)) return element;
+            }
+
+            return null;
+        }
+
         internal TNode[] Nodes
         {
             get

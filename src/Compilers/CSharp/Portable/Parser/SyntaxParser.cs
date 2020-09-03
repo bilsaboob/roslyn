@@ -315,6 +315,59 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
+        protected bool IsCurrentLineIndented
+        {
+            get
+            {
+                var i = 0;
+
+                // find the closest newline, so we can calculate the "current line indentation level"
+                var currentLineIndent = GetLineIndent(ref i);
+                if (currentLineIndent == null) return false;
+
+                // now find the next closest newline, which is the previous newline
+                var prevLineIndent = GetLineIndent(ref i);
+
+                return (currentLineIndent ?? 0) > (prevLineIndent ?? 0);
+            }
+        }
+
+        private int? GetLineIndent(ref int i)
+        {
+            int? indent = null;
+
+            SyntaxToken prevToken = null;
+            SyntaxToken token = null;
+            while (true)
+            {
+                token = PeekPrevToken(i);
+                if (token == null) break;
+                ++i;
+
+                // check if current token has newline before
+                var eolLeadingTriviaIndent = token.LeadingTrivia.GetFullWidthAfterLast(n => n.Kind == SyntaxKind.EndOfLineTrivia);
+                if (eolLeadingTriviaIndent != null)
+                {
+                    indent = eolLeadingTriviaIndent;
+                    break;
+                }
+
+                // if we are not, the check if the previous token has newline after
+                prevToken = PeekPrevToken(i);
+                if (prevToken == null) break;
+
+                var eolTrivia = prevToken.TrailingTrivia.FirstOrDefault(n => n.Kind == SyntaxKind.EndOfLineTrivia);
+                if (eolTrivia != null)
+                {
+                    // since previous token has newline after... the indentation is all the whitespace before the token
+                    indent = token.LeadingTrivia.GetFullWidth(n => n.Kind == SyntaxKind.EndOfLineTrivia);
+                    break;
+                }
+            }
+
+            return indent;
+        }
+
         private SyntaxToken FetchCurrentToken()
         {
             if (_tokenOffset >= _tokenCount)
@@ -464,7 +517,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             if (_blendedTokens != null)
             {
-                return _blendedTokens[_tokenOffset - n].Token;
+                var token = _blendedTokens[_tokenOffset - n].Token;
+                if (token != null) return token;
+                var firstToken = _blendedTokens[_tokenOffset - n].Node.GetFirstToken();
+                if (firstToken == default) return null;
+                return firstToken.Node as SyntaxToken;
             }
             else
             {
@@ -890,6 +947,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         protected TNode AddTrailingSkippedSyntax<TNode>(TNode node, GreenNode skippedSyntax) where TNode : CSharpSyntaxNode
         {
+            if (skippedSyntax == null) return node;
             var token = node as SyntaxToken;
             if (token != null)
             {

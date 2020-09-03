@@ -250,7 +250,7 @@ namespace Microsoft.CodeAnalysis.CSharp.InlineDeclaration
                 // If the user originally wrote it something other than 'var', then use what they
                 // wrote.  Otherwise, synthesize the actual type of the local.
                 var explicitType = declaration.Type.IsVar ? local.Type?.GenerateTypeSyntax() : declaration.Type;
-                declarationExpression = SyntaxFactory.DeclarationExpression(explicitType, declarationExpression.Designation);
+                declarationExpression = SyntaxFactory.DeclarationExpression(declarationExpression.Designation, explicitType);
             }
 
             editor.ReplaceNode(identifier, declarationExpression);
@@ -310,7 +310,7 @@ namespace Microsoft.CodeAnalysis.CSharp.InlineDeclaration
                 }
             }
 
-            return SyntaxFactory.DeclarationExpression(newType, designation);
+            return SyntaxFactory.DeclarationExpression(designation, newType);
         }
 
         private static IEnumerable<SyntaxTrivia> MassageTrivia(IEnumerable<SyntaxTrivia> triviaList)

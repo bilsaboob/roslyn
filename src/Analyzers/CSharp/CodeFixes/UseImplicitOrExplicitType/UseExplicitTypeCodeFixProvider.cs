@@ -137,7 +137,7 @@ namespace Microsoft.CodeAnalysis.CSharp.TypeStyle
                     case SyntaxKind.SingleVariableDesignation:
                     case SyntaxKind.DiscardDesignation:
                         var typeName = type.GenerateTypeSyntax(allowVar: false);
-                        newDeclaration = SyntaxFactory.DeclarationExpression(typeName, designation);
+                        newDeclaration = SyntaxFactory.DeclarationExpression(designation, typeName);
                         break;
                     case SyntaxKind.ParenthesizedVariableDesignation:
                         newDeclaration = GenerateTupleDeclaration(type, (ParenthesizedVariableDesignationSyntax)designation);

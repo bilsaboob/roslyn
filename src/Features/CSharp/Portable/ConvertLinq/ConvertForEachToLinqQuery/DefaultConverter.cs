@@ -51,8 +51,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq.ConvertForEachToLinqQuery
             {
                 // Generate foreach(var _ ... select new {})
                 return SyntaxFactory.ForEachStatement(
-                    VarNameIdentifier,
                     SyntaxFactory.Identifier("_"),
+                    SyntaxFactory.FakeTypeIdentifier(),
                     CreateQueryExpressionOrLinqInvocation(
                         SyntaxFactory.AnonymousObjectCreationExpression(),
                         Enumerable.Empty<SyntaxToken>(),
@@ -64,8 +64,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq.ConvertForEachToLinqQuery
             {
                 // Generate foreach(var singleIdentifier from ... select singleIdentifier)
                 return SyntaxFactory.ForEachStatement(
-                    VarNameIdentifier,
                     identifiers.Single(),
+                    SyntaxFactory.FakeTypeIdentifier(),
                     CreateQueryExpressionOrLinqInvocation(
                         SyntaxFactory.IdentifierName(identifiers.Single()),
                         Enumerable.Empty<SyntaxToken>(),
@@ -79,10 +79,11 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq.ConvertForEachToLinqQuery
                     SyntaxFactory.SeparatedList(identifiers.Select(
                         identifier => SyntaxFactory.Argument(SyntaxFactory.IdentifierName(identifier)))));
                 var declaration = SyntaxFactory.DeclarationExpression(
-                    VarNameIdentifier,
                     SyntaxFactory.ParenthesizedVariableDesignation(
                         SyntaxFactory.SeparatedList<VariableDesignationSyntax>(identifiers.Select(
-                            identifier => SyntaxFactory.SingleVariableDesignation(identifier)))));
+                            identifier => SyntaxFactory.SingleVariableDesignation(identifier)))),
+                        VarNameIdentifier
+                    );
 
                 // Generate foreach(var (a,b) ... select (a, b))
                 return SyntaxFactory.ForEachVariableStatement(

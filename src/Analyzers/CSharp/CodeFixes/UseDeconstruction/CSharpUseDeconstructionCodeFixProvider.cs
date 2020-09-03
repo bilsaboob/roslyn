@@ -128,6 +128,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseDeconstruction
                 forEachStatement.InKeyword,
                 forEachStatement.Expression,
                 forEachStatement.CloseParenToken,
+                forEachStatement.EqualsGreaterThanToken,
                 forEachStatement.Statement);
         }
 
@@ -159,9 +160,11 @@ namespace Microsoft.CodeAnalysis.CSharp.UseDeconstruction
 
         private static DeclarationExpressionSyntax CreateDeclarationExpression(INamedTypeSymbol tupleType, TypeSyntax typeNode)
             => SyntaxFactory.DeclarationExpression(
-                typeNode, SyntaxFactory.ParenthesizedVariableDesignation(
+                SyntaxFactory.ParenthesizedVariableDesignation(
                     SyntaxFactory.SeparatedList<VariableDesignationSyntax>(tupleType.TupleElements.Select(
-                        e => SyntaxFactory.SingleVariableDesignation(SyntaxFactory.Identifier(e.Name.EscapeIdentifier()))))));
+                        e => SyntaxFactory.SingleVariableDesignation(SyntaxFactory.Identifier(e.Name.EscapeIdentifier()))))),
+                typeNode
+                );
 
         private TupleExpressionSyntax CreateTupleExpression(TupleTypeSyntax typeNode)
             => SyntaxFactory.TupleExpression(
@@ -182,8 +185,9 @@ namespace Microsoft.CodeAnalysis.CSharp.UseDeconstruction
             var node = (TupleElementSyntax)nodeOrToken.AsNode();
             return SyntaxFactory.Argument(
                 SyntaxFactory.DeclarationExpression(
-                    node.Type,
-                    SyntaxFactory.SingleVariableDesignation(node.Identifier)));
+                    SyntaxFactory.SingleVariableDesignation(node.Identifier),
+                    node.Type
+                ));
         }
 
         private class MyCodeAction : CustomCodeActions.DocumentChangeAction

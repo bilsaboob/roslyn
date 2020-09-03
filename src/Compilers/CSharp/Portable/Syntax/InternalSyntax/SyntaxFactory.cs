@@ -134,6 +134,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return type;
         }
 
+        internal static IdentifierNameSyntax FakeIdentifier(ContextAwareSyntax syntaxFactory = null)
+        {
+            var token = SyntaxFactory.Token(SyntaxKind.IdentifierToken);
+            var type = syntaxFactory?.IdentifierName(token) ?? SyntaxFactory.IdentifierName(token);
+            return type;
+        }
+
         internal static SyntaxToken Token(GreenNode leading, SyntaxKind kind, string text, string valueText, GreenNode trailing)
         {
             Debug.Assert(SyntaxFacts.IsAnyToken(kind));
