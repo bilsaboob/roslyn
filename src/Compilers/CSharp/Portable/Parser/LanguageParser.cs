@@ -7596,7 +7596,47 @@ done:;
         }
 
         private StatementSyntax ParseStatementStartingWithUsing(SyntaxList<AttributeListSyntax> attributes)
-            => PeekToken(1).Kind == SyntaxKind.OpenParenToken ? ParseUsingStatement(attributes) : ParseLocalDeclarationStatement(attributes);
+        {
+            if (PeekToken(1).Kind == SyntaxKind.OpenParenToken)
+            {
+                return ParseUsingStatement(attributes);
+            }
+            else
+            {
+                var resetPoint = GetResetPoint();
+
+                var wasTrailingLambdaAllowed = IsTrailingLambdaAllowed;
+                var wasObjectInitializerAllowed = IsObjectInitializerAllowed;
+                try
+                {
+                    // trailing lambdas are not allowed in using statements ... 
+                    IsTrailingLambdaAllowed = false;
+                    IsObjectInitializerAllowed = false;
+
+                    var statement = ParseLocalDeclarationStatement(attributes);
+
+                    if (statement is LocalDeclarationStatementSyntax localDecl)
+                    {
+                        // if we have a following open brace, then what we parsed is a using statement without the "parenthesis" ... we should return that instead
+                        if (CurrentToken.Kind == SyntaxKind.OpenBraceToken)
+                        {
+                            Reset(ref resetPoint);
+
+                            return ParseUsingStatement(attributes);
+                        }
+                    }
+
+                    return statement;
+                }
+                finally
+                {
+                    IsTrailingLambdaAllowed = wasTrailingLambdaAllowed;
+                    IsObjectInitializerAllowed = wasObjectInitializerAllowed;
+
+                    Release(ref resetPoint);
+                }
+            }
+        }
 
         // Checking for brace to disambiguate between unsafe statement and unsafe local function
         private StatementSyntax TryParseStatementStartingWithUnsafe(SyntaxList<AttributeListSyntax> attributes)
@@ -9650,22 +9690,46 @@ tryAgain:
         private UsingStatementSyntax ParseUsingStatement(SyntaxList<AttributeListSyntax> attributes, SyntaxToken awaitTokenOpt = null)
         {
             var @using = this.EatToken(SyntaxKind.UsingKeyword);
-            var openParen = this.EatToken(SyntaxKind.OpenParenToken);
+
+            SyntaxToken openParen = null;
+            SyntaxToken closeParen = null;
+
+            // parse the "(" if available, not a required token
+            if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken)
+                openParen = this.EatToken(SyntaxKind.OpenParenToken);
 
             VariableDeclarationSyntax declaration = null;
             ExpressionSyntax expression = null;
 
-            var resetPoint = this.GetResetPoint();
-            ParseUsingExpression(ref declaration, ref expression, ref resetPoint);
-            this.Release(ref resetPoint);
+            ParseUsingExpression(ref declaration, ref expression);
 
-            var closeParen = this.EatToken(SyntaxKind.CloseParenToken);
+            // parse the ")" if we had an "open ("
+            if ((openParen != null || this.CurrentToken.Kind == SyntaxKind.CloseParenToken) && this.CurrentToken.Kind != SyntaxKind.OpenBraceToken)
+            {
+                // if we are at an open brace, don't consume the open paren... we are more likely at the
+                closeParen = this.EatToken(SyntaxKind.CloseParenToken);
+            }
+
+            // add error if missing close paren despite being at the next statement expression
+            if (openParen != null && closeParen == null)
+            {
+                if (expression != null)
+                    expression = AddError(expression, ErrorCode.ERR_CloseParenExpected);
+                else if(declaration != null)
+                    declaration = AddError(declaration, ErrorCode.ERR_CloseParenExpected);
+            }
+
+            // make sure we have the open / close parens
+            openParen ??= SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken);
+            closeParen ??= SyntaxFactory.FakeToken(SyntaxKind.CloseParenToken);
+
+            // parse the following statement
             var statement = this.ParseEmbeddedStatement();
 
             return _syntaxFactory.UsingStatement(attributes, awaitTokenOpt, @using, openParen, declaration, expression, closeParen, statement);
         }
 
-        private void ParseUsingExpression(ref VariableDeclarationSyntax declaration, ref ExpressionSyntax expression, ref ResetPoint resetPoint)
+        private void ParseUsingExpression(ref VariableDeclarationSyntax declaration, ref ExpressionSyntax expression)
         {
             if (this.IsAwaitExpression())
             {
@@ -9673,78 +9737,15 @@ tryAgain:
                 return;
             }
 
-            // Now, this can be either an expression or a decl list
-
-            ScanTypeFlags st;
-
-            if (this.IsQueryExpression(mayBeVariableDeclaration: true, mayBeMemberDeclaration: false))
+            // if this is a query, we can'
+            var isQueryExpression = this.IsQueryExpression(mayBeVariableDeclaration: true, mayBeMemberDeclaration: false);
+            if (!isQueryExpression)
             {
-                st = ScanTypeFlags.NotType;
-            }
-            else
-            {
-                st = this.ScanType();
-            }
-
-            if (st == ScanTypeFlags.NullableType)
-            {
-                // We need to handle:
-                // * using (f ? x = a : x = b)
-                // * using (f ? x = a)
-                // * using (f ? x, y)
-
-                if (this.CurrentToken.Kind != SyntaxKind.IdentifierToken)
-                {
-                    this.Reset(ref resetPoint);
-                    expression = this.ParseExpressionCore();
-                }
-                else
-                {
-                    switch (this.PeekToken(1).Kind)
-                    {
-                        default:
-                            this.Reset(ref resetPoint);
-                            expression = this.ParseExpressionCore();
-                            break;
-
-                        case SyntaxKind.CommaToken:
-                        case SyntaxKind.CloseParenToken:
-                            this.Reset(ref resetPoint);
-                            declaration = ParseVariableDeclaration();
-                            break;
-
-                        case SyntaxKind.EqualsToken:
-                            // Parse it as a decl. If the next token is a : and only one variable was parsed,
-                            // convert the whole thing to ?: expression.
-                            this.Reset(ref resetPoint);
-                            declaration = ParseVariableDeclaration();
-
-                            // We may have non-nullable types in error scenarios.
-                            if (this.CurrentToken.Kind == SyntaxKind.ColonToken &&
-                                declaration.Type.Kind == SyntaxKind.NullableType &&
-                                SyntaxFacts.IsName(((NullableTypeSyntax)declaration.Type).ElementType.Kind) &&
-                                declaration.Variables.Count == 1)
-                            {
-                                // We have "name? id = expr :" so need to convert to a ?: expression.
-                                this.Reset(ref resetPoint);
-                                declaration = null;
-                                expression = this.ParseExpressionCore();
-                            }
-
-                            break;
-                    }
-                }
-            }
-            else if (IsUsingStatementVariableDeclaration(st))
-            {
-                this.Reset(ref resetPoint);
                 declaration = ParseVariableDeclaration();
             }
             else
             {
-                // Must be an expression statement
-                this.Reset(ref resetPoint);
-                expression = this.ParseExpressionCore();
+                expression = ParseExpressionCore();
             }
         }
 
@@ -11259,6 +11260,7 @@ tryAgain:
         }
 
         internal bool IsSimpleExpression { get; set; }
+        internal bool IsTrailingLambdaAllowed { get; set; } = true;
 
         private ExpressionSyntax ParsePostFixExpression(ExpressionSyntax expr)
         {
@@ -11270,11 +11272,11 @@ tryAgain:
                 switch (tk)
                 {
                     case SyntaxKind.OpenParenToken:
-                        expr = _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList(allowTrailingBlockArg: true));
+                        expr = _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList(allowTrailingBlockArg: IsTrailingLambdaAllowed));
                         break;
 
                     case SyntaxKind.OpenBraceToken:
-                        if (IsSimpleExpression) return expr;
+                        if (IsSimpleExpression || !IsTrailingLambdaAllowed) return expr;
                         if (expr is InvocationExpressionSyntax) return expr;
                         var openToken = SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken, "(");
                         var closeToken = SyntaxFactory.FakeToken(SyntaxKind.CloseParenToken, ")");
@@ -11486,6 +11488,11 @@ tryAgain:
             _termState |= TerminatorState.IsEndOfArgumentList;
 
             SeparatedSyntaxListBuilder<ArgumentSyntax> list = default(SeparatedSyntaxListBuilder<ArgumentSyntax>);
+            var wasObjectInitializerAllowed = IsObjectInitializerAllowed;
+            var wasTrailingLambdaAllowed = IsTrailingLambdaAllowed;
+
+            IsObjectInitializerAllowed = true;
+            IsTrailingLambdaAllowed = true;
             try
             {
                 if (this.CurrentToken.Kind != closeKind && this.CurrentToken.Kind != SyntaxKind.SemicolonToken)
@@ -11558,6 +11565,9 @@ tryAgain:
             }
             finally
             {
+                IsObjectInitializerAllowed = wasObjectInitializerAllowed;
+                IsTrailingLambdaAllowed = wasTrailingLambdaAllowed;
+
                 if (!list.IsNull)
                 {
                     _pool.Free(list);
@@ -12392,6 +12402,8 @@ tryAgain:
             return this.CurrentToken.Kind == SyntaxKind.OpenBracketToken;
         }
 
+        private bool IsObjectInitializerAllowed { get; set; } = true;
+
         private ExpressionSyntax ParseArrayOrObjectCreationExpression()
         {
             SyntaxToken @new = this.EatToken(SyntaxKind.NewKeyword);
@@ -12424,7 +12436,7 @@ tryAgain:
                 argumentList = this.ParseParenthesizedArgumentList();
             }
 
-            if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
+            if (IsObjectInitializerAllowed && this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
             {
                 initializer = this.ParseObjectOrCollectionInitializer();
             }
