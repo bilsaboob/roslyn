@@ -10926,15 +10926,20 @@ tryAgain:
                 {
                     opKind = SyntaxFacts.GetBinaryExpression(tk);
                 }
-                else if (IsExpectedAssignmentOperator(tk))
+                else if (tk == SyntaxKind.ColonEqualsToken && IsDeclAssignmentAllowed)
+                {
+                    opKind = SyntaxKind.SimpleAssignmentExpression;
+                    isDeclarationOperator = true;
+                }
+                else if (tk == SyntaxKind.EqualsToken && IsDeclAssignmentAllowed)
                 {
                     opKind = SyntaxFacts.GetAssignmentExpression(tk);
                     isAssignmentOperator = true;
                 }
-                else if(tk == SyntaxKind.ColonEqualsToken && IsDeclAssignmentAllowed)
+                else if (IsExpectedAssignmentOperator(tk) && tk != SyntaxKind.EqualsToken)
                 {
-                    opKind = SyntaxKind.SimpleAssignmentExpression;
-                    isDeclarationOperator = true;
+                    opKind = SyntaxFacts.GetAssignmentExpression(tk);
+                    isAssignmentOperator = true;
                 }
                 else if (tk == SyntaxKind.DotDotToken)
                 {
