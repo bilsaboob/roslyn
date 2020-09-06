@@ -710,6 +710,7 @@
         <Kind Name="LessThanLessThanEqualsToken"/>
         <Kind Name="GreaterThanGreaterThanEqualsToken"/>
         <Kind Name="QuestionQuestionEqualsToken" />
+        <Kind Name="ColonEqualsToken" />
         <PropertyComment>
           <summary>SyntaxToken representing the operator of the assignment expression.</summary>
         </PropertyComment>
