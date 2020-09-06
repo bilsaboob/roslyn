@@ -127,10 +127,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return SyntaxToken.CreateFake(kind, value, allowTrivia);
         }
 
-        internal static IdentifierNameSyntax FakeTypeIdentifier(ContextAwareSyntax syntaxFactory = null)
+        internal static IdentifierNameSyntax FakeTypeIdentifier(ContextAwareSyntax syntaxFactory = null, bool isVar = false)
         {
             var token = SyntaxFactory.Token(SyntaxKind.IdentifierToken);
             var type = syntaxFactory?.IdentifierName(token) ?? SyntaxFactory.IdentifierName(token);
+            if (isVar) type.IsVar = true;
             return type;
         }
 

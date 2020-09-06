@@ -11,10 +11,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         {
             get
             {
-                if (Variables.Count > 0)
-                    return Variables[0].Type;
+                TypeSyntax type = null;
 
-                return null;
+                if (Variables.Count > 0)
+                {
+                    type = Variables[0].Type;
+                }
+
+                type ??= SyntaxFactory.FakeTypeIdentifier(isVar: true);
+
+                return type;
             }
         }
 

@@ -295,7 +295,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             get
             {
-                if (_prevTokenTrailingTrivia != null && _prevTokenTrailingTrivia.RawKind == (int)SyntaxKind.EndOfLineTrivia) return true;
                 if (CurrentToken.LeadingTrivia.Any((int)SyntaxKind.EndOfLineTrivia)) return true;
                 var prevToken = PeekPrevToken(1);
                 if (prevToken != null && prevToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia)) return true;
@@ -307,7 +306,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             get
             {
-                if (_prevTokenTrailingTrivia != null && _prevTokenTrailingTrivia.RawKind == (int)SyntaxKind.WhitespaceTrivia) return true;
                 if (CurrentToken.LeadingTrivia.Any((int)SyntaxKind.WhitespaceTrivia)) return true;
                 var prevToken = PeekPrevToken(1);
                 if (prevToken != null && prevToken.TrailingTrivia.Any((int)SyntaxKind.WhitespaceTrivia)) return true;

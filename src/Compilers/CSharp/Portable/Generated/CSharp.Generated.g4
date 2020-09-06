@@ -748,7 +748,7 @@ initializer_expression
   ;
 
 assignment_expression
-  : expression ('=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '^=' | '|=' | '<<=' | '>>=' | '??=') expression
+  : expression ('=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '^=' | '|=' | '<<=' | '>>=' | '??=' | ':=') expression
   ;
 
 await_expression
