@@ -815,43 +815,76 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
                 return true;
             }
 
-            return
-                //syntaxTree.IsAfterKeyword(position, SyntaxKind.ConstKeyword, cancellationToken) ||
-                //syntaxTree.IsAfterKeyword(position, SyntaxKind.RefKeyword, cancellationToken) ||
-                //syntaxTree.IsAfterKeyword(position, SyntaxKind.ReadOnlyKeyword, cancellationToken) ||
-                syntaxTree.IsAfterKeyword(position, SyntaxKind.CaseKeyword, cancellationToken) ||
-                //syntaxTree.IsAfterKeyword(position, SyntaxKind.EventKeyword, cancellationToken) ||
-                syntaxTree.IsAfterKeyword(position, SyntaxKind.StackAllocKeyword, cancellationToken) ||
-                syntaxTree.IsAttributeNameContext(position, cancellationToken) ||
-                syntaxTree.IsBaseClassOrInterfaceContext(position, cancellationToken) ||
-                syntaxTree.IsCatchVariableDeclarationContext(position, cancellationToken) ||
-                syntaxTree.IsDefiniteCastTypeContext(position, tokenOnLeftOfPosition) ||
-                syntaxTree.IsDelegateReturnTypeContext(position, tokenOnLeftOfPosition) ||
-                syntaxTree.IsExpressionContext(position, tokenOnLeftOfPosition, attributes: true, cancellationToken: cancellationToken, semanticModelOpt: semanticModelOpt) ||
-                syntaxTree.IsPrimaryFunctionExpressionContext(position, tokenOnLeftOfPosition) ||
-                syntaxTree.IsGenericTypeArgumentContext(position, tokenOnLeftOfPosition, cancellationToken, semanticModelOpt) ||
-                syntaxTree.IsFunctionPointerTypeArgumentContext(position, tokenOnLeftOfPosition, cancellationToken) ||
-                syntaxTree.IsFixedVariableDeclarationContext(position, tokenOnLeftOfPosition) ||
-                syntaxTree.IsImplicitOrExplicitOperatorTypeContext(position, tokenOnLeftOfPosition) ||
-                syntaxTree.IsIsOrAsTypeContext(position, tokenOnLeftOfPosition) ||
-                syntaxTree.IsLocalVariableDeclarationContext(position, tokenOnLeftOfPosition, cancellationToken) ||
-                syntaxTree.IsObjectCreationTypeContext(position, tokenOnLeftOfPosition, cancellationToken) ||
-                syntaxTree.IsParameterTypeContext(position, tokenOnLeftOfPosition) ||
-                syntaxTree.IsPossibleLambdaOrAnonymousMethodParameterTypeContext(position, tokenOnLeftOfPosition, cancellationToken) ||
-                syntaxTree.IsStatementContext(position, tokenOnLeftOfPosition, cancellationToken) ||
-                syntaxTree.IsGlobalStatementContext(position, cancellationToken) ||
-                syntaxTree.IsTypeParameterConstraintContext(position, tokenOnLeftOfPosition) ||
-                syntaxTree.IsUsingAliasContext(position, cancellationToken) ||
-                syntaxTree.IsUsingStaticContext(position, cancellationToken) ||
-                syntaxTree.IsGlobalMemberDeclarationContext(position, SyntaxKindSet.AllGlobalMemberModifiers, cancellationToken) ||
-                syntaxTree.IsPossibleTupleContext(tokenOnLeftOfPosition, position) ||
-                syntaxTree.IsMemberDeclarationContext(
+            var isAfterCaseKeyword = syntaxTree.IsAfterKeyword(position, SyntaxKind.CaseKeyword, cancellationToken);
+            var isAfterStackAllocKeyword = syntaxTree.IsAfterKeyword(position, SyntaxKind.StackAllocKeyword, cancellationToken);
+            var isAttributeNameContext = syntaxTree.IsAttributeNameContext(position, cancellationToken);
+            var isBaseClassOrInterfaceContext = syntaxTree.IsBaseClassOrInterfaceContext(position, cancellationToken);
+            var isCatchVariableDeclarationContext = syntaxTree.IsCatchVariableDeclarationContext(position, cancellationToken);
+            var isDefiniteCastTypeContext = syntaxTree.IsDefiniteCastTypeContext(position, tokenOnLeftOfPosition);
+            var isDelegateReturnTypeContext = syntaxTree.IsDelegateReturnTypeContext(position, tokenOnLeftOfPosition);
+            var isExpressionContext = syntaxTree.IsExpressionContext(position, tokenOnLeftOfPosition, attributes: true, cancellationToken: cancellationToken, semanticModelOpt: semanticModelOpt);
+            var isPrimaryFunctionExpressionContext = syntaxTree.IsPrimaryFunctionExpressionContext(position, tokenOnLeftOfPosition);
+            var isGenericTypeArgumentContext = syntaxTree.IsGenericTypeArgumentContext(position, tokenOnLeftOfPosition, cancellationToken, semanticModelOpt);
+            var isFunctionPointerTypeArgumentContext = syntaxTree.IsFunctionPointerTypeArgumentContext(position, tokenOnLeftOfPosition, cancellationToken);
+
+            //var isFixedVariableDeclarationContext = syntaxTree.IsFixedVariableDeclarationContext(position, tokenOnLeftOfPosition);
+            var isFixedVariableDeclarationTypeContext = syntaxTree.IsFixedVariableDeclarationTypeContext(position, tokenOnLeftOfPosition);
+
+            var isImplicitOrExplicitOperatorTypeContext = syntaxTree.IsImplicitOrExplicitOperatorTypeContext(position, tokenOnLeftOfPosition);
+            var isIsOrAsTypeContext = syntaxTree.IsIsOrAsTypeContext(position, tokenOnLeftOfPosition);
+            var isLocalVariableDeclarationContext = syntaxTree.IsLocalVariableDeclarationContext(position, tokenOnLeftOfPosition, cancellationToken);
+            var isObjectCreationTypeContext = syntaxTree.IsObjectCreationTypeContext(position, tokenOnLeftOfPosition, cancellationToken);
+            var isParameterTypeContext = syntaxTree.IsParameterTypeContext(position, tokenOnLeftOfPosition);
+            var isPossibleLambdaOrAnonymousMethodParameterTypeContext = syntaxTree.IsPossibleLambdaOrAnonymousMethodParameterTypeContext(position, tokenOnLeftOfPosition, cancellationToken);
+            var isStatementContext = syntaxTree.IsStatementContext(position, tokenOnLeftOfPosition, cancellationToken);
+            var isGlobalStatementContext = syntaxTree.IsGlobalStatementContext(position, cancellationToken);
+            var isTypeParameterConstraintContext = syntaxTree.IsTypeParameterConstraintContext(position, tokenOnLeftOfPosition);
+            var isUsingAliasContext = syntaxTree.IsUsingAliasContext(position, cancellationToken);
+            var isUsingStaticContext = syntaxTree.IsUsingStaticContext(position, cancellationToken);
+            var isGlobalMemberDeclarationContext = syntaxTree.IsGlobalMemberDeclarationContext(position, SyntaxKindSet.AllGlobalMemberModifiers, cancellationToken);
+            var isPossibleTupleContext = syntaxTree.IsPossibleTupleContext(tokenOnLeftOfPosition, position);
+
+            var isMemberDeclarationTypeContext = syntaxTree.IsMemberDeclarationTypeContext(position, contextOpt: null, validTypeDeclarations: SyntaxKindSet.ClassInterfaceStructRecordTypeDeclarations, tokenOnLeftOfPosition, cancellationToken);
+
+            /*var isMemberDeclarationContext = syntaxTree.IsMemberDeclarationContext(
                     position,
                     contextOpt: null,
                     validModifiers: SyntaxKindSet.AllMemberModifiers,
                     validTypeDeclarations: SyntaxKindSet.ClassInterfaceStructRecordTypeDeclarations,
                     canBePartial: false,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken);*/
+
+            return
+                isAfterCaseKeyword || // OK
+                isAfterStackAllocKeyword || // OK
+                isAttributeNameContext || // OK
+                isBaseClassOrInterfaceContext || // OK
+                isCatchVariableDeclarationContext || // OK - should be changed when "try / catch" postfix types is implemented
+                isDefiniteCastTypeContext || // OK
+                isDelegateReturnTypeContext || // OK
+                isExpressionContext || // OK
+                isPrimaryFunctionExpressionContext || // OK
+                isGenericTypeArgumentContext || // OK
+                isFunctionPointerTypeArgumentContext || // OK
+                // isFixedVariableDeclarationContext || // ???
+                isFixedVariableDeclarationTypeContext ||
+                isImplicitOrExplicitOperatorTypeContext || // OK
+                isIsOrAsTypeContext || // OK
+                isLocalVariableDeclarationContext || // ???
+                isObjectCreationTypeContext || // OK
+                isParameterTypeContext || // ???
+                isPossibleLambdaOrAnonymousMethodParameterTypeContext || // ???
+                isStatementContext || // OK
+                isGlobalStatementContext || // OK
+                isTypeParameterConstraintContext || // OK
+                isUsingAliasContext || // OK
+                isUsingStaticContext || // OK
+                isGlobalMemberDeclarationContext || // ???
+                isPossibleTupleContext || // ???
+                // isMemberDeclarationContext // ???
+                isMemberDeclarationTypeContext // OK
+                ;
+
         }
 
         public static bool IsBaseClassOrInterfaceContext(this SyntaxTree syntaxTree, int position, CancellationToken cancellationToken)
@@ -1891,6 +1924,123 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             if (token.Parent is VariableDeclaratorSyntax varDeclarator)
             {
                 if (varDeclarator.Identifier == token) return true;
+            }
+
+            return false;
+        }
+
+        public static bool IsFixedVariableDeclarationTypeContext(this SyntaxTree syntaxTree, int position, SyntaxToken tokenOnLeftOfPosition)
+        {
+            // cases:
+            //  fixed (some $|
+            //  fixed some $|
+
+            var token = tokenOnLeftOfPosition;
+            var identToken = token.GetPreviousToken();
+            var fixedToken = identToken.GetPreviousToken();
+
+            if (identToken.IsKind(SyntaxKind.IdentifierToken) && fixedToken.IsKind(SyntaxKind.FixedKeyword))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool IsMemberDeclarationTypeContext(this SyntaxTree syntaxTree, int position, CSharpSyntaxContext contextOpt, ISet<SyntaxKind> validTypeDeclarations, SyntaxToken tokenOnLeftOfPosition, CancellationToken cancellationToken)
+        {
+            // must be in type declaration for a member type context
+            var typeDecl = contextOpt != null ? contextOpt.ContainingTypeOrEnumDeclaration : syntaxTree.GetContainingTypeOrEnumDeclaration(position, cancellationToken);
+            if (typeDecl == null) return false;
+
+            // check that the type decl is allowed
+            validTypeDeclarations ??= SpecializedCollections.EmptySet<SyntaxKind>();
+            if (!validTypeDeclarations.Contains(typeDecl.Kind())) return false;
+
+            // now check for members
+            // cases:
+            //  public name t$|
+            //  name t$|
+            //  name() t$|
+
+            var token = tokenOnLeftOfPosition;
+            var tokenMemberSyntax = token.GetAncestor(a => a is MemberDeclarationSyntax || a is VariableDeclarationSyntax);
+
+            var prevToken = token.GetPreviousToken();
+            var prevTokenMemberSyntax = token.GetAncestor(a => a is MemberDeclarationSyntax || a is VariableDeclarationSyntax);
+            var isPrevCurrentSameMember = tokenMemberSyntax == prevTokenMemberSyntax;
+
+            // check by wellformed syntax
+            if (tokenMemberSyntax is MethodDeclarationSyntax methodDecl)
+            {
+                // check if return type matches
+                if (methodDecl.HasExplicitReturnType() && methodDecl.ReturnType?.Span.Contains(token.SpanStart) == true) return true;
+            }
+
+            if (tokenMemberSyntax is PropertyDeclarationSyntax propDecl)
+            {
+                // check if return type matches
+                if (propDecl.HasExplicitReturnType() && propDecl.Type?.Span.Contains(token.SpanStart) == true) return true;
+            }
+
+            if (tokenMemberSyntax is EventDeclarationSyntax eventDecl)
+            {
+                // check if return type matches
+                if (eventDecl.HasExplicitReturnType() && eventDecl.Type?.Span.Contains(token.SpanStart) == true) return true;
+            }
+
+            if (tokenMemberSyntax is FieldDeclarationSyntax fieldDecl)
+            {
+                // check if return type matches
+                if (fieldDecl.HasExplicitReturnType() && fieldDecl.Type?.Span.Contains(token.SpanStart) == true) return true;
+            }
+
+            if (tokenMemberSyntax is ClassDeclarationSyntax classDecl)
+            {
+                // check if in base list
+                if (classDecl.BaseList?.Types.GetContainedSpan().Contains(token.SpanStart) == true) return true;
+                if (classDecl.ConstraintClauses.GetContainedSpan().Contains(token.SpanStart) == true) return true;
+            }
+
+            if (tokenMemberSyntax is VariableDeclarationSyntax varDecl)
+            {
+                // check if return type matches
+                if (varDecl.HasExplicitReturnType() && varDecl.Type?.Span.Contains(token.SpanStart) == true) return true;
+            }
+
+            // check adhoc syntax
+            if (token.IsKind(SyntaxKind.IdentifierToken))
+            {
+                if (prevToken.IsKind(SyntaxKind.IdentifierToken))
+                {
+                    // if not in same member, then its:
+                    // t$|
+                    if (!isPrevCurrentSameMember) return false;
+
+                    // check what is before
+                    var prevPrevToken = prevToken.GetPreviousToken();
+                    var prevPrevTokenMemberSyntax = prevPrevToken.GetAncestor(a => a is StatementSyntax || a is MemberDeclarationSyntax || a is VariableDeclarationSyntax);
+                    var isPrevPrevSameMember = prevTokenMemberSyntax == prevPrevTokenMemberSyntax;
+
+                    // if not same as prev prev, then its:
+                    // name t$|
+                    if (!isPrevPrevSameMember) return true;
+
+                    // public name t$|
+                    // virtual name t$|
+                    // override name t$|
+                    if (SyntaxFacts.IsMemberModifier(prevPrevToken.RawKind)) return true;
+
+                    // name (arg t$|
+                    // name t$|
+                    if (prevToken.IsKind(SyntaxKind.IdentifierToken)) return true;
+                }
+            }
+
+            if (prevToken.IsKind(SyntaxKind.CloseParenToken))
+            {
+                // name () t$|
+                return true;
             }
 
             return false;

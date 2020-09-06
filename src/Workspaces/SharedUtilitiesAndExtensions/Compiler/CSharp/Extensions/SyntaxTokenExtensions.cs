@@ -137,6 +137,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         public static SyntaxToken GetNextNonZeroWidthTokenOrEndOfFile(this SyntaxToken token)
             => token.GetNextTokenOrEndOfFile();
 
+        public static bool IsFirstTokenOnLine(this SyntaxToken token) => token.IsFirstTokenOnLine(token.Parent?.GetText());
+
         /// <summary>
         /// Determines whether the given SyntaxToken is the first token on a line in the specified SourceText.
         /// </summary>

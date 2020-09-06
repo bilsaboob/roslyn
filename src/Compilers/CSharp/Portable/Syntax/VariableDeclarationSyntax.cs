@@ -34,5 +34,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
             return WithVariables(Variables);
         }
+
+        public bool HasExplicitReturnType()
+        {
+            var noExplicitReturnType = Type.Kind() == SyntaxKind.IdentifierName && Type.Width == 0;
+            return !noExplicitReturnType;
+        }
     }
 }

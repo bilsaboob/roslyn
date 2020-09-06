@@ -5,6 +5,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -61,6 +62,24 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.ProtectedKeyword:
                 case SyntaxKind.InternalKeyword:
                 case SyntaxKind.PublicKeyword:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsMemberModifier(int kind) => IsMemberModifier((SyntaxKind)kind);
+        public static bool IsMemberModifier(SyntaxKind kind)
+        {
+            switch (kind)
+            {
+                case SyntaxKind.PrivateKeyword:
+                case SyntaxKind.ProtectedKeyword:
+                case SyntaxKind.InternalKeyword:
+                case SyntaxKind.PublicKeyword:
+                case SyntaxKind.StaticKeyword:
+                case SyntaxKind.OverrideKeyword:
+                case SyntaxKind.VirtualKeyword:
                     return true;
                 default:
                     return false;
