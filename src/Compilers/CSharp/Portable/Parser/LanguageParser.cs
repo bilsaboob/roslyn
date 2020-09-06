@@ -7886,6 +7886,7 @@ done:;
                         // check if followed by ; or :=
                         switch (this.CurrentToken.Kind)
                         {
+                            case SyntaxKind.EqualsToken:
                             case SyntaxKind.ColonEqualsToken:
                             case SyntaxKind.SemicolonToken:
                                 return true;
