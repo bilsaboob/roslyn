@@ -5,6 +5,7 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Extensions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -399,7 +400,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                                                SyntaxKind.NameColon,
                                                SyntaxKind.SwitchExpressionArm))
                 {
-                    return CreateAdjustSpacesOperation(0, AdjustSpacesOption.ForceSpacesIfOnSingleLine);
+                    // when typing 'myValue :' ... the following is often a "=", which is part of an assignment declaration...
+                    // only apply this if we have a "successfully parsed" label statement
+                    if (!currentToken.Parent.IsKind(SyntaxKind.LabeledStatement) || !currentToken.Parent.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+                    {
+                        return CreateAdjustSpacesOperation(0, AdjustSpacesOption.ForceSpacesIfOnSingleLine);
+                    }
                 }
             }
 
