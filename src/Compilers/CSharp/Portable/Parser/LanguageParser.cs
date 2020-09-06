@@ -10433,8 +10433,8 @@ tryAgain:
                     // add a fake token to fulfill the ExpressionStatement requirement of a semicolon token
                     semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
 
-                    // if there are more tokens on the same line, it can't be a statement!
-                    if (!IsCurrentTokenOnNewline)
+                    // if there are more tokens on the same line, it can't be a statement! - unless the token is a token that closes a "block"
+                    if (!IsCurrentTokenOnNewline && CurrentToken.Kind != SyntaxKind.CloseBraceToken)
                     {
                         // the expression we parsed is a bad expression...
                         var stat = _syntaxFactory.ExpressionStatement(attributes, expression, semicolon);
