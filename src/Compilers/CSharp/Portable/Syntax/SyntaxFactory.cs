@@ -305,9 +305,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new SyntaxToken(Syntax.InternalSyntax.SyntaxFactory.FakeToken(kind, value, allowTrivia));
         }
 
-        public static IdentifierNameSyntax FakeTypeIdentifier()
+        public static IdentifierNameSyntax FakeTypeIdentifier(bool isVar = false)
         {
-            return IdentifierName(new SyntaxToken(Syntax.InternalSyntax.SyntaxFactory.Token(SyntaxKind.IdentifierToken)));
+            var identifier = Syntax.InternalSyntax.SyntaxFactory.Token(SyntaxKind.IdentifierToken);
+            var type = Syntax.InternalSyntax.SyntaxFactory.IdentifierName(identifier);
+            if (isVar) type.IsVar = isVar;
+            return (IdentifierNameSyntax)type.CreateRed();
         }
 
         /// <summary>
