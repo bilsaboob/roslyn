@@ -7788,7 +7788,8 @@ done:;
                                     return true;
                             }
 
-                            this.EatToken();
+                            this.EatToken(); // eat whatever was before the close parenthesis
+                            this.EatToken(); // eat the close parenthesis
 
                             // following the parameters there could be a return type
                             TypeSyntax returnType = null;
