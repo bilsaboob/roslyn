@@ -7852,9 +7852,8 @@ done:;
                                 {
                                     case SyntaxKind.EqualsGreaterThanToken:
                                     case SyntaxKind.WhereClause:
-                                        return true;
                                     case SyntaxKind.OpenBraceToken:
-                                        return hasAllValidParams;
+                                        return true;
                                 }
                             }
                             else
@@ -7867,6 +7866,11 @@ done:;
                                     if (this.CurrentToken.Kind == SyntaxKind.ColonEqualsToken) return true;
 
                                     return true;
+                                }
+                                else
+                                {
+                                    // probably a function without return type if at least one parameter is valid
+                                    if (hasValidParam) return true;
                                 }
                             }
                         }
