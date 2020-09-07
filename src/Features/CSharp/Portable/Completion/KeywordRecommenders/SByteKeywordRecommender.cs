@@ -20,7 +20,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.KeywordRecommenders
 
         protected override bool IsValidContext(int position, CSharpSyntaxContext context, CancellationToken cancellationToken)
         {
-            var syntaxTree = context.SyntaxTree;
+            return base.IsInTypeContext(position, context, cancellationToken);
+
+            /*var syntaxTree = context.SyntaxTree;
             return
                 context.IsNonAttributeExpressionContext ||
                 context.IsDefiniteCastTypeContext ||
@@ -49,7 +51,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.KeywordRecommenders
                     validModifiers: SyntaxKindSet.AllMemberModifiers,
                     validTypeDeclarations: SyntaxKindSet.ClassInterfaceStructRecordTypeDeclarations,
                     canBePartial: false,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken);*/
         }
 
         protected override SpecialType SpecialType => SpecialType.System_SByte;

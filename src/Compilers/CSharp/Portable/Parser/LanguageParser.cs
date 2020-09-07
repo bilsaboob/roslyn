@@ -7788,7 +7788,8 @@ done:;
                                     return true;
                             }
 
-                            this.EatToken();
+                            this.EatToken(); // eat whatever was before the close parenthesis
+                            this.EatToken(); // eat the close parenthesis
 
                             // following the parameters there could be a return type
                             TypeSyntax returnType = null;
@@ -7851,9 +7852,8 @@ done:;
                                 {
                                     case SyntaxKind.EqualsGreaterThanToken:
                                     case SyntaxKind.WhereClause:
-                                        return true;
                                     case SyntaxKind.OpenBraceToken:
-                                        return hasAllValidParams;
+                                        return true;
                                 }
                             }
                             else
@@ -7866,6 +7866,11 @@ done:;
                                     if (this.CurrentToken.Kind == SyntaxKind.ColonEqualsToken) return true;
 
                                     return true;
+                                }
+                                else
+                                {
+                                    // probably a function without return type if at least one parameter is valid
+                                    if (hasValidParam) return true;
                                 }
                             }
                         }

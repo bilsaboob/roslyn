@@ -322,8 +322,71 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.AsyncComplet
                 return false;
             }
 
+            // Handle space as a special commit character which only commits for selected kind of completion items and only in specific "semantic contexts"
+            if (ch == ' ')
+            {
+                // * Only allow completion of "symbols" and "type keywords"
+                // * IGNORE commit of snippets and "other stuff" using "space" ... force explicitly using the "enter" key
+
+                var textTypedSoFarWithoutSpace = textTypedSoFar?.Length > 1 ? textTypedSoFar.Substring(0, textTypedSoFar.Length - 1) : "";
+                if (string.IsNullOrEmpty(textTypedSoFarWithoutSpace)) return false;
+
+                if (item.ProviderName.Contains("SymbolCompletionProvider"))
+                {
+                    // only allow committing if the text before is really matching what has been typed so far ... for "fuzzy commits" - force explicitly using the "enter" key
+                    if (item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCultureIgnoreCase) == true)
+                    {
+                        return true;
+                    }
+                }
+                else if (item.ProviderName.Contains("KeywordCompletionProvider"))
+                {
+                    // only allow "type" keywords
+
+                    if (!IsPredefinedType(item.DisplayText))
+                    {
+                        return false;
+                    }
+
+                    // only allow committing if the text before is really matching what has been typed so far ... for "fuzzy commits" - force explicitly using the "enter" key
+                    if (item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCultureIgnoreCase) == true)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
             // Fall back to the default rules for this language's completion service.
             return completionRules.DefaultCommitCharacters.IndexOf(ch) >= 0;
+        }
+
+        private static bool IsPredefinedType(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+
+            switch (text.ToLowerInvariant())
+            {
+                case "bool": return true;
+                case "byte": return true;
+                case "sbyte": return true;
+                case "int": return true;
+                case "uint": return true;
+                case "short": return true;
+                case "ushort": return true;
+                case "long": return true;
+                case "ulong": return true;
+                case "float": return true;
+                case "double": return true;
+                case "decimal": return true;
+                case "string": return true;
+                case "char": return true;
+                case "object": return true;
+                case "void": return true;
+            }
+
+            return false;
         }
 
         internal static bool SendEnterThroughToEditor(CompletionRules rules, RoslynCompletionItem item, string textTypedSoFar)

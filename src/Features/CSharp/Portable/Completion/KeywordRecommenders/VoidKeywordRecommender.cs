@@ -36,7 +36,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.KeywordRecommenders
 
         protected override bool IsValidContext(int position, CSharpSyntaxContext context, CancellationToken cancellationToken)
         {
-            var syntaxTree = context.SyntaxTree;
+            return context?.IsTypeContext == true;
+
+            /*var syntaxTree = context.SyntaxTree;
             return
                 IsMemberReturnTypeContext(position, context, cancellationToken) ||
                 context.IsGlobalStatementContext ||
@@ -50,7 +52,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.KeywordRecommenders
                 IsUnsafeDefaultExpressionContext(context) ||
                 context.IsFixedVariableDeclarationContext ||
                 context.SyntaxTree.IsGlobalMemberDeclarationContext(position, SyntaxKindSet.AllGlobalMemberModifiers, cancellationToken) ||
-                context.SyntaxTree.IsLocalFunctionDeclarationContext(position, SyntaxKindSet.AllLocalFunctionModifiers, cancellationToken);
+                context.SyntaxTree.IsLocalFunctionDeclarationContext(position, SyntaxKindSet.AllLocalFunctionModifiers, cancellationToken);*/
         }
 
         private static bool IsUnsafeDefaultExpressionContext(CSharpSyntaxContext context)

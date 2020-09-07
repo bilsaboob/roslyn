@@ -395,17 +395,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                 if (currentToken.Parent.IsKind(SyntaxKind.CaseSwitchLabel,
                                                SyntaxKind.CasePatternSwitchLabel,
                                                SyntaxKind.DefaultSwitchLabel,
-                                               SyntaxKind.LabeledStatement,
                                                SyntaxKind.AttributeTargetSpecifier,
                                                SyntaxKind.NameColon,
                                                SyntaxKind.SwitchExpressionArm))
                 {
                     // when typing 'myValue :' ... the following is often a "=", which is part of an assignment declaration...
                     // only apply this if we have a "successfully parsed" label statement
-                    if (!currentToken.Parent.IsKind(SyntaxKind.LabeledStatement) || !currentToken.Parent.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
-                    {
-                        return CreateAdjustSpacesOperation(0, AdjustSpacesOption.ForceSpacesIfOnSingleLine);
-                    }
+                    return CreateAdjustSpacesOperation(0, AdjustSpacesOption.ForceSpacesIfOnSingleLine);
                 }
             }
 

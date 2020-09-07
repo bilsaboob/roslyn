@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Completion;
@@ -33,10 +34,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
         {
         }
 
-        protected override Task<ImmutableArray<ISymbol>> GetSymbolsAsync(SyntaxContext context, int position, OptionSet options, CancellationToken cancellationToken)
+        protected override async Task<ImmutableArray<ISymbol>> GetSymbolsAsync(SyntaxContext context, int position, OptionSet options, CancellationToken cancellationToken)
         {
-            return Recommender.GetImmutableRecommendedSymbolsAtPositionAsync(
-                context.SemanticModel, position, context.Workspace, options, cancellationToken);
+            var recommendedItems = await Recommender.GetImmutableRecommendedSymbolsAtPositionAsync(context.SemanticModel, position, context.Workspace, options, cancellationToken).ConfigureAwait(false);
+
+            if (context?.IsTypeContext == false)
+            {
+                // filter away "type symbols"
+                recommendedItems = recommendedItems.Where(item =>
+                    item.Kind != SymbolKind.NamedType &&
+                    item.Kind != SymbolKind.TypeParameter &&
+                    item.Kind != SymbolKind.ArrayType &&
+                    item.Kind != SymbolKind.PointerType &&
+                    item.Kind != SymbolKind.DynamicType &&
+                    item.Kind != SymbolKind.FunctionPointerType &&
+                    item.Kind != SymbolKind.ErrorType
+                ).ToImmutableArray();
+            }
+
+            return recommendedItems;
         }
 
         protected override async Task<bool> ShouldProvidePreselectedItemsAsync(CompletionContext completionContext, SyntaxContext syntaxContext, Document document, int position, Lazy<ImmutableArray<ITypeSymbol>> inferredTypes, OptionSet options)

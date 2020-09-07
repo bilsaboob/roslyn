@@ -21,5 +21,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         {
             return Update(attributeLists, modifiers, eventKeyword, explicitInterfaceSpecifier, identifier, type, accessorList: null, semicolonToken);
         }
+
+        public bool HasExplicitReturnType()
+        {
+            var noExplicitReturnType = Type.Kind() == SyntaxKind.IdentifierName && Type.Width == 0;
+            return !noExplicitReturnType;
+        }
     }
 }
