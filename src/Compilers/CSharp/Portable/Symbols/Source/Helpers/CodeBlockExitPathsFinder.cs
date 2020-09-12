@@ -13,16 +13,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Source.Helpers
 {
     internal sealed class CodeBlockExitPathsFinder : BoundTreeWalker
     {
-        internal static readonly TypeSymbol NoReturnExpression = new UnsupportedMetadataTypeSymbol();
+        private readonly ArrayBuilder<(BoundNode, TypeWithAnnotations?)> _builder;
 
-        private readonly ArrayBuilder<(BoundNode, TypeWithAnnotations)> _builder;
-
-        private CodeBlockExitPathsFinder(ArrayBuilder<(BoundNode, TypeWithAnnotations)> builder)
+        private CodeBlockExitPathsFinder(ArrayBuilder<(BoundNode, TypeWithAnnotations?)> builder)
         {
             _builder = builder;
         }
 
-        public static void GetExitPaths(ArrayBuilder<(BoundNode, TypeWithAnnotations)> builder, BoundNode node)
+        public static void GetExitPaths(ArrayBuilder<(BoundNode, TypeWithAnnotations?)> builder, BoundNode node)
         {
             var visitor = new CodeBlockExitPathsFinder(builder);
             visitor.Visit(node);
@@ -52,10 +50,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Source.Helpers
         public override BoundNode VisitReturnStatement(BoundReturnStatement node)
         {
             var expression = node.ExpressionOpt;
-            var type = (expression is null) ?
-                NoReturnExpression :
-                expression.Type?.SetUnknownNullabilityForReferenceTypes();
-            _builder.Add((node, TypeWithAnnotations.Create(type)));
+            TypeSymbol? type = (expression is null) ? null : expression.Type?.SetUnknownNullabilityForReferenceTypes();
+            if (type is null)
+            {
+                _builder.Add((node, null));
+            }
+            else
+            {
+                _builder.Add((node, TypeWithAnnotations.Create(type)));
+            }
+
             return null;
         }
     }
