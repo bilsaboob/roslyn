@@ -16,6 +16,7 @@ using Roslyn.Utilities;
 namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 {
     using System.Linq.Expressions;
+    using System.Text;
     using Microsoft.CodeAnalysis.Syntax.InternalSyntax;
 
     internal partial class LanguageParser : SyntaxParser
@@ -4209,6 +4210,32 @@ parse_member_name:;
             return SyntaxKind.UnknownAccessorDeclaration;
         }
 
+        internal ParameterListSyntax TryParseParenthesizedParameterList()
+        {
+            if (this.IsIncrementalAndFactoryContextMatches && CanReuseParameterList(this.CurrentNode as CSharp.Syntax.ParameterListSyntax))
+            {
+                return (ParameterListSyntax)this.EatNode();
+            }
+
+            var parameters = _pool.AllocateSeparated<ParameterSyntax>();
+
+            try
+            {
+                var openKind = SyntaxKind.OpenParenToken;
+                var closeKind = SyntaxKind.CloseParenToken;
+
+                SyntaxToken open;
+                SyntaxToken close;
+                if (!TryParseParameterList(out open, parameters, out close, openKind, closeKind, canFail: true))
+                    return null;
+                return _syntaxFactory.ParameterList(open, parameters, close);
+            }
+            finally
+            {
+                _pool.Free(parameters);
+            }
+        }
+
         internal ParameterListSyntax ParseParenthesizedParameterList()
         {
             if (this.IsIncrementalAndFactoryContextMatches && CanReuseParameterList(this.CurrentNode as CSharp.Syntax.ParameterListSyntax))
@@ -4322,7 +4349,19 @@ parse_member_name:;
             SyntaxKind openKind,
             SyntaxKind closeKind)
         {
+            TryParseParameterList(out open, nodes, out close, openKind, closeKind, canFail: false);
+        }
+
+        private bool TryParseParameterList(
+            out SyntaxToken open,
+            SeparatedSyntaxListBuilder<ParameterSyntax> nodes,
+            out SyntaxToken close,
+            SyntaxKind openKind,
+            SyntaxKind closeKind,
+            bool canFail = false)
+        {
             open = this.EatToken(openKind);
+            close = null;
 
             var saveTerm = _termState;
             _termState |= TerminatorState.IsEndOfParameterList;
@@ -4340,6 +4379,24 @@ tryAgain:
                     {
                         // first parameter
                         var parameter = this.ParseParameter();
+
+                        if (canFail)
+                        {
+                            // some cases of tuple syntax... those must be separated from the identifier by a whitespace!
+                            var paramType = parameter.Type;
+                            if (paramType is TupleTypeSyntax tuple)
+                            {
+                                if (!IsTokenAfterWhitespace(tuple.OpenParenToken, parameter.Identifier))
+                                    return false;
+                            }
+
+                            // if we have a colon following... its very likely it's a named arg expression
+                            if (this.CurrentToken.Kind == SyntaxKind.ColonToken && (paramType is null || paramType.IsMissing || paramType.IsFake))
+                            {
+                                return false;
+                            }
+                        }
+
                         nodes.Add(parameter);
 
                         // additional parameters
@@ -4368,9 +4425,41 @@ tryAgain:
                             }
                         }
                     }
-                    else if (this.SkipBadParameterListTokens(ref open, nodes, SyntaxKind.IdentifierToken, closeKind) == PostSkipAction.Continue)
+                    else
                     {
-                        goto tryAgain;
+                        if (canFail)
+                        {
+                            // we don't allow skipping some specific types of tokens if we are allowed to fail
+                            switch (this.CurrentToken.Kind)
+                            {
+                                case SyntaxKind.AsyncKeyword:
+                                case SyntaxKind.AwaitKeyword:
+                                case SyntaxKind.TypeOfKeyword:
+                                case SyntaxKind.IsKeyword:
+                                case SyntaxKind.OpenBraceToken:
+                                case SyntaxKind.EqualsGreaterThanToken:
+                                case SyntaxKind.OpenParenToken:
+                                    return false;
+                                case SyntaxKind.IdentifierToken:
+                                    {
+                                        switch(this.CurrentToken.ContextualKind)
+                                        {
+                                            case SyntaxKind.AsyncKeyword:
+                                            case SyntaxKind.AwaitKeyword:
+                                            case SyntaxKind.TypeOfKeyword:
+                                            case SyntaxKind.IsKeyword:
+                                                return false;
+                                        }
+                                        break;
+                                    }
+                            }
+                        }
+
+                        // ok we can skip the tokens and keep parsing the parameters
+                        if (this.SkipBadParameterListTokens(ref open, nodes, SyntaxKind.IdentifierToken, closeKind) == PostSkipAction.Continue)
+                        {
+                            goto tryAgain;
+                        }
                     }
                 }
             }
@@ -4381,6 +4470,7 @@ tryAgain:
 
             _termState = saveTerm;
             close = this.EatToken(closeKind);
+            return true;
         }
 
         private bool IsEndOfParameterList()
@@ -4402,17 +4492,29 @@ tryAgain:
         {
             switch (this.CurrentToken.Kind)
             {
+                case SyntaxKind.OpenParenToken:
+                    return false;
                 case SyntaxKind.OpenBracketToken: // attribute
+                    return true;
                 case SyntaxKind.ArgListKeyword:
-                case SyntaxKind.OpenParenToken:   // tuple
+                    return true;
                 case SyntaxKind.DelegateKeyword when IsFunctionPointerStart(): // Function pointer type
                     return true;
-
                 case SyntaxKind.IdentifierToken:
-                    return this.IsTrueIdentifier();
+                    {
+                        switch (this.CurrentToken.ContextualKind)
+                        {
+                            case SyntaxKind.AsyncKeyword:
+                            case SyntaxKind.AwaitKeyword:
+                            case SyntaxKind.TypeOfKeyword:
+                            case SyntaxKind.IsKeyword:
+                                return false;
+                        }
 
+                        return this.IsTrueIdentifier();
+                    }
                 default:
-                    return IsParameterModifier(this.CurrentToken.Kind) || IsPredefinedType(this.CurrentToken.Kind);
+                    return IsParameterModifier(this.CurrentToken.Kind);
             }
         }
 
@@ -7807,10 +7909,15 @@ done:;
                         }
                         else
                         {
-                            // try parsing parameters
-                            var parameters = ParseParenthesizedParameterList();
+                            // try parsing parameters - may or may not be valid parameter syntax
+                            var parameters = TryParseParenthesizedParameterList();
+                            if (parameters == null) return false;
+
+                            var hasParams = parameters.Parameters.Count > 0;
                             var hasValidParam = false;
-                            var hasAllValidParams = parameters.Parameters.Count > 0;
+                            var hasAllValidParams = hasParams;
+
+                            // validate the params
                             for (var i = 0; i < parameters.Parameters.Count; ++i)
                             {
                                 var p = parameters.Parameters[i];
