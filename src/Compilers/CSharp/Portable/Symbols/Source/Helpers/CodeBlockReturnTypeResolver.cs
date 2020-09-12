@@ -24,7 +24,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Source.Helpers
             }
 
             useSiteDiagnostics = null;
-            var exitPaths = ArrayBuilder<(BoundNode, TypeWithAnnotations)>.GetInstance();
+            var exitPaths = ArrayBuilder<(BoundNode, TypeWithAnnotations?)>.GetInstance();
             try
             {
                 CodeBlockExitPathsFinder.GetExitPaths(exitPaths, boundNode);
@@ -46,14 +46,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Source.Helpers
                             if (p.Item1 == null) continue;
 
                             var type = p.Item2;
-                            if (ReferenceEquals(type.Type, null)) continue;
+                            var t = type?.Type;
+                            if (ReferenceEquals(t, null)) continue;
 
                             lastType = type;
-                            types.Add(type.Type);
+                            types.Add(t);
                         }
 
-                        // no valid type to resolve from?
-                        if (types.Count == 0) return (null, false);
+                        // no valid type to resolve from - must be void then
+                        if (types.Count == 0) return (null, true);
 
                         // if we have more than one type to resolve from...
                         if (types.Count > 1)
@@ -90,7 +91,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Source.Helpers
                         var exitPathReturnType = lastExitPath.Item2;
 
                         // if the return type is null... then there is some issue... we only use the return type if we have a valid one...
-                        if (!ReferenceEquals(exitPathReturnType.Type, null))
+                        if (!ReferenceEquals(exitPathReturnType?.Type, null))
                             return (exitPathReturnType, false);
 
                         return (null, false);
