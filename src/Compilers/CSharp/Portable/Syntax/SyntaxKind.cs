@@ -206,6 +206,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         WithKeyword = 8442,
         InitKeyword = 8443,
         RecordKeyword = 8444,
+        FnKeyword = 8445,
 
         /// when adding a contextual keyword following functions must be adapted:
         /// <see cref="SyntaxFacts.GetContextualKeywordKinds"/>
@@ -606,6 +607,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         OrPattern = 9031,
         AndPattern = 9032,
         NotPattern = 9033,
+        LambdaFunctionType = 9034,
 
         // Kinds between 9000 and 9039 are "reserved" for pattern matching.
 

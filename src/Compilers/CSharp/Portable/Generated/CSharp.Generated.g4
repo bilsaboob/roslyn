@@ -340,6 +340,7 @@ namespace_declaration
 type
   : array_type
   | function_pointer_type
+  | lambda_function_type
   | name
   | nullable_type
   | omitted_type_argument
@@ -359,6 +360,10 @@ array_rank_specifier
 
 function_pointer_type
   : 'delegate' '*' syntax_token? '<' parameter (',' parameter)* '>'
+  ;
+
+lambda_function_type
+  : fn_keyword '(' (parameter (',' parameter)*)? ')' type?
   ;
 
 nullable_type
@@ -1276,6 +1281,10 @@ character_literal_token
 expression_or_pattern
   : expression
   | pattern
+  ;
+
+fn_keyword
+  : /* see lexical specification */
   ;
 
 identifier_token

@@ -465,6 +465,78 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         public PointerTypeSyntax WithAsteriskToken(SyntaxToken asteriskToken) => Update(this.ElementType, asteriskToken);
     }
 
+    public sealed partial class LambdaFunctionTypeSyntax : TypeSyntax
+    {
+        private SyntaxNode? parameters;
+        private TypeSyntax? returnType;
+
+        internal LambdaFunctionTypeSyntax(InternalSyntax.CSharpSyntaxNode green, SyntaxNode? parent, int position)
+          : base(green, parent, position)
+        {
+        }
+
+        /// <summary>SyntaxToken representing the fn keyword.</summary>
+        public SyntaxToken FnKeyword => new SyntaxToken(this, ((Syntax.InternalSyntax.LambdaFunctionTypeSyntax)this.Green).fnKeyword, Position, 0);
+
+        /// <summary>Gets the open paren token.</summary>
+        public SyntaxToken OpenParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.LambdaFunctionTypeSyntax)this.Green).openParenToken, GetChildPosition(1), GetChildIndex(1));
+
+        public SeparatedSyntaxList<ParameterSyntax> Parameters
+        {
+            get
+            {
+                var red = GetRed(ref this.parameters, 2);
+                return red != null ? new SeparatedSyntaxList<ParameterSyntax>(red, GetChildIndex(2)) : default;
+            }
+        }
+
+        /// <summary>Gets the close paren token.</summary>
+        public SyntaxToken CloseParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.LambdaFunctionTypeSyntax)this.Green).closeParenToken, GetChildPosition(3), GetChildIndex(3));
+
+        /// <summary>Gets the return type.</summary>
+        public TypeSyntax? ReturnType => GetRed(ref this.returnType, 4);
+
+        internal override SyntaxNode? GetNodeSlot(int index)
+            => index switch
+            {
+                2 => GetRed(ref this.parameters, 2)!,
+                4 => GetRed(ref this.returnType, 4),
+                _ => null,
+            };
+
+        internal override SyntaxNode? GetCachedSlot(int index)
+            => index switch
+            {
+                2 => this.parameters,
+                4 => this.returnType,
+                _ => null,
+            };
+
+        public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitLambdaFunctionType(this);
+        [return: MaybeNull]
+        public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitLambdaFunctionType(this);
+
+        public LambdaFunctionTypeSyntax Update(SyntaxToken fnKeyword, SyntaxToken openParenToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, TypeSyntax? returnType)
+        {
+            if (fnKeyword != this.FnKeyword || openParenToken != this.OpenParenToken || parameters != this.Parameters || closeParenToken != this.CloseParenToken || returnType != this.ReturnType)
+            {
+                var newNode = SyntaxFactory.LambdaFunctionType(fnKeyword, openParenToken, parameters, closeParenToken, returnType);
+                var annotations = GetAnnotations();
+                return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
+            }
+
+            return this;
+        }
+
+        public LambdaFunctionTypeSyntax WithFnKeyword(SyntaxToken fnKeyword) => Update(fnKeyword, this.OpenParenToken, this.Parameters, this.CloseParenToken, this.ReturnType);
+        public LambdaFunctionTypeSyntax WithOpenParenToken(SyntaxToken openParenToken) => Update(this.FnKeyword, openParenToken, this.Parameters, this.CloseParenToken, this.ReturnType);
+        public LambdaFunctionTypeSyntax WithParameters(SeparatedSyntaxList<ParameterSyntax> parameters) => Update(this.FnKeyword, this.OpenParenToken, parameters, this.CloseParenToken, this.ReturnType);
+        public LambdaFunctionTypeSyntax WithCloseParenToken(SyntaxToken closeParenToken) => Update(this.FnKeyword, this.OpenParenToken, this.Parameters, closeParenToken, this.ReturnType);
+        public LambdaFunctionTypeSyntax WithReturnType(TypeSyntax? returnType) => Update(this.FnKeyword, this.OpenParenToken, this.Parameters, this.CloseParenToken, returnType);
+
+        public LambdaFunctionTypeSyntax AddParameters(params ParameterSyntax[] items) => WithParameters(this.Parameters.AddRange(items));
+    }
+
     public sealed partial class FunctionPointerTypeSyntax : TypeSyntax
     {
         private SyntaxNode? parameters;

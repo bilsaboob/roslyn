@@ -1092,7 +1092,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public static IEnumerable<SyntaxKind> GetContextualKeywordKinds()
         {
-            for (int i = (int)SyntaxKind.YieldKeyword; i <= (int)SyntaxKind.InitKeyword; i++)
+            for (int i = (int)SyntaxKind.YieldKeyword; i <= (int)SyntaxKind.FnKeyword; i++)
             {
                 yield return (SyntaxKind)i;
             }
@@ -1144,6 +1144,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.WithKeyword:
                 case SyntaxKind.InitKeyword:
                 case SyntaxKind.RecordKeyword:
+                case SyntaxKind.FnKeyword:
                     return true;
                 default:
                     return false;
@@ -1261,6 +1262,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return SyntaxKind.InitKeyword;
                 case "record":
                     return SyntaxKind.RecordKeyword;
+                case "fn":
+                    return SyntaxKind.FnKeyword;
                 default:
                     return SyntaxKind.None;
             }
@@ -1696,6 +1699,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return "init";
                 case SyntaxKind.RecordKeyword:
                     return "record";
+                case SyntaxKind.FnKeyword:
+                    return "fn";
                 default:
                     return string.Empty;
             }

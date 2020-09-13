@@ -100,6 +100,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
     }
 
+    internal sealed partial class LambdaFunctionTypeSyntax
+    {
+        internal override TypeSyntax Clone()
+        {
+            return new LambdaFunctionTypeSyntax(this.Kind, this.fnKeyword, this.openParenToken, this.parameters, this.closeParenToken, this.returnType, GetDiagnostics(), GetAnnotations());
+        }
+    }
+
     internal sealed partial class NullableTypeSyntax
     {
         internal override TypeSyntax Clone()

@@ -50,6 +50,8 @@ Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclaratorSyntax.Update(Microsoft.C
 Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclaratorSyntax.WithType(Microsoft.CodeAnalysis.CSharp.Syntax.TypeSyntax type) -> Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclaratorSyntax
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.ColonEqualsToken = 8223 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.DefaultConstraint = 9057 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
+Microsoft.CodeAnalysis.CSharp.SyntaxKind.FnKeyword = 8445 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
+Microsoft.CodeAnalysis.CSharp.SyntaxKind.LambdaFunctionType = 9034 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 abstract Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax.Modifiers.get -> Microsoft.CodeAnalysis.SyntaxTokenList
 abstract Microsoft.CodeAnalysis.CSharp.Syntax.CommonForEachStatementSyntax.EqualsGreaterThanToken.get -> Microsoft.CodeAnalysis.SyntaxToken
 override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.ToFullString() -> string
