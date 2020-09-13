@@ -223,6 +223,33 @@
       <summary>Creates a PointerTypeSyntax node.</summary>
     </FactoryComment>
   </Node>
+  <Node Name="LambdaFunctionTypeSyntax" Base="TypeSyntax">
+    <Kind Name="LambdaFunctionType"/>
+    <Field Name="FnKeyword" Type="SyntaxToken">
+      <Kind Name="FnKeyword"/>
+      <PropertyComment>
+        <summary>SyntaxToken representing the fn keyword.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="OpenParenToken" Type="SyntaxToken">
+      <Kind Name="OpenParenToken"/>
+      <PropertyComment>
+        <summary>Gets the open paren token.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="Parameters" Type="SeparatedSyntaxList&lt;ParameterSyntax&gt;" />
+    <Field Name="CloseParenToken" Type="SyntaxToken">
+      <Kind Name="CloseParenToken"/>
+      <PropertyComment>
+        <summary>Gets the close paren token.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="ReturnType" Type="TypeSyntax" Optional="true">
+      <PropertyComment>
+        <summary>Gets the return type.</summary>
+      </PropertyComment>
+    </Field>
+  </Node>
   <Node Name="FunctionPointerTypeSyntax" Base="TypeSyntax">
     <Kind Name="FunctionPointerType"/>
     <Field Name="DelegateKeyword" Type="SyntaxToken">
