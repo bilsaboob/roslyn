@@ -12,6 +12,7 @@ using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.RuntimeMembers;
+using Microsoft.CodeAnalysis.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 
@@ -435,6 +436,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.PointerType:
                     return bindPointer();
 
+                case SyntaxKind.LambdaFunctionType:
+                    {
+                        return BindLambdaFunctionType((LambdaFunctionTypeSyntax)syntax, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+                    }
+
                 case SyntaxKind.FunctionPointerType:
                     var functionPointerTypeSyntax = (FunctionPointerTypeSyntax)syntax;
                     if (GetUnsafeDiagnosticInfo(sizeOfTypeOpt: null) is CSDiagnosticInfo info)
@@ -598,6 +604,99 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
 #nullable restore
+
+        private NamespaceOrTypeOrAliasSymbolWithAnnotations BindLambdaFunctionType(LambdaFunctionTypeSyntax syntax, DiagnosticBag diagnostics, ConsList<TypeSymbol> basesBeingResolved, bool suppressUseSiteDiagnostics)
+        {
+            if (syntax == null)
+            {
+                diagnostics.Add(ErrorCode.ERR_TypeExpected, syntax.GetLocation());
+                return TypeWithAnnotations.Create(CreateErrorType());
+            }
+
+            if (syntax.ReturnType == null)
+            {
+                // bind as an "System.Action"
+
+                // check for parameters
+                if (syntax.Parameters.Count > 0)
+                {
+                    // bind as an "System.Action<...>" - with argument type parameters
+                    var typeArguments = SeparatedSyntaxListBuilder<Syntax.TypeSyntax>.Create();
+                    bool separatorRequired = false;
+                    for (var i = 0; i < syntax.Parameters.Count; ++i)
+                    {
+                        var param = syntax.Parameters[i];
+                        if (param.Type != null)
+                        {
+                            if (separatorRequired) typeArguments.AddSeparator(SyntaxFactory.Token(SyntaxKind.CommaToken));
+
+                            // bind the type to make sure we get errors
+                            BindType(param.Type, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+
+                            typeArguments.Add(param.Type);
+                            separatorRequired = true;
+                        }
+                    }
+                    var typeArgumentList = SyntaxFactory.TypeArgumentList(typeArguments);
+                    var funcName = SyntaxFactory.Identifier("Action");
+                    var actionTypeSyntax = SyntaxFactory.GenericName(funcName, typeArgumentList);
+                    return BindGenericSimpleNamespaceOrTypeOrAliasSymbol(actionTypeSyntax, diagnostics, basesBeingResolved, qualifierOpt: null);
+                }
+                else
+                {
+                    // bind as an "System.Action" - without any argument type parameters
+                    var actionTypeSyntax = SyntaxFactory.IdentifierName("Action");
+                    return BindNonGenericSimpleNamespaceOrTypeOrAliasSymbol(actionTypeSyntax, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics, qualifierOpt: null);
+                }
+            }
+            else
+            {
+                // check for parameters
+                if (syntax.Parameters.Count > 0)
+                {
+                    // bind as an "System.Func<..., ReturnType>" - with argument type parameters
+                    var typeArguments = SeparatedSyntaxListBuilder<Syntax.TypeSyntax>.Create();
+                    bool separatorRequired = false;
+                    for (var i = 0; i < syntax.Parameters.Count; ++i)
+                    {
+                        var param = syntax.Parameters[i];
+                        if (param.Type != null)
+                        {
+                            if (separatorRequired) typeArguments.AddSeparator(SyntaxFactory.Token(SyntaxKind.CommaToken));
+
+                            // bind the type to make sure we get errors
+                            BindType(param.Type, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+
+                            typeArguments.Add(param.Type);
+                            separatorRequired = true;
+                        }
+                    }
+
+                    // add the return type
+                    // bind the type to make sure we get errors
+                    BindType(syntax.ReturnType, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+                    if (separatorRequired) typeArguments.AddSeparator(SyntaxFactory.Token(SyntaxKind.CommaToken));
+                    typeArguments.Add(syntax.ReturnType);
+
+                    var typeArgumentList = SyntaxFactory.TypeArgumentList(typeArguments);
+                    var funcName = SyntaxFactory.Identifier("Func");
+                    var actionTypeSyntax = SyntaxFactory.GenericName(funcName, typeArgumentList);
+                    return BindGenericSimpleNamespaceOrTypeOrAliasSymbol(actionTypeSyntax, diagnostics, basesBeingResolved, qualifierOpt: null);
+                }
+                else
+                {
+                    // bind as an "System.Func<ReturnType>" - without any argument type parameters
+                    var typeArguments = SeparatedSyntaxListBuilder<Syntax.TypeSyntax>.Create();
+                    BindType(syntax.ReturnType, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+                    typeArguments.Add(syntax.ReturnType);
+
+                    var typeArgumentList = SyntaxFactory.TypeArgumentList(typeArguments);
+                    var funcName = SyntaxFactory.Identifier("Func");
+                    var actionTypeSyntax = SyntaxFactory.GenericName(funcName, typeArgumentList);
+                    return BindGenericSimpleNamespaceOrTypeOrAliasSymbol(actionTypeSyntax, diagnostics, basesBeingResolved, qualifierOpt: null);
+                }
+            }
+        }
 
         private TypeWithAnnotations BindArrayType(
             ArrayTypeSyntax node,
