@@ -51,6 +51,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         [return: MaybeNull]
         public virtual TResult VisitPointerType(PointerTypeSyntax node) => this.DefaultVisit(node);
 
+        /// <summary>Called when the visitor visits a LambdaFunctionTypeSyntax node.</summary>
+        [return: MaybeNull]
+        public virtual TResult VisitLambdaFunctionType(LambdaFunctionTypeSyntax node) => this.DefaultVisit(node);
+
         /// <summary>Called when the visitor visits a FunctionPointerTypeSyntax node.</summary>
         [return: MaybeNull]
         public virtual TResult VisitFunctionPointerType(FunctionPointerTypeSyntax node) => this.DefaultVisit(node);
@@ -949,6 +953,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>Called when the visitor visits a PointerTypeSyntax node.</summary>
         public virtual void VisitPointerType(PointerTypeSyntax node) => this.DefaultVisit(node);
 
+        /// <summary>Called when the visitor visits a LambdaFunctionTypeSyntax node.</summary>
+        public virtual void VisitLambdaFunctionType(LambdaFunctionTypeSyntax node) => this.DefaultVisit(node);
+
         /// <summary>Called when the visitor visits a FunctionPointerTypeSyntax node.</summary>
         public virtual void VisitFunctionPointerType(FunctionPointerTypeSyntax node) => this.DefaultVisit(node);
 
@@ -1629,6 +1636,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override SyntaxNode? VisitPointerType(PointerTypeSyntax node)
             => node.Update((TypeSyntax?)Visit(node.ElementType) ?? throw new ArgumentNullException("elementType"), VisitToken(node.AsteriskToken));
+
+        public override SyntaxNode? VisitLambdaFunctionType(LambdaFunctionTypeSyntax node)
+            => node.Update(VisitToken(node.FnKeyword), VisitToken(node.OpenParenToken), VisitList(node.Parameters), VisitToken(node.CloseParenToken), (TypeSyntax?)Visit(node.ReturnType));
 
         public override SyntaxNode? VisitFunctionPointerType(FunctionPointerTypeSyntax node)
             => node.Update(VisitToken(node.DelegateKeyword), VisitToken(node.AsteriskToken), VisitToken(node.CallingConvention), VisitToken(node.LessThanToken), VisitList(node.Parameters), VisitToken(node.GreaterThanToken));
@@ -2414,6 +2424,23 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>Creates a new PointerTypeSyntax instance.</summary>
         public static PointerTypeSyntax PointerType(TypeSyntax elementType)
             => SyntaxFactory.PointerType(elementType, SyntaxFactory.Token(SyntaxKind.AsteriskToken));
+
+        /// <summary>Creates a new LambdaFunctionTypeSyntax instance.</summary>
+        public static LambdaFunctionTypeSyntax LambdaFunctionType(SyntaxToken fnKeyword, SyntaxToken openParenToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, TypeSyntax? returnType)
+        {
+            if (fnKeyword.Kind() != SyntaxKind.FnKeyword) throw new ArgumentException(nameof(fnKeyword));
+            if (openParenToken.Kind() != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
+            if (closeParenToken.Kind() != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
+            return (LambdaFunctionTypeSyntax)Syntax.InternalSyntax.SyntaxFactory.LambdaFunctionType((Syntax.InternalSyntax.SyntaxToken)fnKeyword.Node!, (Syntax.InternalSyntax.SyntaxToken)openParenToken.Node!, parameters.Node.ToGreenSeparatedList<Syntax.InternalSyntax.ParameterSyntax>(), (Syntax.InternalSyntax.SyntaxToken)closeParenToken.Node!, returnType == null ? null : (Syntax.InternalSyntax.TypeSyntax)returnType.Green).CreateRed();
+        }
+
+        /// <summary>Creates a new LambdaFunctionTypeSyntax instance.</summary>
+        public static LambdaFunctionTypeSyntax LambdaFunctionType(SeparatedSyntaxList<ParameterSyntax> parameters, TypeSyntax? returnType)
+            => SyntaxFactory.LambdaFunctionType(SyntaxFactory.Token(SyntaxKind.FnKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), parameters, SyntaxFactory.Token(SyntaxKind.CloseParenToken), returnType);
+
+        /// <summary>Creates a new LambdaFunctionTypeSyntax instance.</summary>
+        public static LambdaFunctionTypeSyntax LambdaFunctionType(SeparatedSyntaxList<ParameterSyntax> parameters = default)
+            => SyntaxFactory.LambdaFunctionType(SyntaxFactory.Token(SyntaxKind.FnKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), parameters, SyntaxFactory.Token(SyntaxKind.CloseParenToken), default);
 
         /// <summary>Creates a new FunctionPointerTypeSyntax instance.</summary>
         public static FunctionPointerTypeSyntax FunctionPointerType(SyntaxToken delegateKeyword, SyntaxToken asteriskToken, SyntaxToken callingConvention, SyntaxToken lessThanToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken greaterThanToken)
