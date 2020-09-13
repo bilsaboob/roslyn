@@ -4358,7 +4358,8 @@ parse_member_name:;
             out SyntaxToken close,
             SyntaxKind openKind,
             SyntaxKind closeKind,
-            bool canFail = false)
+            bool canFail = false,
+            bool nameIsOptional = false)
         {
             open = this.EatToken(openKind);
             close = null;
@@ -4375,10 +4376,10 @@ parse_member_name:;
                 if (this.CurrentToken.Kind != closeKind)
                 {
 tryAgain:
-                    if (this.IsPossibleParameter() || this.CurrentToken.Kind == SyntaxKind.CommaToken)
+                    if (this.IsPossibleParameter(allowStartingTypeName: nameIsOptional) || this.CurrentToken.Kind == SyntaxKind.CommaToken)
                     {
                         // first parameter
-                        var parameter = this.ParseParameter();
+                        var parameter = this.ParseParameter(nameIsOptional: nameIsOptional);
 
                         if (canFail)
                         {
@@ -4409,8 +4410,8 @@ tryAgain:
                             else if (this.CurrentToken.Kind == SyntaxKind.CommaToken || this.IsPossibleParameter())
                             {
                                 nodes.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
-                                parameter = this.ParseParameter();
-                                if (parameter.IsMissing && this.IsPossibleParameter())
+                                parameter = this.ParseParameter(nameIsOptional: nameIsOptional);
+                                if (parameter.IsMissing && this.IsPossibleParameter(allowStartingTypeName: nameIsOptional))
                                 {
                                     // ensure we always consume tokens
                                     parameter = AddTrailingSkippedSyntax(parameter, this.EatToken());
@@ -4419,7 +4420,7 @@ tryAgain:
                                 nodes.Add(parameter);
                                 continue;
                             }
-                            else if (this.SkipBadParameterListTokens(ref open, nodes, SyntaxKind.CommaToken, closeKind) == PostSkipAction.Abort)
+                            else if (this.SkipBadParameterListTokens(ref open, nodes, SyntaxKind.CommaToken, closeKind, allowStartingTypeName: nameIsOptional) == PostSkipAction.Abort)
                             {
                                 break;
                             }
@@ -4456,7 +4457,7 @@ tryAgain:
                         }
 
                         // ok we can skip the tokens and keep parsing the parameters
-                        if (this.SkipBadParameterListTokens(ref open, nodes, SyntaxKind.IdentifierToken, closeKind) == PostSkipAction.Continue)
+                        if (this.SkipBadParameterListTokens(ref open, nodes, SyntaxKind.IdentifierToken, closeKind, allowStartingTypeName: nameIsOptional) == PostSkipAction.Continue)
                         {
                             goto tryAgain;
                         }
@@ -4479,16 +4480,15 @@ tryAgain:
                 || this.CurrentToken.Kind == SyntaxKind.CloseBracketToken;
         }
 
-        private PostSkipAction SkipBadParameterListTokens(
-            ref SyntaxToken open, SeparatedSyntaxListBuilder<ParameterSyntax> list, SyntaxKind expected, SyntaxKind closeKind)
+        private PostSkipAction SkipBadParameterListTokens(ref SyntaxToken open, SeparatedSyntaxListBuilder<ParameterSyntax> list, SyntaxKind expected, SyntaxKind closeKind, bool allowStartingTypeName = false)
         {
             return this.SkipBadSeparatedListTokensWithExpectedKind(ref open, list,
-                p => p.CurrentToken.Kind != SyntaxKind.CommaToken && !p.IsPossibleParameter(),
+                p => p.CurrentToken.Kind != SyntaxKind.CommaToken && !p.IsPossibleParameter(allowStartingTypeName: allowStartingTypeName),
                 p => p.CurrentToken.Kind == closeKind || p.IsTerminator(),
                 expected);
         }
 
-        private bool IsPossibleParameter()
+        private bool IsPossibleParameter(bool allowStartingTypeName = false)
         {
             switch (this.CurrentToken.Kind)
             {
@@ -4511,10 +4511,21 @@ tryAgain:
                                 return false;
                         }
 
+                        if (IsLambdaFunctionTypeStart())
+                        {
+                            if (!allowStartingTypeName) return false;
+                            return true;
+                        }
+
                         return this.IsTrueIdentifier();
                     }
                 default:
-                    return IsParameterModifier(this.CurrentToken.Kind);
+                    if (IsParameterModifier(this.CurrentToken.Kind)) return true;
+                    if (allowStartingTypeName)
+                    {
+                        if (IsPredefinedType(this.CurrentToken.Kind) || IsLambdaFunctionTypeStart()) return true;
+                    }
+                    return false;
             }
         }
 
@@ -4552,7 +4563,7 @@ tryAgain:
             return true;
         }
 
-        private ParameterSyntax ParseParameter()
+        private ParameterSyntax ParseParameter(bool nameIsOptional = false)
         {
             if (this.IsIncrementalAndFactoryContextMatches && CanReuseParameter(this.CurrentNode as CSharp.Syntax.ParameterSyntax))
             {
@@ -4570,7 +4581,45 @@ tryAgain:
                 SyntaxToken name;
                 if (this.CurrentToken.Kind != SyntaxKind.ArgListKeyword)
                 {
-                    name = this.ParseIdentifierToken();
+                    var onlyParseType = false;
+                    if (nameIsOptional)
+                    {
+                        // could be that we only have the type specified... check if that seems to be the case?
+                        if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken)
+                        {
+                            // the next token should be anything that is not a "comma" or "closing type of Token"
+                            var nextToken = this.PeekToken(1);
+                            switch (nextToken.Kind)
+                            {
+                                case SyntaxKind.CommaToken:
+                                case SyntaxKind.CloseBracketToken:
+                                case SyntaxKind.CloseBraceToken:
+                                case SyntaxKind.CloseParenToken:
+                                case SyntaxKind.OpenBracketToken:
+                                case SyntaxKind.LessThanToken:
+                                case SyntaxKind.DotToken:
+                                case SyntaxKind.ColonColonToken:
+                                    {
+                                        onlyParseType = true;
+                                        break;
+                                    }
+                            }
+                        }
+                        else if(IsPredefinedType(this.CurrentToken.Kind))
+                        {
+                            onlyParseType = true;
+                        }
+                    }
+
+                    if (onlyParseType)
+                    {
+                        name = SyntaxFactory.FakeToken(SyntaxKind.IdentifierToken, "");
+                    }
+                    else
+                    {
+                        name = this.ParseIdentifierToken();
+                    }
+
                     type = this.ParseType(mode: ParseTypeMode.Parameter);
 
                     // When the user type "int goo[]", give them a useful error
@@ -6662,7 +6711,11 @@ tryAgain:
                 }
             }
 
-            if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken)
+            if (IsLambdaFunctionTypeStart())
+            {
+                result = ScanLambdaFunctionType(out lastTokenOfType);
+            }
+            else if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken)
             {
                 result = this.ScanNamedTypePart(out lastTokenOfType);
                 if (result == ScanTypeFlags.NotType)
@@ -6836,6 +6889,88 @@ done:
             // Can't be a type!
             lastTokenOfType = null;
             return ScanTypeFlags.NotType;
+        }
+
+        private ScanTypeFlags ScanLambdaFunctionType(out SyntaxToken lastTokenOfType)
+        {
+            Debug.Assert(IsLambdaFunctionTypeStart());
+            lastTokenOfType = EatContextualToken(SyntaxKind.FnKeyword);
+
+            if (!IsPossibleFunctionPointerParameterListStart(CurrentToken))
+            {
+                // Even though this function pointer type is incomplete, we know that it
+                // must be the start of a type, as there is no other possible interpretation
+                // of delegate*. By always treating it as a type, we ensure that any disambiguation
+                // done in later parsing treats this as a type, which will produce better
+                // errors at later stages.
+                return ScanTypeFlags.MustBeType;
+            }
+
+            var validStartingToken = EatToken().Kind == SyntaxKind.LessThanToken;
+
+            var saveTerm = _termState;
+            _termState |= validStartingToken ? TerminatorState.IsEndOfFunctionPointerParameterList : TerminatorState.IsEndOfFunctionPointerParameterListErrored;
+
+            try
+            {
+                do
+                {
+                    var ignoredModifiers = _pool.Allocate<SyntaxToken>();
+                    try
+                    {
+                        ParseParameterModifiers(ignoredModifiers, isFunctionPointerParameter: true);
+                    }
+                    finally
+                    {
+                        _pool.Free(ignoredModifiers);
+                    }
+
+                    // first is either name or type
+                    _ = ScanType(out _);
+
+                    if (CurrentToken.Kind != SyntaxKind.CommaToken)
+                    {
+                        // second should be type... since it's not comma
+                        _ = ScanType(out _);
+                    }
+
+                    if (skipBadFunctionPointerParameterTokens() == PostSkipAction.Abort)
+                    {
+                        break;
+                    }
+
+                    _ = EatToken(SyntaxKind.CommaToken);
+                }
+                while (true);
+            }
+            finally
+            {
+                _termState = saveTerm;
+            }
+
+            if (!validStartingToken && CurrentToken.Kind == SyntaxKind.GreaterThanToken)
+            {
+                lastTokenOfType = EatTokenAsKind(SyntaxKind.CloseParenToken);
+            }
+            else
+            {
+                lastTokenOfType = EatToken(SyntaxKind.CloseParenToken);
+            }
+
+            if (CurrentToken.Kind == SyntaxKind.IdentifierToken)
+            {
+                // scan as the return type
+                _ = ScanType(ParseTypeMode.Normal, out lastTokenOfType);
+            }
+
+            return ScanTypeFlags.MustBeType;
+
+            PostSkipAction skipBadFunctionPointerParameterTokens()
+            {
+                return SkipBadTokensWithExpectedKind(isNotExpectedFunction: p => p.CurrentToken.Kind != SyntaxKind.CommaToken,
+                                                     abortFunction: p => p.IsTerminator(),
+                                                     expected: SyntaxKind.CommaToken, trailingTrivia: out _);
+            }
         }
 
 #nullable enable
@@ -7326,6 +7461,11 @@ done:;
                 return _syntaxFactory.PredefinedType(token);
             }
 
+            if (IsLambdaFunctionTypeStart())
+            {
+                return ParseLambdaFunctionType();
+            }
+
             if (IsTrueIdentifier())
             {
                 return this.ParseQualifiedName(options);
@@ -7346,6 +7486,44 @@ done:;
         }
 
 #nullable enable
+        private LambdaFunctionTypeSyntax ParseLambdaFunctionType()
+        {
+            Debug.Assert(IsLambdaFunctionTypeStart());
+            var @fn = EatContextualToken(SyntaxKind.FnKeyword);
+
+            if (!IsPossibleFunctionPointerParameterListStart(CurrentToken))
+            {
+                var openParenTokenError = WithAdditionalDiagnostics(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), GetExpectedTokenError(SyntaxKind.OpenParenToken, SyntaxKind.None));
+                var missingParameters = _pool.AllocateSeparated<ParameterSyntax>();
+                var missingTypeName = CreateMissingIdentifierName();
+                var missingType = SyntaxFactory.Parameter(attributeLists: default, modifiers: default, CreateMissingIdentifierToken(), missingTypeName, @default: null);
+                missingParameters.Add(missingType);
+                var closeParenTokenError = SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken);
+                var lambdaFnType = SyntaxFactory.LambdaFunctionType(@fn, openParenTokenError, missingParameters, closeParenTokenError, null);
+                _pool.Free(missingParameters);
+                return lambdaFnType;
+            }
+
+            // parse the parameters
+            SyntaxToken openParenToken;
+            SyntaxToken closeParenToken;
+            var parameters = _pool.AllocateSeparated<ParameterSyntax>();
+            try
+            {
+                // parse the parameters
+                this.TryParseParameterList(out openParenToken, parameters, out closeParenToken, SyntaxKind.OpenParenToken, SyntaxKind.CloseParenToken, canFail: false, nameIsOptional: true);
+
+                // parse the return type
+                var returnType = TryParseType();
+
+                return SyntaxFactory.LambdaFunctionType(@fn, openParenToken, parameters, closeParenToken, returnType);
+            }
+            finally
+            {
+                _pool.Free(parameters);
+            }
+        }
+
         private FunctionPointerTypeSyntax ParseFunctionPointerTypeSyntax()
         {
             Debug.Assert(IsFunctionPointerStart());
@@ -7435,6 +7613,9 @@ done:;
 
         private bool IsFunctionPointerStart()
             => CurrentToken.Kind == SyntaxKind.DelegateKeyword && PeekToken(1).Kind == SyntaxKind.AsteriskToken;
+
+        private bool IsLambdaFunctionTypeStart()
+            => CurrentToken.Kind == SyntaxKind.IdentifierToken && CurrentToken.ContextualKind == SyntaxKind.FnKeyword;
 
         private bool IsPossibleCallingConvention(SyntaxToken asteriskToken)
         {
