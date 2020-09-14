@@ -795,6 +795,28 @@ namespace Microsoft.CodeAnalysis
             return node;
         }
 
+        internal GreenNode? GetFirstNonZeroWidthTerminal()
+        {
+            GreenNode? node = this;
+
+            do
+            {
+                GreenNode? firstChild = null;
+                for (int i = 0, n = node.SlotCount; i < n; i++)
+                {
+                    var child = node.GetSlot(i);
+                    if (child != null && child.Width > 0)
+                    {
+                        firstChild = child;
+                        break;
+                    }
+                }
+                node = firstChild;
+            } while (node?._slotCount > 0);
+
+            return node;
+        }
+
         internal GreenNode? GetLastTerminal()
         {
             GreenNode? node = this;
@@ -806,6 +828,28 @@ namespace Microsoft.CodeAnalysis
                 {
                     var child = node.GetSlot(i);
                     if (child != null)
+                    {
+                        lastChild = child;
+                        break;
+                    }
+                }
+                node = lastChild;
+            } while (node?._slotCount > 0);
+
+            return node;
+        }
+
+        internal GreenNode? GetLastNonZeroWidthTerminal()
+        {
+            GreenNode? node = this;
+
+            do
+            {
+                GreenNode? lastChild = null;
+                for (int i = node.SlotCount - 1; i >= 0; i--)
+                {
+                    var child = node.GetSlot(i);
+                    if (child != null && child.Width > 0)
                     {
                         lastChild = child;
                         break;

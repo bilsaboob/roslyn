@@ -935,7 +935,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         protected TNode AddLeadingSkippedSyntax<TNode>(TNode node, GreenNode skippedSyntax) where TNode : CSharpSyntaxNode
         {
-            var oldToken = node as SyntaxToken ?? node.GetFirstToken();
+            var oldToken = node as SyntaxToken ?? node.GetFirstNonZeroWidthToken();
             var newToken = AddSkippedSyntax(oldToken, skippedSyntax, trailing: false);
             return SyntaxFirstTokenReplacer.Replace(node, oldToken, newToken, skippedSyntax.FullWidth);
         }
@@ -960,9 +960,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             else
             {
-                var lastToken = node.GetLastToken();
+                var lastToken = node.GetLastNonZeroWidthToken();
                 var newToken = AddSkippedSyntax(lastToken, skippedSyntax, trailing: true);
-                return SyntaxLastTokenReplacer.Replace(node, newToken);
+                return SyntaxLastTokenReplacer.Replace(node, newToken, lastToken);
             }
         }
 
