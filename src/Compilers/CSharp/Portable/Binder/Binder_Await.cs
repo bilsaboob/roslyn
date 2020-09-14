@@ -176,7 +176,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             info = method.ReturnsVoid ?
                                 new CSDiagnosticInfo(ErrorCode.ERR_BadAwaitWithoutVoidAsyncMethod) :
-                                new CSDiagnosticInfo(ErrorCode.ERR_BadAwaitWithoutAsyncMethod, method.ReturnType);
+                                (method.ReturnType is null ?
+                                    new CSDiagnosticInfo(ErrorCode.ERR_BadAwaitWithoutAsyncMethod) :
+                                    new CSDiagnosticInfo(ErrorCode.ERR_BadAwaitWithoutAsyncMethod, method.ReturnType));
                         }
                         break;
                 }
