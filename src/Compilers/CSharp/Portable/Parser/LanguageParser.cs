@@ -1230,8 +1230,8 @@ tryAgain:
                 // ... 'async' [partial] <event> ...
                 // ... 'async' [partial] <implicit> <operator> ...
                 // ... 'async' [partial] <explicit> <operator> ...
-                // ... 'async' [partial] <typename> <operator> ...
-                // ... 'async' [partial] <typename> <membername> ...
+                // ... 'async' [partial] <operator> ...
+                // ... 'async' [partial] <membername> ...
                 // DEVNOTE: Although we parse async user defined conversions, operators, etc. here,
                 // anything other than async methods are detected as erroneous later, during the define phase
 
@@ -1246,67 +1246,59 @@ tryAgain:
                     }
                 }
 
-                if (ScanType() != ScanTypeFlags.NotType)
+                if (IsPossibleMemberName())
                 {
-                    // We've seen "async TypeName".  Now we have to determine if we should we treat 
-                    // 'async' as a modifier.  Or is the user actually writing something like 
-                    // "public async Goo" where 'async' is actually the return type.
+                    // we have: "async X" or "async this", 'async' is definitely - skip the identifier name
+                    return true;
+                }
 
-                    if (IsPossibleMemberName())
-                    {
-                        // we have: "async Type X" or "async Type this", 'async' is definitely a 
-                        // modifier here.
-                        return true;
-                    }
+                var currentTokenKind = this.CurrentToken.Kind;
 
-                    var currentTokenKind = this.CurrentToken.Kind;
+                // The file ends with "async Identifier", it's not legal code, and it's much 
+                // more likely that this is meant to be a modifier.
+                if (currentTokenKind == SyntaxKind.EndOfFileToken)
+                {
+                    return true;
+                }
 
-                    // The file ends with "async TypeName", it's not legal code, and it's much 
-                    // more likely that this is meant to be a modifier.
-                    if (currentTokenKind == SyntaxKind.EndOfFileToken)
-                    {
-                        return true;
-                    }
+                // "async Identifier }".  In this case, we just have an incomplete member, and 
+                // we should definitely default to 'async' being considered a return type here.
+                if (currentTokenKind == SyntaxKind.CloseBraceToken)
+                {
+                    return true;
+                }
 
-                    // "async TypeName }".  In this case, we just have an incomplete member, and 
-                    // we should definitely default to 'async' being considered a return type here.
-                    if (currentTokenKind == SyntaxKind.CloseBraceToken)
-                    {
-                        return true;
-                    }
+                // "async Identifier void". In this case, we just have an incomplete member before
+                // an existing member.  Treat this 'async' as a keyword.
+                if (SyntaxFacts.IsPredefinedType(this.CurrentToken.Kind))
+                {
+                    return true;
+                }
 
-                    // "async TypeName void". In this case, we just have an incomplete member before
-                    // an existing member.  Treat this 'async' as a keyword.
-                    if (SyntaxFacts.IsPredefinedType(this.CurrentToken.Kind))
-                    {
-                        return true;
-                    }
+                // "async Identifier public".  In this case, we just have an incomplete member before
+                // an existing member.  Treat this 'async' as a keyword.
+                if (IsNonContextualModifier(this.CurrentToken))
+                {
+                    return true;
+                }
 
-                    // "async TypeName public".  In this case, we just have an incomplete member before
-                    // an existing member.  Treat this 'async' as a keyword.
-                    if (IsNonContextualModifier(this.CurrentToken))
-                    {
-                        return true;
-                    }
+                // "async TypeName class". In this case, we just have an incomplete member before
+                // an existing type declaration.  Treat this 'async' as a keyword.
+                if (IsTypeDeclarationStart())
+                {
+                    return true;
+                }
 
-                    // "async TypeName class". In this case, we just have an incomplete member before
-                    // an existing type declaration.  Treat this 'async' as a keyword.
-                    if (IsTypeDeclarationStart())
-                    {
-                        return true;
-                    }
+                // "async TypeName namespace". In this case, we just have an incomplete member before
+                // an existing namespace declaration.  Treat this 'async' as a keyword.
+                if (currentTokenKind == SyntaxKind.NamespaceKeyword)
+                {
+                    return true;
+                }
 
-                    // "async TypeName namespace". In this case, we just have an incomplete member before
-                    // an existing namespace declaration.  Treat this 'async' as a keyword.
-                    if (currentTokenKind == SyntaxKind.NamespaceKeyword)
-                    {
-                        return true;
-                    }
-
-                    if (!parsingStatementNotDeclaration && currentTokenKind == SyntaxKind.OperatorKeyword)
-                    {
-                        return true;
-                    }
+                if (!parsingStatementNotDeclaration && currentTokenKind == SyntaxKind.OperatorKeyword)
+                {
+                    return true;
                 }
             }
             finally
