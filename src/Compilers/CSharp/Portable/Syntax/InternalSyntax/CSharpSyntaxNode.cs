@@ -118,9 +118,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return (SyntaxToken)this.GetFirstTerminal();
         }
 
+        public SyntaxToken GetFirstNonZeroWidthToken()
+        {
+            return (SyntaxToken)this.GetFirstTerminal();
+        }
+
         public SyntaxToken GetLastToken()
         {
             return (SyntaxToken)this.GetLastTerminal();
+        }
+
+        public SyntaxToken GetLastNonZeroWidthToken()
+        {
+            return (SyntaxToken)this.GetLastNonZeroWidthTerminal();
         }
 
         public SyntaxToken GetLastNonmissingToken()

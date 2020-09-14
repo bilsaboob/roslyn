@@ -22,10 +22,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             _newToken = newToken;
         }
 
-        internal static TRoot Replace<TRoot>(TRoot root, SyntaxToken newToken)
+        internal static TRoot Replace<TRoot>(TRoot root, SyntaxToken newToken, SyntaxToken oldToken = null)
             where TRoot : CSharpSyntaxNode
         {
-            var oldToken = root.GetLastToken();
+            oldToken ??= root.GetLastNonZeroWidthToken();
             var replacer = new SyntaxLastTokenReplacer(oldToken, newToken);
             var newRoot = (TRoot)replacer.Visit(root);
             Debug.Assert(replacer._found);
@@ -34,24 +34,37 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         private static int CountNonNullSlots(CSharpSyntaxNode node)
         {
-            return node.ChildNodesAndTokens().Count;
+            // count nodes that have Width > 0
+            var count = 0;
+            var nodes = node.ChildNodesAndTokens();
+
+            foreach (var n in nodes)
+            {
+                if (n.Width > 0)
+                    ++count;
+            }
+
+            return count;
         }
 
         public override CSharpSyntaxNode Visit(CSharpSyntaxNode node)
         {
             if (node != null && !_found)
             {
-                _count--;
-                if (_count == 0)
+                if (node.Width > 0) _count--;
+
+                var token = node as SyntaxToken;
+                if (token != null)
                 {
-                    var token = node as SyntaxToken;
-                    if (token != null)
+                    if (token == _oldToken)
                     {
-                        Debug.Assert(token == _oldToken);
                         _found = true;
                         return _newToken;
                     }
+                }
 
+                if (_count == 0)
+                {
                     _count += CountNonNullSlots(node);
                     return base.Visit(node);
                 }
