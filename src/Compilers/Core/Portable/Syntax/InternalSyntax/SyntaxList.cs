@@ -5,12 +5,21 @@
 #nullable enable
 
 using System.Diagnostics;
+using System.Dynamic;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Syntax.InternalSyntax
 {
     internal abstract partial class SyntaxList : GreenNode
     {
+        public static SyntaxList<T> Create<T>(params T[] nodes)
+            where T : GreenNode
+        {
+            var builder = SyntaxListBuilder<T>.Create();
+            foreach (var node in nodes) builder.Add(node);
+            return builder.ToList();
+        }
+
         internal SyntaxList()
             : base(GreenNode.ListKind)
         {

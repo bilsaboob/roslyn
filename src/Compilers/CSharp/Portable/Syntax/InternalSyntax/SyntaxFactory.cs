@@ -357,4 +357,48 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return SyntaxToken.GetWellKnownTokens();
         }
     }
+
+    internal static partial class SyntaxFactory
+    {
+        public static TryStatementSyntax FakeTryStatement(
+            ContextAwareSyntax syntaxFactory = null,
+            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists = default,
+            SyntaxToken tryToken = null,
+            BlockSyntax tryBlock = null,
+            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<CatchClauseSyntax> catchClauses = default,
+            SyntaxToken finallyToken = null,
+            BlockSyntax finallyBlock = null
+            )
+        {
+            tryToken ??= SyntaxFactory.FakeToken(SyntaxKind.TryKeyword, "try");
+
+            FinallyClauseSyntax finallyClause = null;
+            if (finallyBlock != null)
+            {
+                if (syntaxFactory != null)
+                    finallyClause = syntaxFactory.FinallyClause(finallyToken, finallyBlock);
+                else
+                    SyntaxFactory.FinallyClause(finallyToken, finallyBlock);
+            }
+
+            if (syntaxFactory != null)
+                return syntaxFactory.TryStatement(attributeLists: attributeLists, tryToken, tryBlock, catches: catchClauses, finallyClause);
+            else
+                return SyntaxFactory.TryStatement(attributeLists: attributeLists, tryToken, tryBlock, catches: catchClauses, finallyClause);
+        }
+
+        public static BlockSyntax FakeBlock(
+            ContextAwareSyntax syntaxFactory = null,
+            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists = default, 
+            SyntaxToken openBraceToken = null, 
+            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<StatementSyntax> statements = default, 
+            SyntaxToken closeBraceToken = null)
+        {
+            openBraceToken ??= SyntaxFactory.FakeToken(SyntaxKind.OpenBraceToken, "{");
+            closeBraceToken ??= SyntaxFactory.FakeToken(SyntaxKind.CloseBraceToken, "}");
+            if (syntaxFactory != null)
+                return syntaxFactory.Block(attributeLists, openBraceToken, statements, closeBraceToken);
+            return SyntaxFactory.Block(attributeLists, openBraceToken, statements, closeBraceToken);
+        }
+    }
 }
