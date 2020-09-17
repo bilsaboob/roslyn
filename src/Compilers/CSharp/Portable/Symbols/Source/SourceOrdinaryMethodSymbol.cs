@@ -172,33 +172,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // make sure that the return type of the method is "Task" for async declarations, and if its not - synthesize the Task<...> type
             if (IsAsync)
             {
-                if (returnType.Type?.Name?.StartsWith("Task") != true)
-                {
-                    if (returnType.Type.IsErrorType())
-                    {
-                        // we have an error type ... probably failed to infer the type from the body ... lets just wrap it with the Task<...> type ...
-                        var taskTypeT = signatureBinder.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task_T, diagnostics, returnTypeSyntax);
-                        var returnTaskTypeT = taskTypeT.Construct(ImmutableArray.Create(returnType));
-                        returnType = TypeWithAnnotations.Create(returnTaskTypeT);
-                    }
-                    else
-                    {
-                        // we have a valid type
-                        if (returnType.Type.IsVoidType())
-                        {
-                            // just use the Task type for 'void' ...
-                            var taskType = signatureBinder.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task, diagnostics, returnTypeSyntax);
-                            returnType = TypeWithAnnotations.Create(taskType);
-                        }
-                        else
-                        {
-                            // lets just wrap it with the Task<...> type...
-                            var taskTypeT = signatureBinder.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task_T, diagnostics, returnTypeSyntax);
-                            var returnTaskTypeT = taskTypeT.Construct(ImmutableArray.Create(returnType));
-                            returnType = TypeWithAnnotations.Create(returnTaskTypeT);
-                        }
-                    }
-                }
+                returnType = signatureBinder.BindAsTaskType(returnType, diagnostics, returnTypeSyntax);
             }
 
             // span-like types are returnable in general
