@@ -104,7 +104,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
     {
         internal override TypeSyntax Clone()
         {
-            return new LambdaFunctionTypeSyntax(this.Kind, this.fnKeyword, this.openParenToken, this.parameters, this.closeParenToken, this.returnType, GetDiagnostics(), GetAnnotations());
+            return new LambdaFunctionTypeSyntax(this.Kind, this.asyncModifier, this.fnKeyword, this.openParenToken, this.parameters, this.closeParenToken, this.returnType, GetDiagnostics(), GetAnnotations());
         }
     }
 

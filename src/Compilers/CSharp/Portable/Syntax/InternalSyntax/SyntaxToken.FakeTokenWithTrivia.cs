@@ -73,6 +73,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
     internal static class FakeSyntaxTokenExtensions
     {
+        internal static bool IsContextKind(this SyntaxToken token, SyntaxKind contextKind, SyntaxKind? kind = null)
+        {
+            if (token == null) return false;
+            if (kind != null && kind.Value != token.Kind) return false;
+            return token.ContextualKind == contextKind;
+        }
+
         internal static bool IsFakeToken(this SyntaxToken token)
         {
             return token is SyntaxToken.FakeTokenWithTrivia;

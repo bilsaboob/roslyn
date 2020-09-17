@@ -6886,6 +6886,13 @@ done:
         private ScanTypeFlags ScanLambdaFunctionType(out SyntaxToken lastTokenOfType)
         {
             Debug.Assert(IsLambdaFunctionTypeStart());
+
+            // skip the async keyword if exits
+            if (CurrentToken.IsContextKind(SyntaxKind.AsyncKeyword))
+            {
+                lastTokenOfType = EatContextualToken(SyntaxKind.AsyncKeyword);
+            }
+
             lastTokenOfType = EatContextualToken(SyntaxKind.FnKeyword);
 
             if (!IsPossibleFunctionPointerParameterListStart(CurrentToken))
@@ -7481,6 +7488,14 @@ done:;
         private LambdaFunctionTypeSyntax ParseLambdaFunctionType()
         {
             Debug.Assert(IsLambdaFunctionTypeStart());
+
+            SyntaxToken @async = null;
+
+            // skip the async keyword if exits
+            if (CurrentToken.IsContextKind(SyntaxKind.AsyncKeyword))
+                @async = EatContextualToken(SyntaxKind.AsyncKeyword);
+
+            // now parse the "fn" and remaining parts
             var @fn = EatContextualToken(SyntaxKind.FnKeyword);
 
             if (!IsPossibleFunctionPointerParameterListStart(CurrentToken))
@@ -7491,7 +7506,7 @@ done:;
                 var missingType = SyntaxFactory.Parameter(attributeLists: default, modifiers: default, CreateMissingIdentifierToken(), missingTypeName, @default: null);
                 missingParameters.Add(missingType);
                 var closeParenTokenError = SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken);
-                var lambdaFnType = SyntaxFactory.LambdaFunctionType(@fn, openParenTokenError, missingParameters, closeParenTokenError, null);
+                var lambdaFnType = SyntaxFactory.LambdaFunctionType(@async, @fn, openParenTokenError, missingParameters, closeParenTokenError, null);
                 _pool.Free(missingParameters);
                 return lambdaFnType;
             }
@@ -7508,7 +7523,7 @@ done:;
                 // parse the return type
                 var returnType = TryParseType();
 
-                return SyntaxFactory.LambdaFunctionType(@fn, openParenToken, parameters, closeParenToken, returnType);
+                return SyntaxFactory.LambdaFunctionType(@async, @fn, openParenToken, parameters, closeParenToken, returnType);
             }
             finally
             {
@@ -7607,7 +7622,16 @@ done:;
             => CurrentToken.Kind == SyntaxKind.DelegateKeyword && PeekToken(1).Kind == SyntaxKind.AsteriskToken;
 
         private bool IsLambdaFunctionTypeStart()
-            => CurrentToken.Kind == SyntaxKind.IdentifierToken && CurrentToken.ContextualKind == SyntaxKind.FnKeyword;
+        {
+            var token = CurrentToken;
+            if (token.IsContextKind(SyntaxKind.AsyncKeyword))
+            {
+                // skip to the next token
+                token = PeekToken(1);
+            }
+
+            return token.IsContextKind(SyntaxKind.FnKeyword);
+        }
 
         private bool IsPossibleCallingConvention(SyntaxToken asteriskToken)
         {
@@ -13630,7 +13654,7 @@ tryAgain:
 
                 var body = this.ParseBlock(attributes: default);
 
-                (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(body, modifiers, IsInAsync);
+                (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(body, modifiers);
 
                 return _syntaxFactory.AnonymousMethodExpression(
                     modifiers, @delegate, parameterList, body, expressionBody: null);
@@ -13667,8 +13691,9 @@ tryAgain:
             return result;
         }
 
-        private (SyntaxList<SyntaxToken>, bool) UpdateAsyncModifiersForAwaitExpressions(CSharpSyntaxNode node, SyntaxList<SyntaxToken> modifiers, bool isInAsync)
+        private (SyntaxList<SyntaxToken>, bool) UpdateAsyncModifiersForAwaitExpressions(CSharpSyntaxNode node, SyntaxList<SyntaxToken> modifiers)
         {
+            var isInAsync = modifiers.Any((int)SyntaxKind.AsyncKeyword);
             if (isInAsync || node == null) return (modifiers, isInAsync);
 
             var hasAwait = AwaitExpressionsInternalSyntaxFinder.HasNonNestedAwaitExpressions(node);
@@ -13713,7 +13738,7 @@ tryAgain:
                     arrow = CheckFeatureAvailability(arrow, MessageID.IDS_FeatureLambda);
                     var (block, expression) = ParseLambdaBody();
 
-                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers, IsInAsync);
+                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers);
 
                     return _syntaxFactory.ParenthesizedLambdaExpression(
                         modifiers, paramList, arrow, block, expression);
@@ -13732,7 +13757,7 @@ tryAgain:
                     // parse the body
                     var (block, expression) = ParseLambdaBody();
 
-                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers, IsInAsync);
+                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers);
 
                     return _syntaxFactory.ParenthesizedLambdaExpression(
                         modifiers, paramList, arrow, block, expression);
@@ -13754,7 +13779,7 @@ tryAgain:
                     // parse the body
                     var (block, expression) = ParseLambdaBody();
 
-                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers, IsInAsync);
+                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers);
 
                     return _syntaxFactory.ParenthesizedLambdaExpression(
                         modifiers, paramList, arrow, block, expression);
@@ -13771,7 +13796,7 @@ tryAgain:
                         type: null, identifier: name, @default: null);
                     var (block, expression) = ParseLambdaBody();
 
-                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers, IsInAsync);
+                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers);
 
                     return _syntaxFactory.SimpleLambdaExpression(
                         modifiers, parameter, arrow, block, expression);
