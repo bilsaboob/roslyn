@@ -13629,6 +13629,9 @@ tryAgain:
                 }
 
                 var body = this.ParseBlock(attributes: default);
+
+                (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(body, modifiers, IsInAsync);
+
                 return _syntaxFactory.AnonymousMethodExpression(
                     modifiers, @delegate, parameterList, body, expressionBody: null);
             }
@@ -13664,10 +13667,32 @@ tryAgain:
             return result;
         }
 
+        private (SyntaxList<SyntaxToken>, bool) UpdateAsyncModifiersForAwaitExpressions(CSharpSyntaxNode node, SyntaxList<SyntaxToken> modifiers, bool isInAsync)
+        {
+            if (isInAsync || node == null) return (modifiers, isInAsync);
+
+            var hasAwait = AwaitExpressionsInternalSyntaxFinder.HasNonNestedAwaitExpressions(node);
+            if (!hasAwait) return (modifiers, isInAsync);
+
+            var newModifiers = _pool.Allocate();
+            try
+            {
+                newModifiers.Add(SyntaxFactory.FakeToken(SyntaxKind.AsyncKeyword, "async"));
+                newModifiers.AddRange(modifiers);
+                return (newModifiers.ToList(), true);
+            }
+            finally
+            {
+                _pool.Free(newModifiers);
+            }
+        }
+
         private LambdaExpressionSyntax ParseLambdaExpression()
         {
             var parentScopeIsInAsync = this.IsInAsync;
+
             var result = parseLambdaExpressionWorker();
+
             this.IsInAsync = parentScopeIsInAsync;
             return result;
 
@@ -13688,6 +13713,8 @@ tryAgain:
                     arrow = CheckFeatureAvailability(arrow, MessageID.IDS_FeatureLambda);
                     var (block, expression) = ParseLambdaBody();
 
+                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers, IsInAsync);
+
                     return _syntaxFactory.ParenthesizedLambdaExpression(
                         modifiers, paramList, arrow, block, expression);
                 }
@@ -13704,6 +13731,8 @@ tryAgain:
 
                     // parse the body
                     var (block, expression) = ParseLambdaBody();
+
+                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers, IsInAsync);
 
                     return _syntaxFactory.ParenthesizedLambdaExpression(
                         modifiers, paramList, arrow, block, expression);
@@ -13725,6 +13754,8 @@ tryAgain:
                     // parse the body
                     var (block, expression) = ParseLambdaBody();
 
+                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers, IsInAsync);
+
                     return _syntaxFactory.ParenthesizedLambdaExpression(
                         modifiers, paramList, arrow, block, expression);
                 }
@@ -13740,6 +13771,8 @@ tryAgain:
                         type: null, identifier: name, @default: null);
                     var (block, expression) = ParseLambdaBody();
 
+                    (modifiers, IsInAsync) = UpdateAsyncModifiersForAwaitExpressions(block as CSharpSyntaxNode ?? expression as CSharpSyntaxNode, modifiers, IsInAsync);
+
                     return _syntaxFactory.SimpleLambdaExpression(
                         modifiers, parameter, arrow, block, expression);
                 }
@@ -13747,9 +13780,11 @@ tryAgain:
         }
 
         private (BlockSyntax, ExpressionSyntax) ParseLambdaBody()
-            => CurrentToken.Kind == SyntaxKind.OpenBraceToken
+        {
+            return CurrentToken.Kind == SyntaxKind.OpenBraceToken
                 ? (ParseBlock(attributes: default), (ExpressionSyntax)null)
                 : ((BlockSyntax)null, ParsePossibleRefExpression());
+        }
 
         private ParameterListSyntax ParseLambdaParameterList()
         {
