@@ -584,7 +584,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
             else if (!hasBody && IsAsync)
             {
-                diagnostics.Add(ErrorCode.ERR_BadAsyncLacksBody, location);
+                // diagnostics.Add(ErrorCode.ERR_BadAsyncLacksBody, location);
             }
             else if (!hasBody && !IsExtern && !IsAbstract && !IsPartial && !IsExpressionBodied)
             {

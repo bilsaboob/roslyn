@@ -311,8 +311,9 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
 
         public static TextSpan GetContainedSpan(this IEnumerable<SyntaxNode> nodes)
         {
-            Contract.ThrowIfNull(nodes);
-            Contract.ThrowIfFalse(nodes.Any());
+            //Contract.ThrowIfNull(nodes);
+            //Contract.ThrowIfFalse(nodes.Any());
+            if (nodes == null || !nodes.Any()) return TextSpan.FromBounds(0, 0);
 
             var fullSpan = nodes.First().Span;
             foreach (var node in nodes)
