@@ -38,7 +38,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => InternalSyntaxFactory.PointerType(GenerateIdentifierName(), InternalSyntaxFactory.Token(SyntaxKind.AsteriskToken));
 
         private static Syntax.InternalSyntax.LambdaFunctionTypeSyntax GenerateLambdaFunctionType()
-            => InternalSyntaxFactory.LambdaFunctionType(InternalSyntaxFactory.Token(SyntaxKind.FnKeyword), InternalSyntaxFactory.Token(SyntaxKind.OpenParenToken), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.ParameterSyntax>(), InternalSyntaxFactory.Token(SyntaxKind.CloseParenToken), null);
+            => InternalSyntaxFactory.LambdaFunctionType(null, InternalSyntaxFactory.Token(SyntaxKind.FnKeyword), InternalSyntaxFactory.Token(SyntaxKind.OpenParenToken), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.ParameterSyntax>(), InternalSyntaxFactory.Token(SyntaxKind.CloseParenToken), null);
 
         private static Syntax.InternalSyntax.FunctionPointerTypeSyntax GenerateFunctionPointerType()
             => InternalSyntaxFactory.FunctionPointerType(InternalSyntaxFactory.Token(SyntaxKind.DelegateKeyword), InternalSyntaxFactory.Token(SyntaxKind.AsteriskToken), null, InternalSyntaxFactory.Token(SyntaxKind.LessThanToken), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.ParameterSyntax>(), InternalSyntaxFactory.Token(SyntaxKind.GreaterThanToken));
@@ -799,6 +799,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             var node = GenerateLambdaFunctionType();
 
+            Assert.Null(node.AsyncModifier);
             Assert.Equal(SyntaxKind.FnKeyword, node.FnKeyword.Kind);
             Assert.Equal(SyntaxKind.OpenParenToken, node.OpenParenToken.Kind);
             Assert.Equal(default, node.Parameters);
@@ -9547,7 +9548,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => SyntaxFactory.PointerType(GenerateIdentifierName(), SyntaxFactory.Token(SyntaxKind.AsteriskToken));
 
         private static LambdaFunctionTypeSyntax GenerateLambdaFunctionType()
-            => SyntaxFactory.LambdaFunctionType(SyntaxFactory.Token(SyntaxKind.FnKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), new SeparatedSyntaxList<ParameterSyntax>(), SyntaxFactory.Token(SyntaxKind.CloseParenToken), default(TypeSyntax));
+            => SyntaxFactory.LambdaFunctionType(default(SyntaxToken), SyntaxFactory.Token(SyntaxKind.FnKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), new SeparatedSyntaxList<ParameterSyntax>(), SyntaxFactory.Token(SyntaxKind.CloseParenToken), default(TypeSyntax));
 
         private static FunctionPointerTypeSyntax GenerateFunctionPointerType()
             => SyntaxFactory.FunctionPointerType(SyntaxFactory.Token(SyntaxKind.DelegateKeyword), SyntaxFactory.Token(SyntaxKind.AsteriskToken), default(SyntaxToken), SyntaxFactory.Token(SyntaxKind.LessThanToken), new SeparatedSyntaxList<ParameterSyntax>(), SyntaxFactory.Token(SyntaxKind.GreaterThanToken));
@@ -10308,12 +10309,13 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             var node = GenerateLambdaFunctionType();
 
+            Assert.Equal(SyntaxKind.None, node.AsyncModifier.Kind());
             Assert.Equal(SyntaxKind.FnKeyword, node.FnKeyword.Kind());
             Assert.Equal(SyntaxKind.OpenParenToken, node.OpenParenToken.Kind());
             Assert.Equal(default, node.Parameters);
             Assert.Equal(SyntaxKind.CloseParenToken, node.CloseParenToken.Kind());
             Assert.Null(node.ReturnType);
-            var newNode = node.WithFnKeyword(node.FnKeyword).WithOpenParenToken(node.OpenParenToken).WithParameters(node.Parameters).WithCloseParenToken(node.CloseParenToken).WithReturnType(node.ReturnType);
+            var newNode = node.WithAsyncModifier(node.AsyncModifier).WithFnKeyword(node.FnKeyword).WithOpenParenToken(node.OpenParenToken).WithParameters(node.Parameters).WithCloseParenToken(node.CloseParenToken).WithReturnType(node.ReturnType);
             Assert.Equal(node, newNode);
         }
 

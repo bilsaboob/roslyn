@@ -225,6 +225,12 @@
   </Node>
   <Node Name="LambdaFunctionTypeSyntax" Base="TypeSyntax">
     <Kind Name="LambdaFunctionType"/>
+    <Field Name="AsyncModifier" Type="SyntaxToken" Optional="true">
+      <Kind Name="AsyncKeyword"/>
+      <PropertyComment>
+        <summary>SyntaxToken representing the async modifier keyword.</summary>
+      </PropertyComment>
+    </Field>
     <Field Name="FnKeyword" Type="SyntaxToken">
       <Kind Name="FnKeyword"/>
       <PropertyComment>

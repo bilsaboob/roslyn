@@ -613,7 +613,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return TypeWithAnnotations.Create(CreateErrorType());
             }
 
-            if (syntax.ReturnType == null)
+            var isAsync = syntax.AsyncModifier.Node != null;
+
+            if (syntax.ReturnType == null && !isAsync)
             {
                 // bind as an "System.Action"
 
@@ -621,81 +623,124 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (syntax.Parameters.Count > 0)
                 {
                     // bind as an "System.Action<...>" - with argument type parameters
-                    var typeArguments = SeparatedSyntaxListBuilder<Syntax.TypeSyntax>.Create();
-                    bool separatorRequired = false;
+                    var typeArguments = ImmutableArray.CreateBuilder<TypeWithAnnotations>();
                     for (var i = 0; i < syntax.Parameters.Count; ++i)
                     {
                         var param = syntax.Parameters[i];
                         if (param.Type != null)
                         {
-                            if (separatorRequired) typeArguments.AddSeparator(SyntaxFactory.Token(SyntaxKind.CommaToken));
-
                             // bind the type to make sure we get errors
-                            BindType(param.Type, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
-
-                            typeArguments.Add(param.Type);
-                            separatorRequired = true;
+                            var paramType = BindType(param.Type, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+                            typeArguments.Add(paramType);
                         }
                     }
-                    var typeArgumentList = SyntaxFactory.TypeArgumentList(typeArguments);
-                    var funcName = SyntaxFactory.Identifier("Action");
-                    var actionTypeSyntax = SyntaxFactory.GenericName(funcName, typeArgumentList);
-                    return BindGenericSimpleNamespaceOrTypeOrAliasSymbol(actionTypeSyntax, diagnostics, basesBeingResolved, qualifierOpt: null);
+
+                    var wellKnownType = typeArguments.Count > 1 ? (WellKnownType)Enum.Parse(typeof(WellKnownType), $"System_Action_T{typeArguments.Count}") : WellKnownType.System_Func_T;
+
+                    var actionTypeT = this.GetWellKnownType(wellKnownType, diagnostics, syntax);
+                    var returnTypeT = actionTypeT.Construct(typeArguments.ToImmutable());
+                    var returnType = TypeWithAnnotations.Create(returnTypeT);
+                    return returnType;
                 }
                 else
                 {
                     // bind as an "System.Action" - without any argument type parameters
-                    var actionTypeSyntax = SyntaxFactory.IdentifierName("Action");
-                    return BindNonGenericSimpleNamespaceOrTypeOrAliasSymbol(actionTypeSyntax, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics, qualifierOpt: null);
+
+                    // get the Action type and construct for the parameters
+                    var actionTypeT = this.GetWellKnownType(WellKnownType.System_Action, diagnostics, syntax);
+                    var returnType = TypeWithAnnotations.Create(actionTypeT);
+                    return returnType;
                 }
             }
             else
             {
+                var returnTypeSyntax = syntax.ReturnType;
+                TypeWithAnnotations returnType = default;
+
                 // check for parameters
                 if (syntax.Parameters.Count > 0)
                 {
                     // bind as an "System.Func<..., ReturnType>" - with argument type parameters
-                    var typeArguments = SeparatedSyntaxListBuilder<Syntax.TypeSyntax>.Create();
-                    bool separatorRequired = false;
+                    var typeArguments = ImmutableArray.CreateBuilder<TypeWithAnnotations>();
                     for (var i = 0; i < syntax.Parameters.Count; ++i)
                     {
                         var param = syntax.Parameters[i];
                         if (param.Type != null)
                         {
-                            if (separatorRequired) typeArguments.AddSeparator(SyntaxFactory.Token(SyntaxKind.CommaToken));
-
                             // bind the type to make sure we get errors
-                            BindType(param.Type, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
-
-                            typeArguments.Add(param.Type);
-                            separatorRequired = true;
+                            var paramType = BindType(param.Type, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+                            typeArguments.Add(paramType);
                         }
                     }
 
                     // add the return type
                     // bind the type to make sure we get errors
-                    BindType(syntax.ReturnType, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
-                    if (separatorRequired) typeArguments.AddSeparator(SyntaxFactory.Token(SyntaxKind.CommaToken));
-                    typeArguments.Add(syntax.ReturnType);
+                    if (returnTypeSyntax != null)
+                        returnType = BindType(returnTypeSyntax, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+                    if (isAsync) returnType = BindAsTaskType(returnType, diagnostics, returnTypeSyntax ?? syntax); // make sure the return type is a Task
+                    typeArguments.Add(returnType);
 
-                    var typeArgumentList = SyntaxFactory.TypeArgumentList(typeArguments);
-                    var funcName = SyntaxFactory.Identifier("Func");
-                    var actionTypeSyntax = SyntaxFactory.GenericName(funcName, typeArgumentList);
-                    return BindGenericSimpleNamespaceOrTypeOrAliasSymbol(actionTypeSyntax, diagnostics, basesBeingResolved, qualifierOpt: null);
+                    var wellKnownType = typeArguments.Count > 1 ? (WellKnownType)Enum.Parse(typeof(WellKnownType), $"System_Func_T{typeArguments.Count}") : WellKnownType.System_Func_T;
+
+                    // get the Func type and construct for the parameters
+                    var funcTypeT = this.GetWellKnownType(wellKnownType, diagnostics, returnTypeSyntax ?? syntax);
+                    var returnTypeT = funcTypeT.Construct(typeArguments.ToImmutable());
+                    returnType = TypeWithAnnotations.Create(returnTypeT);
+                    return returnType;
                 }
                 else
                 {
                     // bind as an "System.Func<ReturnType>" - without any argument type parameters
-                    var typeArguments = SeparatedSyntaxListBuilder<Syntax.TypeSyntax>.Create();
-                    BindType(syntax.ReturnType, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
-                    typeArguments.Add(syntax.ReturnType);
+                    if (returnTypeSyntax != null)
+                        returnType = BindType(returnTypeSyntax, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+                    if (isAsync) returnType = BindAsTaskType(returnType, diagnostics, returnTypeSyntax ?? syntax); // make sure the return type is a Task
 
-                    var typeArgumentList = SyntaxFactory.TypeArgumentList(typeArguments);
-                    var funcName = SyntaxFactory.Identifier("Func");
-                    var actionTypeSyntax = SyntaxFactory.GenericName(funcName, typeArgumentList);
-                    return BindGenericSimpleNamespaceOrTypeOrAliasSymbol(actionTypeSyntax, diagnostics, basesBeingResolved, qualifierOpt: null);
+                    // get the Func type and construct for the parameters
+                    var funcTypeT = this.GetWellKnownType(WellKnownType.System_Func_T, diagnostics, returnTypeSyntax ?? syntax);
+                    var returnTypeT = funcTypeT.Construct(ImmutableArray.Create(returnType));
+                    returnType = TypeWithAnnotations.Create(returnTypeT);
+                    return returnType;
                 }
             }
+        }
+
+        internal TypeWithAnnotations BindAsTaskType(TypeWithAnnotations returnType, DiagnosticBag diagnostics, SyntaxNode diagnosticsNode)
+        {
+            if (returnType.Type?.Name?.StartsWith("Task") != true)
+            {
+                if (returnType.Type is null)
+                {
+                    // just return a Task
+                    var taskType = this.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task, diagnostics, diagnosticsNode);
+                    returnType = TypeWithAnnotations.Create(taskType);
+                }
+                else if (returnType.Type.IsErrorType() == true)
+                {
+                    // we have an error type ... probably failed to infer the type from the body ... lets just wrap it with the Task<...> type ...
+                    var taskTypeT = this.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task_T, diagnostics, diagnosticsNode);
+                    var returnTaskTypeT = taskTypeT.Construct(ImmutableArray.Create(returnType));
+                    returnType = TypeWithAnnotations.Create(returnTaskTypeT);
+                }
+                else
+                {
+                    // we have a valid type
+                    if (returnType.Type.IsVoidType())
+                    {
+                        // just use the Task type for 'void' ...
+                        var taskType = this.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task, diagnostics, diagnosticsNode);
+                        returnType = TypeWithAnnotations.Create(taskType);
+                    }
+                    else
+                    {
+                        // lets just wrap it with the Task<...> type...
+                        var taskTypeT = this.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task_T, diagnostics, diagnosticsNode);
+                        var returnTaskTypeT = taskTypeT.Construct(ImmutableArray.Create(returnType));
+                        returnType = TypeWithAnnotations.Create(returnTaskTypeT);
+                    }
+                }
+            }
+
+            return returnType;
         }
 
         private TypeWithAnnotations BindArrayType(
