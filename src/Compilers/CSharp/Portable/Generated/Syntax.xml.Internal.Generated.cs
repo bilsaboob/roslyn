@@ -1051,16 +1051,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
     internal sealed partial class LambdaFunctionTypeSyntax : TypeSyntax
     {
+        internal readonly SyntaxToken? asyncModifier;
         internal readonly SyntaxToken fnKeyword;
         internal readonly SyntaxToken openParenToken;
         internal readonly GreenNode? parameters;
         internal readonly SyntaxToken closeParenToken;
         internal readonly TypeSyntax? returnType;
 
-        internal LambdaFunctionTypeSyntax(SyntaxKind kind, SyntaxToken fnKeyword, SyntaxToken openParenToken, GreenNode? parameters, SyntaxToken closeParenToken, TypeSyntax? returnType, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+        internal LambdaFunctionTypeSyntax(SyntaxKind kind, SyntaxToken? asyncModifier, SyntaxToken fnKeyword, SyntaxToken openParenToken, GreenNode? parameters, SyntaxToken closeParenToken, TypeSyntax? returnType, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
           : base(kind, diagnostics, annotations)
         {
-            this.SlotCount = 5;
+            this.SlotCount = 6;
+            if (asyncModifier != null)
+            {
+                this.AdjustFlagsAndWidth(asyncModifier);
+                this.asyncModifier = asyncModifier;
+            }
             this.AdjustFlagsAndWidth(fnKeyword);
             this.fnKeyword = fnKeyword;
             this.AdjustFlagsAndWidth(openParenToken);
@@ -1079,11 +1085,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        internal LambdaFunctionTypeSyntax(SyntaxKind kind, SyntaxToken fnKeyword, SyntaxToken openParenToken, GreenNode? parameters, SyntaxToken closeParenToken, TypeSyntax? returnType, SyntaxFactoryContext context)
+        internal LambdaFunctionTypeSyntax(SyntaxKind kind, SyntaxToken? asyncModifier, SyntaxToken fnKeyword, SyntaxToken openParenToken, GreenNode? parameters, SyntaxToken closeParenToken, TypeSyntax? returnType, SyntaxFactoryContext context)
           : base(kind)
         {
             this.SetFactoryContext(context);
-            this.SlotCount = 5;
+            this.SlotCount = 6;
+            if (asyncModifier != null)
+            {
+                this.AdjustFlagsAndWidth(asyncModifier);
+                this.asyncModifier = asyncModifier;
+            }
             this.AdjustFlagsAndWidth(fnKeyword);
             this.fnKeyword = fnKeyword;
             this.AdjustFlagsAndWidth(openParenToken);
@@ -1102,10 +1113,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        internal LambdaFunctionTypeSyntax(SyntaxKind kind, SyntaxToken fnKeyword, SyntaxToken openParenToken, GreenNode? parameters, SyntaxToken closeParenToken, TypeSyntax? returnType)
+        internal LambdaFunctionTypeSyntax(SyntaxKind kind, SyntaxToken? asyncModifier, SyntaxToken fnKeyword, SyntaxToken openParenToken, GreenNode? parameters, SyntaxToken closeParenToken, TypeSyntax? returnType)
           : base(kind)
         {
-            this.SlotCount = 5;
+            this.SlotCount = 6;
+            if (asyncModifier != null)
+            {
+                this.AdjustFlagsAndWidth(asyncModifier);
+                this.asyncModifier = asyncModifier;
+            }
             this.AdjustFlagsAndWidth(fnKeyword);
             this.fnKeyword = fnKeyword;
             this.AdjustFlagsAndWidth(openParenToken);
@@ -1124,6 +1140,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
+        /// <summary>SyntaxToken representing the async modifier keyword.</summary>
+        public SyntaxToken? AsyncModifier => this.asyncModifier;
         /// <summary>SyntaxToken representing the fn keyword.</summary>
         public SyntaxToken FnKeyword => this.fnKeyword;
         /// <summary>Gets the open paren token.</summary>
@@ -1137,11 +1155,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         internal override GreenNode? GetSlot(int index)
             => index switch
             {
-                0 => this.fnKeyword,
-                1 => this.openParenToken,
-                2 => this.parameters,
-                3 => this.closeParenToken,
-                4 => this.returnType,
+                0 => this.asyncModifier,
+                1 => this.fnKeyword,
+                2 => this.openParenToken,
+                3 => this.parameters,
+                4 => this.closeParenToken,
+                5 => this.returnType,
                 _ => null,
             };
 
@@ -1150,11 +1169,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitLambdaFunctionType(this);
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitLambdaFunctionType(this);
 
-        public LambdaFunctionTypeSyntax Update(SyntaxToken fnKeyword, SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, TypeSyntax returnType)
+        public LambdaFunctionTypeSyntax Update(SyntaxToken asyncModifier, SyntaxToken fnKeyword, SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, TypeSyntax returnType)
         {
-            if (fnKeyword != this.FnKeyword || openParenToken != this.OpenParenToken || parameters != this.Parameters || closeParenToken != this.CloseParenToken || returnType != this.ReturnType)
+            if (asyncModifier != this.AsyncModifier || fnKeyword != this.FnKeyword || openParenToken != this.OpenParenToken || parameters != this.Parameters || closeParenToken != this.CloseParenToken || returnType != this.ReturnType)
             {
-                var newNode = SyntaxFactory.LambdaFunctionType(fnKeyword, openParenToken, parameters, closeParenToken, returnType);
+                var newNode = SyntaxFactory.LambdaFunctionType(asyncModifier, fnKeyword, openParenToken, parameters, closeParenToken, returnType);
                 var diags = GetDiagnostics();
                 if (diags?.Length > 0)
                     newNode = newNode.WithDiagnosticsGreen(diags);
@@ -1168,15 +1187,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
 
         internal override GreenNode SetDiagnostics(DiagnosticInfo[]? diagnostics)
-            => new LambdaFunctionTypeSyntax(this.Kind, this.fnKeyword, this.openParenToken, this.parameters, this.closeParenToken, this.returnType, diagnostics, GetAnnotations());
+            => new LambdaFunctionTypeSyntax(this.Kind, this.asyncModifier, this.fnKeyword, this.openParenToken, this.parameters, this.closeParenToken, this.returnType, diagnostics, GetAnnotations());
 
         internal override GreenNode SetAnnotations(SyntaxAnnotation[]? annotations)
-            => new LambdaFunctionTypeSyntax(this.Kind, this.fnKeyword, this.openParenToken, this.parameters, this.closeParenToken, this.returnType, GetDiagnostics(), annotations);
+            => new LambdaFunctionTypeSyntax(this.Kind, this.asyncModifier, this.fnKeyword, this.openParenToken, this.parameters, this.closeParenToken, this.returnType, GetDiagnostics(), annotations);
 
         internal LambdaFunctionTypeSyntax(ObjectReader reader)
           : base(reader)
         {
-            this.SlotCount = 5;
+            this.SlotCount = 6;
+            var asyncModifier = (SyntaxToken?)reader.ReadValue();
+            if (asyncModifier != null)
+            {
+                AdjustFlagsAndWidth(asyncModifier);
+                this.asyncModifier = asyncModifier;
+            }
             var fnKeyword = (SyntaxToken)reader.ReadValue();
             AdjustFlagsAndWidth(fnKeyword);
             this.fnKeyword = fnKeyword;
@@ -1203,6 +1228,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         internal override void WriteTo(ObjectWriter writer)
         {
             base.WriteTo(writer);
+            writer.WriteValue(this.asyncModifier);
             writer.WriteValue(this.fnKeyword);
             writer.WriteValue(this.openParenToken);
             writer.WriteValue(this.parameters);
@@ -33172,7 +33198,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             => node.Update((TypeSyntax)Visit(node.ElementType), (SyntaxToken)Visit(node.AsteriskToken));
 
         public override CSharpSyntaxNode VisitLambdaFunctionType(LambdaFunctionTypeSyntax node)
-            => node.Update((SyntaxToken)Visit(node.FnKeyword), (SyntaxToken)Visit(node.OpenParenToken), VisitList(node.Parameters), (SyntaxToken)Visit(node.CloseParenToken), (TypeSyntax)Visit(node.ReturnType));
+            => node.Update((SyntaxToken)Visit(node.AsyncModifier), (SyntaxToken)Visit(node.FnKeyword), (SyntaxToken)Visit(node.OpenParenToken), VisitList(node.Parameters), (SyntaxToken)Visit(node.CloseParenToken), (TypeSyntax)Visit(node.ReturnType));
 
         public override CSharpSyntaxNode VisitFunctionPointerType(FunctionPointerTypeSyntax node)
             => node.Update((SyntaxToken)Visit(node.DelegateKeyword), (SyntaxToken)Visit(node.AsteriskToken), (SyntaxToken)Visit(node.CallingConvention), (SyntaxToken)Visit(node.LessThanToken), VisitList(node.Parameters), (SyntaxToken)Visit(node.GreaterThanToken));
@@ -34046,9 +34072,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return result;
         }
 
-        public LambdaFunctionTypeSyntax LambdaFunctionType(SyntaxToken fnKeyword, SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, TypeSyntax? returnType)
+        public LambdaFunctionTypeSyntax LambdaFunctionType(SyntaxToken? asyncModifier, SyntaxToken fnKeyword, SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, TypeSyntax? returnType)
         {
 #if DEBUG
+            if (asyncModifier != null)
+            {
+                switch (asyncModifier.Kind)
+                {
+                    case SyntaxKind.AsyncKeyword:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(asyncModifier));
+                }
+            }
             if (fnKeyword == null) throw new ArgumentNullException(nameof(fnKeyword));
             if (fnKeyword.Kind != SyntaxKind.FnKeyword) throw new ArgumentException(nameof(fnKeyword));
             if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
@@ -34057,7 +34092,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
 #endif
 
-            return new LambdaFunctionTypeSyntax(SyntaxKind.LambdaFunctionType, fnKeyword, openParenToken, parameters.Node, closeParenToken, returnType, this.context);
+            return new LambdaFunctionTypeSyntax(SyntaxKind.LambdaFunctionType, asyncModifier, fnKeyword, openParenToken, parameters.Node, closeParenToken, returnType, this.context);
         }
 
         public FunctionPointerTypeSyntax FunctionPointerType(SyntaxToken delegateKeyword, SyntaxToken asteriskToken, SyntaxToken? callingConvention, SyntaxToken lessThanToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken greaterThanToken)
@@ -38861,9 +38896,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return result;
         }
 
-        public static LambdaFunctionTypeSyntax LambdaFunctionType(SyntaxToken fnKeyword, SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, TypeSyntax? returnType)
+        public static LambdaFunctionTypeSyntax LambdaFunctionType(SyntaxToken? asyncModifier, SyntaxToken fnKeyword, SyntaxToken openParenToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, TypeSyntax? returnType)
         {
 #if DEBUG
+            if (asyncModifier != null)
+            {
+                switch (asyncModifier.Kind)
+                {
+                    case SyntaxKind.AsyncKeyword:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(asyncModifier));
+                }
+            }
             if (fnKeyword == null) throw new ArgumentNullException(nameof(fnKeyword));
             if (fnKeyword.Kind != SyntaxKind.FnKeyword) throw new ArgumentException(nameof(fnKeyword));
             if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
@@ -38872,7 +38916,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
 #endif
 
-            return new LambdaFunctionTypeSyntax(SyntaxKind.LambdaFunctionType, fnKeyword, openParenToken, parameters.Node, closeParenToken, returnType);
+            return new LambdaFunctionTypeSyntax(SyntaxKind.LambdaFunctionType, asyncModifier, fnKeyword, openParenToken, parameters.Node, closeParenToken, returnType);
         }
 
         public static FunctionPointerTypeSyntax FunctionPointerType(SyntaxToken delegateKeyword, SyntaxToken asteriskToken, SyntaxToken? callingConvention, SyntaxToken lessThanToken, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken greaterThanToken)

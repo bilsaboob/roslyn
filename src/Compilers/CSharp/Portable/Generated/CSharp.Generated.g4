@@ -363,7 +363,7 @@ function_pointer_type
   ;
 
 lambda_function_type
-  : fn_keyword '(' (parameter (',' parameter)*)? ')' type?
+  : 'async'? 'fn' '(' (parameter (',' parameter)*)? ')' type?
   ;
 
 nullable_type
@@ -1281,10 +1281,6 @@ character_literal_token
 expression_or_pattern
   : expression
   | pattern
-  ;
-
-fn_keyword
-  : /* see lexical specification */
   ;
 
 identifier_token
