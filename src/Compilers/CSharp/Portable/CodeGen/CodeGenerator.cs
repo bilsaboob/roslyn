@@ -317,7 +317,16 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
                 BlockSyntax blockSyntax = _methodBodySyntaxOpt as BlockSyntax;
                 if (blockSyntax != null)
                 {
-                    EmitSequencePoint(blockSyntax.SyntaxTree, blockSyntax.CloseBraceToken.Span);
+                    // some blocks may be "fake blocks" wrapping an "inline statement" ... we want to rebind those to the last "}" token of that inline statement
+                    if (blockSyntax.TryGetInlineStatement(out var inlineStatement))
+                    {
+                        var lastToken = inlineStatement.GetLastToken(includeZeroWidth: false, includeSkipped: false);
+                        EmitSequencePoint(blockSyntax.SyntaxTree, lastToken.Span);
+                    }
+                    else
+                    {
+                        EmitSequencePoint(blockSyntax.SyntaxTree, blockSyntax.CloseBraceToken.Span);
+                    }
                 }
             }
 
