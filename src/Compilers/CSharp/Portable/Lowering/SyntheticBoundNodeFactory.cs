@@ -405,24 +405,24 @@ namespace Microsoft.CodeAnalysis.CSharp
             return (PropertySymbol)SpecialMember(sm);
         }
 
-        public BoundExpressionStatement Assignment(BoundExpression left, BoundExpression right, bool isRef = false)
+        public BoundExpressionStatement Assignment(BoundExpression left, BoundExpression right, bool isRef = false, SyntaxNode syntax = null)
         {
-            return ExpressionStatement(AssignmentExpression(left, right, isRef));
+            return ExpressionStatement(AssignmentExpression(left, right, isRef), syntax: syntax);
         }
 
-        public BoundExpressionStatement ExpressionStatement(BoundExpression expr)
+        public BoundExpressionStatement ExpressionStatement(BoundExpression expr, SyntaxNode syntax = null)
         {
-            return new BoundExpressionStatement(Syntax, expr) { WasCompilerGenerated = true };
+            return new BoundExpressionStatement(syntax ?? Syntax, expr) { WasCompilerGenerated = syntax == null };
         }
 
-        public BoundAssignmentOperator AssignmentExpression(BoundExpression left, BoundExpression right, bool isRef = false)
+        public BoundAssignmentOperator AssignmentExpression(BoundExpression left, BoundExpression right, bool isRef = false, SyntaxNode syntax = null)
         {
             Debug.Assert(left.Type is { } && right.Type is { } &&
                 (left.Type.Equals(right.Type, TypeCompareKind.AllIgnoreOptions) ||
                  StackOptimizerPass1.IsFixedBufferAssignmentToRefLocal(left, right, isRef) ||
                  right.Type.IsErrorType() || left.Type.IsErrorType()));
 
-            return new BoundAssignmentOperator(Syntax, left, right, left.Type, isRef: isRef) { WasCompilerGenerated = true };
+            return new BoundAssignmentOperator(syntax ?? Syntax, left, right, left.Type, isRef: isRef) { WasCompilerGenerated = syntax == null };
         }
 
         public BoundBlock Block()
@@ -839,9 +839,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new BoundThrowStatement(Syntax, e) { WasCompilerGenerated = true };
         }
 
-        public BoundLocal Local(LocalSymbol local)
+        public BoundLocalDeclaration LocalDeclaration(LocalSymbol localSymbol, BoundTypeExpression? declaredTypeOpt, BoundExpression? initializerOpt, ImmutableArray<BoundExpression> argumentsOpt, bool inferredType, bool hasErrors = false,SyntaxNode syntax = null)
         {
-            return new BoundLocal(Syntax, local, null, local.Type) { WasCompilerGenerated = true };
+            return new BoundLocalDeclaration(syntax ?? Syntax, localSymbol, declaredTypeOpt, initializerOpt, argumentsOpt, inferredType, hasErrors) { WasCompilerGenerated = true };
+        }
+
+        public BoundLocal Local(LocalSymbol local, SyntaxNode syntax = null)
+        {
+            return new BoundLocal(syntax ?? Syntax, local, null, local.Type) { WasCompilerGenerated = syntax == null };
         }
 
         public BoundExpression MakeSequence(LocalSymbol temp, params BoundExpression[] parts)
