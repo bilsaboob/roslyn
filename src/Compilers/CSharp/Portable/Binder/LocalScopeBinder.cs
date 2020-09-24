@@ -15,9 +15,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 {
     internal partial class LocalScopeBinder : Binder
     {
-        private ImmutableArray<LocalSymbol> _locals;
-        private ImmutableArray<LocalFunctionSymbol> _localFunctions;
-        private ImmutableArray<LabelSymbol> _labels;
+        protected ImmutableArray<LocalSymbol> _locals;
+        protected ImmutableArray<LocalFunctionSymbol> _localFunctions;
+        protected ImmutableArray<LabelSymbol> _labels;
         private readonly uint _localScopeDepth;
 
         internal LocalScopeBinder(Binder next)

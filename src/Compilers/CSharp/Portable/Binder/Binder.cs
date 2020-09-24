@@ -14,6 +14,11 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
+    internal interface IChildAwareBinder
+    {
+        void AddChildBinder(Binder binder);
+    }
+
     /// <summary>
     /// A Binder converts names in to symbols and syntax nodes into bound trees. It is context
     /// dependent, relative to a location in source code.
@@ -42,6 +47,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.Flags = next.Flags;
             this.Compilation = next.Compilation;
             _lazyConversions = conversions;
+
+            PropagateChildBinders(next);
         }
 
         protected Binder(Binder next, BinderFlags flags)
@@ -54,6 +61,22 @@ namespace Microsoft.CodeAnalysis.CSharp
             Next = next;
             this.Flags = flags;
             this.Compilation = next.Compilation;
+
+            PropagateChildBinders(next);
+        }
+
+        private void PropagateChildBinders(Binder? binder)
+        {
+            while (binder != null)
+            {
+                if (binder is IChildAwareBinder childAwareBinder)
+                {
+                    childAwareBinder.AddChildBinder(this);
+                    break;
+                }
+
+                binder = binder.Next;
+            }
         }
 
         internal bool IsSemanticModelBinder
