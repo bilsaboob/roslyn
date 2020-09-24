@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -623,29 +624,78 @@ namespace Microsoft.CodeAnalysis.CSharp
             Visit(node.Statement, _enclosing);
         }
 
+        class TryCatchBlockBinder : LocalScopeBinder, IChildAwareBinder
+        {
+            private List<Binder> _childBinders;
+
+            public TryCatchBlockBinder(Binder enclosing)
+                : this(enclosing, enclosing.Flags)
+            {
+            }
+
+            public TryCatchBlockBinder(Binder enclosing, BinderFlags additionalFlags)
+                : base(enclosing, enclosing.Flags | additionalFlags)
+            {
+            }
+
+            protected override ImmutableArray<LocalSymbol> BuildLocals()
+            {
+                var allLocals = ArrayBuilder<LocalSymbol>.GetInstance();
+
+                if (_childBinders != null)
+                {
+                    foreach (var childBinder in _childBinders)
+                    {
+                        allLocals.AddRange(childBinder.Locals);
+                    }
+                }
+
+                return allLocals.ToImmutableAndFree();
+            }
+
+            public bool AcceptChildBinders { get; set; }
+
+            public void AddChildBinder(Binder binder)
+            {
+                if (!AcceptChildBinders) return;
+
+                _childBinders ??= new List<Binder>();
+                _childBinders?.Add(binder);
+
+                // reset the locals, we have new child binder that should contribute to the locals
+                ImmutableInterlocked.InterlockedExchange(ref _locals, default);
+            }
+        }
+
         public override void VisitTryStatement(TryStatementSyntax node)
         {
+            // wrap with an additional scope that will make the declarations from the "try block" available to the Catch / Finally blocks
+            var tryCatchBinder = new TryCatchBlockBinder(_enclosing);
+            tryCatchBinder.AcceptChildBinders = true;
+
             if (node.Catches.Any())
             {
                 // NOTE: We're going to cheat a bit - we know that the block is definitely going 
                 // to get a map entry, so we don't need to worry about the WithAdditionalFlags
                 // binder being dropped.  That is, there's no point in adding the WithAdditionalFlags
                 // binder to the map ourselves and having VisitBlock unconditionally overwrite it.
-                Visit(node.Block, _enclosing.WithAdditionalFlags(BinderFlags.InTryBlockOfTryCatch));
+                Visit(node.Block, tryCatchBinder.WithAdditionalFlags(BinderFlags.InTryBlockOfTryCatch));
             }
             else
             {
-                Visit(node.Block, _enclosing);
+                Visit(node.Block, tryCatchBinder);
             }
+
+            tryCatchBinder.AcceptChildBinders = false;
 
             foreach (CatchClauseSyntax c in node.Catches)
             {
-                Visit(c, _enclosing);
+                Visit(c, tryCatchBinder);
             }
 
             if (node.Finally != null)
             {
-                Visit(node.Finally, _enclosing);
+                Visit(node.Finally, tryCatchBinder);
             }
         }
 

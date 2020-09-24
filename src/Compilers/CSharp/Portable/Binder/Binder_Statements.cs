@@ -1761,7 +1761,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var block = FinishBindBlockParts(node, boundStatements.ToImmutableAndFree(), diagnostics);
 
             // this is most likely a "fake block" wrapping a statement...
-            if (node.TryGetInlineStatement(out var inlineStatement))
+            if (node.TryGetInlineBlockStatement(out var inlineStatement))
             {
                 // bind to the inner statement of the block!
                 block = new BoundBlock(inlineStatement, block.Locals, block.Statements) { WasCompilerGenerated = true };
