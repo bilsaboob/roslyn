@@ -10346,8 +10346,16 @@ tryAgain:
                 arg = this.ParseExpressionCore();
             }
 
-            var semi = this.EatToken(SyntaxKind.SemicolonToken);
-            return _syntaxFactory.ThrowStatement(attributes, @throw, arg, semi);
+            SyntaxToken semicolon = null;
+            if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
+            {
+                semicolon = this.EatToken(SyntaxKind.SemicolonToken);
+            }
+            else if (IsProbablyStatementEnd())
+            {
+                semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
+            }
+            return _syntaxFactory.ThrowStatement(attributes, @throw, arg, semicolon);
         }
 
         private UnsafeStatementSyntax ParseUnsafeStatement(SyntaxList<AttributeListSyntax> attributes)
