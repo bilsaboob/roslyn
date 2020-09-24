@@ -13,15 +13,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         public BlockSyntax Update(SyntaxToken openBraceToken, SyntaxList<StatementSyntax> statements, SyntaxToken closeBraceToken)
             => Update(attributeLists: default, openBraceToken, statements, closeBraceToken);
 
-        public bool IsInlineStatement()
+        public bool IsInlineBlockStatement()
         {
             return OpenBraceToken.Width == 0 && CloseBraceToken.Width == 0 && Statements.Count == 1;
         }
 
-        public bool TryGetInlineStatement(out StatementSyntax statement)
+        public bool TryGetInlineBlockStatement(out StatementSyntax statement)
         {
             statement = null;
-            if (!IsInlineStatement()) return false;
+            if (!IsInlineBlockStatement()) return false;
             statement = Statements[0];
             return true;
         }

@@ -12,6 +12,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     {
         public TryStatementSyntax Update(SyntaxToken tryKeyword, BlockSyntax block, SyntaxList<CatchClauseSyntax> catches, FinallyClauseSyntax @finally)
             => Update(attributeLists: default, tryKeyword, block, catches, @finally);
+
+        public bool IsInlineBlockTryCatchStatement()
+        {
+            return !TryKeyword.IsMissing && TryKeyword.Width == 0 && Parent is BlockSyntax;
+        }
     }
 }
 
