@@ -5,7 +5,9 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection.Metadata;
+using System.Resources;
 using Microsoft.CodeAnalysis.CodeGen;
 using Microsoft.CodeAnalysis.CSharp.Emit;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
@@ -268,10 +270,24 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
 
             // Synthesized methods should have a sequence point
             // at offset 0 to ensure correct stepping behavior.
-            if (_emitPdbSequencePoints && _method.IsImplicitlyDeclared)
+            var emitInitialHiddenSequencePoint = false;
+            if (_emitPdbSequencePoints)
             {
-                _builder.DefineInitialHiddenSequencePoint();
+                if (_method.IsImplicitlyDeclared)
+                {
+                    emitInitialHiddenSequencePoint = true;
+                }
+                else if (_boundBody is BoundStatementList statementsList && statementsList.Statements.Length > 0)
+                {
+                    if (statementsList.Statements[0]?.Syntax.IsInlineStatement() == true)
+                    {
+                        // inline block statements don't have any '{...}' braces, so we need to add an initial hidden sequence point for those
+                        emitInitialHiddenSequencePoint = true;
+                    }
+                }
             }
+
+            if (emitInitialHiddenSequencePoint) _builder.DefineInitialHiddenSequencePoint();
 
             try
             {
@@ -317,7 +333,16 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
                 BlockSyntax blockSyntax = _methodBodySyntaxOpt as BlockSyntax;
                 if (blockSyntax != null)
                 {
-                    EmitSequencePoint(blockSyntax.SyntaxTree, blockSyntax.CloseBraceToken.Span);
+                    // some blocks may be "fake blocks" wrapping an "inline statement" ... we want to rebind those to the last "}" token of that inline statement
+                    if (blockSyntax.TryGetInlineBlockStatement(out var inlineStatement))
+                    {
+                        var lastToken = inlineStatement.GetLastToken(includeZeroWidth: false, includeSkipped: false);
+                        EmitSequencePoint(blockSyntax.SyntaxTree, lastToken.Span);
+                    }
+                    else
+                    {
+                        EmitSequencePoint(blockSyntax.SyntaxTree, blockSyntax.CloseBraceToken.Span);
+                    }
                 }
             }
 

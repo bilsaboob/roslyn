@@ -136,7 +136,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new FakeTokenWithTrivia(kind, value, allowTrivia);
         }
 
-        internal static SyntaxToken CreateMissing(SyntaxKind kind, GreenNode leading, GreenNode trailing)
+        internal static SyntaxToken CreateMissing(SyntaxKind kind, GreenNode leading = null, GreenNode trailing = null)
         {
             return new MissingTokenWithTrivia(kind, leading, trailing);
         }

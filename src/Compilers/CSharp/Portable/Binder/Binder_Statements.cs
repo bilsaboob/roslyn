@@ -1758,7 +1758,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                 boundStatements.Add(boundStatement);
             }
 
-            return FinishBindBlockParts(node, boundStatements.ToImmutableAndFree(), diagnostics);
+            var block = FinishBindBlockParts(node, boundStatements.ToImmutableAndFree(), diagnostics);
+
+            // this is most likely a "fake block" wrapping a statement...
+            if (node.TryGetInlineBlockStatement(out var inlineStatement))
+            {
+                // bind to the inner statement of the block!
+                block = new BoundBlock(inlineStatement, block.Locals, block.Statements) { WasCompilerGenerated = true };
+            }
+
+            return block;
         }
 
         private BoundBlock FinishBindBlockParts(CSharpSyntaxNode node, ImmutableArray<BoundStatement> boundStatements, DiagnosticBag diagnostics)

@@ -47,10 +47,17 @@ namespace Microsoft.CodeAnalysis.ExtractMethod
                 AnnotationResolver annotationResolver = null,
                 TriviaResolver triviaResolver = null)
             {
-                var tokens = RecoverTokensAtEdges(root, annotationResolver);
-                var map = CreateOldToNewTokensMap(tokens, triviaResolver);
+                try
+                {
+                    var tokens = RecoverTokensAtEdges(root, annotationResolver);
+                    var map = CreateOldToNewTokensMap(tokens, triviaResolver);
 
-                return root.ReplaceTokens(map.Keys, (o, n) => map[o]);
+                    return root.ReplaceTokens(map.Keys, (o, n) => map[o]);
+                }
+                catch (Exception)
+                {
+                    return root;
+                }
             }
 
             private static Dictionary<SyntaxToken, SyntaxToken> CreateOldToNewTokensMap(
