@@ -38,18 +38,35 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
         {
             var recommendedItems = await Recommender.GetImmutableRecommendedSymbolsAtPositionAsync(context.SemanticModel, position, context.Workspace, options, cancellationToken).ConfigureAwait(false);
 
-            if (context?.IsTypeContext == false)
+            var filterTypes = context?.IsTypeContext == false;
+            var filterNamedTypes = (context as CSharpSyntaxContext)?.IsNamespaceOrTypeMemberAccessContext == false;
+
+            if (filterTypes || filterNamedTypes)
             {
-                // filter away "type symbols"
-                recommendedItems = recommendedItems.Where(item =>
-                    item.Kind != SymbolKind.NamedType &&
-                    item.Kind != SymbolKind.TypeParameter &&
-                    item.Kind != SymbolKind.ArrayType &&
-                    item.Kind != SymbolKind.PointerType &&
-                    item.Kind != SymbolKind.DynamicType &&
-                    item.Kind != SymbolKind.FunctionPointerType &&
-                    item.Kind != SymbolKind.ErrorType
-                ).ToImmutableArray();
+                IEnumerable<ISymbol> filteredItems = recommendedItems;
+
+                if (filterTypes)
+                {
+                    // filter away "type symbols"
+                    filteredItems = recommendedItems.Where(item =>
+                        item.Kind != SymbolKind.TypeParameter &&
+                        item.Kind != SymbolKind.ArrayType &&
+                        item.Kind != SymbolKind.PointerType &&
+                        item.Kind != SymbolKind.DynamicType &&
+                        item.Kind != SymbolKind.FunctionPointerType &&
+                        item.Kind != SymbolKind.ErrorType
+                    );
+                }
+
+                if (filterNamedTypes)
+                {
+                    // filter away "names types"
+                    filteredItems = recommendedItems.Where(item =>
+                        item.Kind != SymbolKind.NamedType
+                    );
+                }
+
+                recommendedItems = filteredItems.ToImmutableArray();
             }
 
             return recommendedItems;
