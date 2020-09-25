@@ -256,36 +256,105 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 namespaceToken = this.AddError(namespaceToken, ErrorCode.ERR_NamespaceNotAllowedInScript);
             }
 
+            var isFlatNamespace = false;
+            var maybeFlatNamespace = false;
             var name = this.ParseQualifiedName();
 
-            SyntaxToken openBrace;
-            if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken || IsPossibleNamespaceMemberDeclaration())
+            // if we have a semicolon after the name, then this is defenitely a flat namespace
+            var postNameSemicolon = this.TryEatToken(SyntaxKind.SemicolonToken);
+            if (postNameSemicolon != null)
+                maybeFlatNamespace = isFlatNamespace = true;
+
+            SyntaxToken openBrace = null;
+            SyntaxToken closeBrace = null;
+
+            if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
             {
                 //either we see the brace we expect here or we see something that could come after a brace
                 //so we insert a missing one
                 openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
             }
+            else if (IsPossibleNamespaceMemberDeclaration())
+            {
+                // this could potentially be an error ... or just a "flat namespace"
+                if (!IsCurrentTokenOnNewline)
+                {
+                    // it's an error ... but eat the token anyway
+                    openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
+                }
+                else
+                {
+                    // this is expected to be a "flat namespace declaration"
+                    maybeFlatNamespace = true;
+                }
+            }
             else
             {
-                //the next character is neither the brace we expect, nor a token that could follow the expected
-                //brace so we assume it's a mistake and replace it with a missing brace 
-                openBrace = this.EatTokenWithPrejudice(SyntaxKind.OpenBraceToken);
-                openBrace = this.ConvertToMissingWithTrailingTrivia(openBrace, SyntaxKind.OpenBraceToken);
+                if (IsCurrentTokenOnNewline)
+                {
+                    maybeFlatNamespace = true;
+                }
+                else
+                {
+                    //the next character is neither the brace we expect, nor a token that could follow the expected
+                    //brace so we assume it's a mistake and replace it with a missing brace 
+                    openBrace = this.EatTokenWithPrejudice(SyntaxKind.OpenBraceToken);
+                    openBrace = this.ConvertToMissingWithTrailingTrivia(openBrace, SyntaxKind.OpenBraceToken);
+                }
             }
 
             var body = new NamespaceBodyBuilder(_pool);
             SyntaxListBuilder initialBadNodes = null;
             try
             {
-                this.ParseNamespaceBody(ref openBrace, ref body, ref initialBadNodes, SyntaxKind.NamespaceDeclaration);
+                this.ParseNamespaceBody(ref openBrace, ref body, ref initialBadNodes, SyntaxKind.NamespaceDeclaration, allowNestedNamespace: !(isFlatNamespace || maybeFlatNamespace), isCompilationUnit: false);
 
-                var closeBrace = this.EatToken(SyntaxKind.CloseBraceToken);
+                // we may be expecting a close brace - if not a flat namespace
+                closeBrace = this.TryEatToken(SyntaxKind.CloseBraceToken);
+                if (closeBrace != null)
+                {
+                    // there should not be a close brace token... but we allow this never the less...
+                    if (isFlatNamespace)
+                    {
+                        closeBrace = AddError(closeBrace, ErrorCode.ERR_UnexpectedToken);
+                    }
+                    else if (maybeFlatNamespace)
+                    {
+                        // probably wasn't a flat namespace afterall... mark a missing brace token 
+                        if (openBrace == null)
+                            openBrace = CreateMissingToken(SyntaxKind.OpenBraceToken, SyntaxKind.None, true);
+                    }
+                }
+                else
+                {
+                    if (!isFlatNamespace && openBrace?.IsMissing == false)
+                    {
+                        // we should have had a close brace
+                        closeBrace = CreateMissingToken(SyntaxKind.CloseBraceToken, SyntaxKind.None, true);
+                    }
+                }
+
+                // we may be expecting a semicolon token - if not a flat namespace
                 var semicolon = this.TryEatToken(SyntaxKind.SemicolonToken);
+                if (semicolon != null && closeBrace == null)
+                {
+                    // there should not be a semicolon token... but we allow this never the less...
+                    semicolon = AddError(semicolon, ErrorCode.ERR_UnexpectedToken);
+                }
 
                 Debug.Assert(initialBadNodes == null); // init bad nodes should have been attached to open brace...
                 return _syntaxFactory.NamespaceDeclaration(
-                    attributeLists, modifiers.ToList(),
-                    namespaceToken, name, openBrace, body.Externs, body.Usings, body.Members, closeBrace, semicolon);
+                    attributeLists,
+                    modifiers.ToList(),
+                    namespaceToken,
+                    name,
+                    postNameSemicolon,
+                    openBrace,
+                    body.Externs,
+                    body.Usings,
+                    body.Members,
+                    closeBrace,
+                    semicolon);
             }
             finally
             {
@@ -367,12 +436,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             TopLevelStatementsAfterTypesAndNamespaces = 6,
         }
 
-        private void ParseNamespaceBody(ref SyntaxToken openBrace, ref NamespaceBodyBuilder body, ref SyntaxListBuilder initialBadNodes, SyntaxKind parentKind)
+        private void ParseNamespaceBody(ref SyntaxToken openBrace, ref NamespaceBodyBuilder body, ref SyntaxListBuilder initialBadNodes, SyntaxKind parentKind, bool allowNestedNamespace = true, bool? isCompilationUnit = null)
         {
             // "top-level" expressions and statements should never occur inside an asynchronous context
             Debug.Assert(!IsInAsync);
 
-            bool isGlobal = openBrace == null;
+            bool isGlobal = isCompilationUnit ?? (openBrace == null);
 
             var saveTerm = _termState;
             _termState |= TerminatorState.IsNamespaceMemberStartOrStop;
@@ -387,6 +456,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     switch (this.CurrentToken.Kind)
                     {
                         case SyntaxKind.NamespaceKeyword:
+                            if (!allowNestedNamespace) return;
+
                             // incomplete members must be processed before we add any nodes to the body:
                             AddIncompleteMembers(ref pendingIncompleteMembers, ref body);
 
