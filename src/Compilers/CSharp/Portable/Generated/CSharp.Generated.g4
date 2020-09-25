@@ -334,7 +334,7 @@ incomplete_member
   ;
 
 namespace_declaration
-  : attribute_list* modifier* 'namespace' name '{' extern_alias_directive* using_directive* member_declaration* '}' ';'?
+  : attribute_list* modifier* 'namespace' name ';'? '{'? extern_alias_directive* using_directive* member_declaration* '}'? ';'?
   ;
 
 type
