@@ -291,6 +291,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
+        protected bool IsCurrentTokenEndOfFile
+        {
+            get => CurrentToken.Kind == SyntaxKind.EndOfFileToken;
+        }
+
         protected bool IsCurrentTokenOnNewline
         {
             get

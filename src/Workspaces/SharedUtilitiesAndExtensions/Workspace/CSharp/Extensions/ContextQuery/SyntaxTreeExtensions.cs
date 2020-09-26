@@ -3345,5 +3345,75 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
 
             return false;
         }
+
+        public static bool IsNamespaceOrTypeMemberAccessContext(this SyntaxTree syntaxTree, SemanticModel semanticModel, int position, CancellationToken cancellationToken)
+        {
+            var token = syntaxTree
+                .FindTokenOnLeftOfPosition(position, cancellationToken)
+                .GetPreviousTokenIfTouchingWord(position);
+
+            // current must be "."
+            if (!token.IsKind(SyntaxKind.DotToken)) return false;
+
+            // previous must be an identifier
+            var prevToken = token.GetPreviousToken();
+            if (!prevToken.IsKind(SyntaxKind.IdentifierToken)) return false;
+
+            // check special case for member access expressions
+            var parent = token.Parent;
+            if (parent is MemberAccessExpressionSyntax memberAccess)
+            {
+                var leftHandBinding = semanticModel.GetSymbolInfo(memberAccess.Expression, cancellationToken);
+                var symbol = leftHandBinding.GetBestOrAllSymbols().FirstOrDefault();
+
+                // check the symbol kind if any available
+                if (symbol != null)
+                {
+                    switch (symbol.Kind)
+                    {
+                        case SymbolKind.Namespace:
+                            return true;
+                        case SymbolKind.NamedType:
+                            switch (((INamedTypeSymbol)symbol).TypeKind)
+                            {
+                                case TypeKind.Class:
+                                case TypeKind.Struct:
+                                case TypeKind.Interface:
+                                case TypeKind.Delegate:
+                                case TypeKind.Module:
+                                    return true;
+                                default:
+                                    return false;
+                            }
+                        case SymbolKind.Alias:
+                            {
+                                var target = ((IAliasSymbol)symbol).Target;
+                                if (target.IsType)
+                                {
+                                    switch (((ITypeSymbol)target).TypeKind)
+                                    {
+                                        case TypeKind.Class:
+                                        case TypeKind.Struct:
+                                        case TypeKind.Interface:
+                                        case TypeKind.Delegate:
+                                        case TypeKind.Module:
+                                            return true;
+                                        default:
+                                            return false;
+                                    }
+                                }
+                                else if (target.IsNamespace)
+                                {
+                                    return true;
+                                }
+
+                                return false;
+                            }
+                    }
+                }
+            }
+
+            return true;
+        }
     }
 }

@@ -627,6 +627,36 @@ namespace Microsoft.CodeAnalysis
             return SyntaxNavigator.Instance.GetPreviousToken(this, includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
         }
 
+        public SyntaxToken? FindPreviousToken(Func<SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false)
+        {
+            if (Node == null)
+                return null;
+
+            var token = this;
+            while (token.Node != null)
+            {
+                if (predicate(token)) return token;
+                token = token.GetPreviousToken(includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
+            }
+
+            return null;
+        }
+
+        public SyntaxToken? FindNextToken(Func<SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false)
+        {
+            if (Node == null)
+                return null;
+
+            var token = this;
+            while (token.Node != null)
+            {
+                if (predicate(token)) return token;
+                token = token.GetNextToken(includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Returns the token before this token in the syntax tree.
         /// </summary>

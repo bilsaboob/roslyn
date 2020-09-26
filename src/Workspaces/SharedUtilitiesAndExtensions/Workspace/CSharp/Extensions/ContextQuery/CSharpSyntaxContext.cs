@@ -53,6 +53,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
         public readonly bool IsLeftSideOfImportAliasDirective;
         public readonly bool IsFunctionPointerTypeArgumentContext;
         public readonly bool IsSymbolDeclarationNameContext;
+        public readonly bool IsNamespaceOrTypeMemberAccessContext;
 
         private CSharpSyntaxContext(
             Workspace workspace,
@@ -110,7 +111,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             bool isInArgumentList,
             bool isFunctionPointerTypeArgumentContext,
             CancellationToken cancellationToken,
-            bool isSymbolDeclarationNameContext = false)
+            bool isSymbolDeclarationNameContext = false,
+            bool isNamespaceOrTypeMemberAccessContext = false)
             : base(workspace, semanticModel, position, leftToken, targetToken,
                    isTypeContext, isNamespaceContext, isNamespaceDeclarationNameContext,
                    isPreProcessorDirectiveContext,
@@ -153,6 +155,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             this.IsLeftSideOfImportAliasDirective = isLeftSideOfImportAliasDirective;
             this.IsFunctionPointerTypeArgumentContext = isFunctionPointerTypeArgumentContext;
             this.IsSymbolDeclarationNameContext = isSymbolDeclarationNameContext;
+            this.IsNamespaceOrTypeMemberAccessContext = isNamespaceOrTypeMemberAccessContext;
         }
 
         public static CSharpSyntaxContext CreateContext(Workspace workspace, SemanticModel semanticModel, int position, CancellationToken cancellationToken)
@@ -239,6 +242,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
                 isConstantExpressionContext: isConstantExpressionContext,
                 isAttributeNameContext: syntaxTree.IsAttributeNameContext(position, cancellationToken),
                 isEnumTypeMemberAccessContext: syntaxTree.IsEnumTypeMemberAccessContext(semanticModel, position, cancellationToken),
+                isNamespaceOrTypeMemberAccessContext: syntaxTree.IsNamespaceOrTypeMemberAccessContext(semanticModel, position, cancellationToken),
                 isNameOfContext: syntaxTree.IsNameOfContext(position, semanticModel, cancellationToken),
                 isInQuery: leftToken.GetAncestor<QueryExpressionSyntax>() != null,
                 isInImportsDirective: leftToken.GetAncestor<UsingDirectiveSyntax>() != null,

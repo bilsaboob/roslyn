@@ -437,7 +437,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => InternalSyntaxFactory.UsingDirective(InternalSyntaxFactory.Token(SyntaxKind.UsingKeyword), null, null, GenerateIdentifierName(), InternalSyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
         private static Syntax.InternalSyntax.NamespaceDeclarationSyntax GenerateNamespaceDeclaration()
-            => InternalSyntaxFactory.NamespaceDeclaration(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.AttributeListSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.SyntaxToken>(), InternalSyntaxFactory.Token(SyntaxKind.NamespaceKeyword), GenerateIdentifierName(), InternalSyntaxFactory.Token(SyntaxKind.OpenBraceToken), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.ExternAliasDirectiveSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.UsingDirectiveSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.MemberDeclarationSyntax>(), InternalSyntaxFactory.Token(SyntaxKind.CloseBraceToken), null);
+            => InternalSyntaxFactory.NamespaceDeclaration(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.AttributeListSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.SyntaxToken>(), InternalSyntaxFactory.Token(SyntaxKind.NamespaceKeyword), GenerateIdentifierName(), null, null, new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.ExternAliasDirectiveSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.UsingDirectiveSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.MemberDeclarationSyntax>(), null, null);
 
         private static Syntax.InternalSyntax.AttributeListSyntax GenerateAttributeList()
             => InternalSyntaxFactory.AttributeList(InternalSyntaxFactory.Token(SyntaxKind.OpenBracketToken), null, new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SeparatedSyntaxList<Syntax.InternalSyntax.AttributeSyntax>(), InternalSyntaxFactory.Token(SyntaxKind.CloseBracketToken));
@@ -2466,11 +2466,12 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             Assert.Equal(default, node.Modifiers);
             Assert.Equal(SyntaxKind.NamespaceKeyword, node.NamespaceKeyword.Kind);
             Assert.NotNull(node.Name);
-            Assert.Equal(SyntaxKind.OpenBraceToken, node.OpenBraceToken.Kind);
+            Assert.Null(node.PostNameSemicolonToken);
+            Assert.Null(node.OpenBraceToken);
             Assert.Equal(default, node.Externs);
             Assert.Equal(default, node.Usings);
             Assert.Equal(default, node.Members);
-            Assert.Equal(SyntaxKind.CloseBraceToken, node.CloseBraceToken.Kind);
+            Assert.Null(node.CloseBraceToken);
             Assert.Null(node.SemicolonToken);
 
             AttachAndCheckDiagnostics(node);
@@ -9947,7 +9948,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => SyntaxFactory.UsingDirective(SyntaxFactory.Token(SyntaxKind.UsingKeyword), default(SyntaxToken), default(NameEqualsSyntax), GenerateIdentifierName(), SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
         private static NamespaceDeclarationSyntax GenerateNamespaceDeclaration()
-            => SyntaxFactory.NamespaceDeclaration(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), SyntaxFactory.Token(SyntaxKind.NamespaceKeyword), GenerateIdentifierName(), SyntaxFactory.Token(SyntaxKind.OpenBraceToken), new SyntaxList<ExternAliasDirectiveSyntax>(), new SyntaxList<UsingDirectiveSyntax>(), new SyntaxList<MemberDeclarationSyntax>(), SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default(SyntaxToken));
+            => SyntaxFactory.NamespaceDeclaration(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), SyntaxFactory.Token(SyntaxKind.NamespaceKeyword), GenerateIdentifierName(), default(SyntaxToken), default(SyntaxToken), new SyntaxList<ExternAliasDirectiveSyntax>(), new SyntaxList<UsingDirectiveSyntax>(), new SyntaxList<MemberDeclarationSyntax>(), default(SyntaxToken), default(SyntaxToken));
 
         private static AttributeListSyntax GenerateAttributeList()
             => SyntaxFactory.AttributeList(SyntaxFactory.Token(SyntaxKind.OpenBracketToken), default(AttributeTargetSpecifierSyntax), new SeparatedSyntaxList<AttributeSyntax>(), SyntaxFactory.Token(SyntaxKind.CloseBracketToken));
@@ -11976,13 +11977,14 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             Assert.Equal(default, node.Modifiers);
             Assert.Equal(SyntaxKind.NamespaceKeyword, node.NamespaceKeyword.Kind());
             Assert.NotNull(node.Name);
-            Assert.Equal(SyntaxKind.OpenBraceToken, node.OpenBraceToken.Kind());
+            Assert.Equal(SyntaxKind.None, node.PostNameSemicolonToken.Kind());
+            Assert.Equal(SyntaxKind.None, node.OpenBraceToken.Kind());
             Assert.Equal(default, node.Externs);
             Assert.Equal(default, node.Usings);
             Assert.Equal(default, node.Members);
-            Assert.Equal(SyntaxKind.CloseBraceToken, node.CloseBraceToken.Kind());
+            Assert.Equal(SyntaxKind.None, node.CloseBraceToken.Kind());
             Assert.Equal(SyntaxKind.None, node.SemicolonToken.Kind());
-            var newNode = node.WithAttributeLists(node.AttributeLists).WithModifiers(node.Modifiers).WithNamespaceKeyword(node.NamespaceKeyword).WithName(node.Name).WithOpenBraceToken(node.OpenBraceToken).WithExterns(node.Externs).WithUsings(node.Usings).WithMembers(node.Members).WithCloseBraceToken(node.CloseBraceToken).WithSemicolonToken(node.SemicolonToken);
+            var newNode = node.WithAttributeLists(node.AttributeLists).WithModifiers(node.Modifiers).WithNamespaceKeyword(node.NamespaceKeyword).WithName(node.Name).WithPostNameSemicolonToken(node.PostNameSemicolonToken).WithOpenBraceToken(node.OpenBraceToken).WithExterns(node.Externs).WithUsings(node.Usings).WithMembers(node.Members).WithCloseBraceToken(node.CloseBraceToken).WithSemicolonToken(node.SemicolonToken);
             Assert.Equal(node, newNode);
         }
 

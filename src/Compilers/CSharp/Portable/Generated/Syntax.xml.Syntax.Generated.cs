@@ -8233,15 +8233,39 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
         public NameSyntax Name => GetRed(ref this.name, 3)!;
 
-        public SyntaxToken OpenBraceToken => new SyntaxToken(this, ((Syntax.InternalSyntax.NamespaceDeclarationSyntax)this.Green).openBraceToken, GetChildPosition(4), GetChildIndex(4));
+        /// <summary>Gets the optional semicolon token right after the name.</summary>
+        public SyntaxToken PostNameSemicolonToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.NamespaceDeclarationSyntax)this.Green).postNameSemicolonToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(4), GetChildIndex(4)) : default;
+            }
+        }
 
-        public SyntaxList<ExternAliasDirectiveSyntax> Externs => new SyntaxList<ExternAliasDirectiveSyntax>(GetRed(ref this.externs, 5));
+        public SyntaxToken OpenBraceToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.NamespaceDeclarationSyntax)this.Green).openBraceToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(5), GetChildIndex(5)) : default;
+            }
+        }
 
-        public SyntaxList<UsingDirectiveSyntax> Usings => new SyntaxList<UsingDirectiveSyntax>(GetRed(ref this.usings, 6));
+        public SyntaxList<ExternAliasDirectiveSyntax> Externs => new SyntaxList<ExternAliasDirectiveSyntax>(GetRed(ref this.externs, 6));
 
-        public SyntaxList<MemberDeclarationSyntax> Members => new SyntaxList<MemberDeclarationSyntax>(GetRed(ref this.members, 7));
+        public SyntaxList<UsingDirectiveSyntax> Usings => new SyntaxList<UsingDirectiveSyntax>(GetRed(ref this.usings, 7));
 
-        public SyntaxToken CloseBraceToken => new SyntaxToken(this, ((Syntax.InternalSyntax.NamespaceDeclarationSyntax)this.Green).closeBraceToken, GetChildPosition(8), GetChildIndex(8));
+        public SyntaxList<MemberDeclarationSyntax> Members => new SyntaxList<MemberDeclarationSyntax>(GetRed(ref this.members, 8));
+
+        public SyntaxToken CloseBraceToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.NamespaceDeclarationSyntax)this.Green).closeBraceToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(9), GetChildIndex(9)) : default;
+            }
+        }
 
         /// <summary>Gets the optional semicolon token.</summary>
         public SyntaxToken SemicolonToken
@@ -8249,7 +8273,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             get
             {
                 var slot = ((Syntax.InternalSyntax.NamespaceDeclarationSyntax)this.Green).semicolonToken;
-                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(9), GetChildIndex(9)) : default;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(10), GetChildIndex(10)) : default;
             }
         }
 
@@ -8258,9 +8282,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             {
                 0 => GetRedAtZero(ref this.attributeLists)!,
                 3 => GetRed(ref this.name, 3)!,
-                5 => GetRed(ref this.externs, 5)!,
-                6 => GetRed(ref this.usings, 6)!,
-                7 => GetRed(ref this.members, 7)!,
+                6 => GetRed(ref this.externs, 6)!,
+                7 => GetRed(ref this.usings, 7)!,
+                8 => GetRed(ref this.members, 8)!,
                 _ => null,
             };
 
@@ -8269,9 +8293,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             {
                 0 => this.attributeLists,
                 3 => this.name,
-                5 => this.externs,
-                6 => this.usings,
-                7 => this.members,
+                6 => this.externs,
+                7 => this.usings,
+                8 => this.members,
                 _ => null,
             };
 
@@ -8279,11 +8303,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitNamespaceDeclaration(this);
 
-        public NamespaceDeclarationSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken namespaceKeyword, NameSyntax name, SyntaxToken openBraceToken, SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
+        public NamespaceDeclarationSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken namespaceKeyword, NameSyntax name, SyntaxToken postNameSemicolonToken, SyntaxToken openBraceToken, SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
         {
-            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || namespaceKeyword != this.NamespaceKeyword || name != this.Name || openBraceToken != this.OpenBraceToken || externs != this.Externs || usings != this.Usings || members != this.Members || closeBraceToken != this.CloseBraceToken || semicolonToken != this.SemicolonToken)
+            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || namespaceKeyword != this.NamespaceKeyword || name != this.Name || postNameSemicolonToken != this.PostNameSemicolonToken || openBraceToken != this.OpenBraceToken || externs != this.Externs || usings != this.Usings || members != this.Members || closeBraceToken != this.CloseBraceToken || semicolonToken != this.SemicolonToken)
             {
-                var newNode = SyntaxFactory.NamespaceDeclaration(attributeLists, modifiers, namespaceKeyword, name, openBraceToken, externs, usings, members, closeBraceToken, semicolonToken);
+                var newNode = SyntaxFactory.NamespaceDeclaration(attributeLists, modifiers, namespaceKeyword, name, postNameSemicolonToken, openBraceToken, externs, usings, members, closeBraceToken, semicolonToken);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -8292,17 +8316,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         }
 
         internal override MemberDeclarationSyntax WithAttributeListsCore(SyntaxList<AttributeListSyntax> attributeLists) => WithAttributeLists(attributeLists);
-        public new NamespaceDeclarationSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
+        public new NamespaceDeclarationSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.PostNameSemicolonToken, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
         internal override MemberDeclarationSyntax WithModifiersCore(SyntaxTokenList modifiers) => WithModifiers(modifiers);
-        public new NamespaceDeclarationSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.NamespaceKeyword, this.Name, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
-        public NamespaceDeclarationSyntax WithNamespaceKeyword(SyntaxToken namespaceKeyword) => Update(this.AttributeLists, this.Modifiers, namespaceKeyword, this.Name, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
-        public NamespaceDeclarationSyntax WithName(NameSyntax name) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, name, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
-        public NamespaceDeclarationSyntax WithOpenBraceToken(SyntaxToken openBraceToken) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, openBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
-        public NamespaceDeclarationSyntax WithExterns(SyntaxList<ExternAliasDirectiveSyntax> externs) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.OpenBraceToken, externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
-        public NamespaceDeclarationSyntax WithUsings(SyntaxList<UsingDirectiveSyntax> usings) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.OpenBraceToken, this.Externs, usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
-        public NamespaceDeclarationSyntax WithMembers(SyntaxList<MemberDeclarationSyntax> members) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.OpenBraceToken, this.Externs, this.Usings, members, this.CloseBraceToken, this.SemicolonToken);
-        public NamespaceDeclarationSyntax WithCloseBraceToken(SyntaxToken closeBraceToken) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.OpenBraceToken, this.Externs, this.Usings, this.Members, closeBraceToken, this.SemicolonToken);
-        public NamespaceDeclarationSyntax WithSemicolonToken(SyntaxToken semicolonToken) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, semicolonToken);
+        public new NamespaceDeclarationSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.NamespaceKeyword, this.Name, this.PostNameSemicolonToken, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
+        public NamespaceDeclarationSyntax WithNamespaceKeyword(SyntaxToken namespaceKeyword) => Update(this.AttributeLists, this.Modifiers, namespaceKeyword, this.Name, this.PostNameSemicolonToken, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
+        public NamespaceDeclarationSyntax WithName(NameSyntax name) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, name, this.PostNameSemicolonToken, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
+        public NamespaceDeclarationSyntax WithPostNameSemicolonToken(SyntaxToken postNameSemicolonToken) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, postNameSemicolonToken, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
+        public NamespaceDeclarationSyntax WithOpenBraceToken(SyntaxToken openBraceToken) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.PostNameSemicolonToken, openBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
+        public NamespaceDeclarationSyntax WithExterns(SyntaxList<ExternAliasDirectiveSyntax> externs) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.PostNameSemicolonToken, this.OpenBraceToken, externs, this.Usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
+        public NamespaceDeclarationSyntax WithUsings(SyntaxList<UsingDirectiveSyntax> usings) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.PostNameSemicolonToken, this.OpenBraceToken, this.Externs, usings, this.Members, this.CloseBraceToken, this.SemicolonToken);
+        public NamespaceDeclarationSyntax WithMembers(SyntaxList<MemberDeclarationSyntax> members) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.PostNameSemicolonToken, this.OpenBraceToken, this.Externs, this.Usings, members, this.CloseBraceToken, this.SemicolonToken);
+        public NamespaceDeclarationSyntax WithCloseBraceToken(SyntaxToken closeBraceToken) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.PostNameSemicolonToken, this.OpenBraceToken, this.Externs, this.Usings, this.Members, closeBraceToken, this.SemicolonToken);
+        public NamespaceDeclarationSyntax WithSemicolonToken(SyntaxToken semicolonToken) => Update(this.AttributeLists, this.Modifiers, this.NamespaceKeyword, this.Name, this.PostNameSemicolonToken, this.OpenBraceToken, this.Externs, this.Usings, this.Members, this.CloseBraceToken, semicolonToken);
 
         internal override MemberDeclarationSyntax AddAttributeListsCore(params AttributeListSyntax[] items) => AddAttributeLists(items);
         public new NamespaceDeclarationSyntax AddAttributeLists(params AttributeListSyntax[] items) => WithAttributeLists(this.AttributeLists.AddRange(items));

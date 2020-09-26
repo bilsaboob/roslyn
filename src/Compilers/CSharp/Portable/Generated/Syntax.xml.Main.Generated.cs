@@ -2037,7 +2037,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update(VisitToken(node.UsingKeyword), VisitToken(node.StaticKeyword), (NameEqualsSyntax?)Visit(node.Alias), (NameSyntax?)Visit(node.Name) ?? throw new ArgumentNullException("name"), VisitToken(node.SemicolonToken));
 
         public override SyntaxNode? VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
-            => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), VisitToken(node.NamespaceKeyword), (NameSyntax?)Visit(node.Name) ?? throw new ArgumentNullException("name"), VisitToken(node.OpenBraceToken), VisitList(node.Externs), VisitList(node.Usings), VisitList(node.Members), VisitToken(node.CloseBraceToken), VisitToken(node.SemicolonToken));
+            => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), VisitToken(node.NamespaceKeyword), (NameSyntax?)Visit(node.Name) ?? throw new ArgumentNullException("name"), VisitToken(node.PostNameSemicolonToken), VisitToken(node.OpenBraceToken), VisitList(node.Externs), VisitList(node.Usings), VisitList(node.Members), VisitToken(node.CloseBraceToken), VisitToken(node.SemicolonToken));
 
         public override SyntaxNode? VisitAttributeList(AttributeListSyntax node)
             => node.Update(VisitToken(node.OpenBracketToken), (AttributeTargetSpecifierSyntax?)Visit(node.Target), VisitList(node.Attributes), VisitToken(node.CloseBracketToken));
@@ -4763,28 +4763,44 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.UsingDirective(SyntaxFactory.Token(SyntaxKind.UsingKeyword), default, default, name, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
         /// <summary>Creates a new NamespaceDeclarationSyntax instance.</summary>
-        public static NamespaceDeclarationSyntax NamespaceDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken namespaceKeyword, NameSyntax name, SyntaxToken openBraceToken, SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
+        public static NamespaceDeclarationSyntax NamespaceDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken namespaceKeyword, NameSyntax name, SyntaxToken postNameSemicolonToken, SyntaxToken openBraceToken, SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
         {
             if (namespaceKeyword.Kind() != SyntaxKind.NamespaceKeyword) throw new ArgumentException(nameof(namespaceKeyword));
             if (name == null) throw new ArgumentNullException(nameof(name));
-            if (openBraceToken.Kind() != SyntaxKind.OpenBraceToken) throw new ArgumentException(nameof(openBraceToken));
-            if (closeBraceToken.Kind() != SyntaxKind.CloseBraceToken) throw new ArgumentException(nameof(closeBraceToken));
+            switch (postNameSemicolonToken.Kind())
+            {
+                case SyntaxKind.SemicolonToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(postNameSemicolonToken));
+            }
+            switch (openBraceToken.Kind())
+            {
+                case SyntaxKind.OpenBraceToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(openBraceToken));
+            }
+            switch (closeBraceToken.Kind())
+            {
+                case SyntaxKind.CloseBraceToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(closeBraceToken));
+            }
             switch (semicolonToken.Kind())
             {
                 case SyntaxKind.SemicolonToken:
                 case SyntaxKind.None: break;
                 default: throw new ArgumentException(nameof(semicolonToken));
             }
-            return (NamespaceDeclarationSyntax)Syntax.InternalSyntax.SyntaxFactory.NamespaceDeclaration(attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), modifiers.Node.ToGreenList<Syntax.InternalSyntax.SyntaxToken>(), (Syntax.InternalSyntax.SyntaxToken)namespaceKeyword.Node!, (Syntax.InternalSyntax.NameSyntax)name.Green, (Syntax.InternalSyntax.SyntaxToken)openBraceToken.Node!, externs.Node.ToGreenList<Syntax.InternalSyntax.ExternAliasDirectiveSyntax>(), usings.Node.ToGreenList<Syntax.InternalSyntax.UsingDirectiveSyntax>(), members.Node.ToGreenList<Syntax.InternalSyntax.MemberDeclarationSyntax>(), (Syntax.InternalSyntax.SyntaxToken)closeBraceToken.Node!, (Syntax.InternalSyntax.SyntaxToken?)semicolonToken.Node).CreateRed();
+            return (NamespaceDeclarationSyntax)Syntax.InternalSyntax.SyntaxFactory.NamespaceDeclaration(attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), modifiers.Node.ToGreenList<Syntax.InternalSyntax.SyntaxToken>(), (Syntax.InternalSyntax.SyntaxToken)namespaceKeyword.Node!, (Syntax.InternalSyntax.NameSyntax)name.Green, (Syntax.InternalSyntax.SyntaxToken?)postNameSemicolonToken.Node, (Syntax.InternalSyntax.SyntaxToken?)openBraceToken.Node, externs.Node.ToGreenList<Syntax.InternalSyntax.ExternAliasDirectiveSyntax>(), usings.Node.ToGreenList<Syntax.InternalSyntax.UsingDirectiveSyntax>(), members.Node.ToGreenList<Syntax.InternalSyntax.MemberDeclarationSyntax>(), (Syntax.InternalSyntax.SyntaxToken?)closeBraceToken.Node, (Syntax.InternalSyntax.SyntaxToken?)semicolonToken.Node).CreateRed();
         }
 
         /// <summary>Creates a new NamespaceDeclarationSyntax instance.</summary>
         public static NamespaceDeclarationSyntax NamespaceDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, NameSyntax name, SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<MemberDeclarationSyntax> members)
-            => SyntaxFactory.NamespaceDeclaration(attributeLists, modifiers, SyntaxFactory.Token(SyntaxKind.NamespaceKeyword), name, SyntaxFactory.Token(SyntaxKind.OpenBraceToken), externs, usings, members, SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default);
+            => SyntaxFactory.NamespaceDeclaration(attributeLists, modifiers, SyntaxFactory.Token(SyntaxKind.NamespaceKeyword), name, default, default, externs, usings, members, default, default);
 
         /// <summary>Creates a new NamespaceDeclarationSyntax instance.</summary>
         public static NamespaceDeclarationSyntax NamespaceDeclaration(NameSyntax name)
-            => SyntaxFactory.NamespaceDeclaration(default, default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.NamespaceKeyword), name, SyntaxFactory.Token(SyntaxKind.OpenBraceToken), default, default, default, SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default);
+            => SyntaxFactory.NamespaceDeclaration(default, default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.NamespaceKeyword), name, default, default, default, default, default, default, default);
 
         /// <summary>Creates a new AttributeListSyntax instance.</summary>
         public static AttributeListSyntax AttributeList(SyntaxToken openBracketToken, AttributeTargetSpecifierSyntax? target, SeparatedSyntaxList<AttributeSyntax> attributes, SyntaxToken closeBracketToken)

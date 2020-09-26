@@ -2537,12 +2537,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 identifier, equalsValue);
 
         public static NamespaceDeclarationSyntax NamespaceDeclaration(NameSyntax name, SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<MemberDeclarationSyntax> members)
-            => NamespaceDeclaration(attributeLists: default, modifiers: default,
-                name, externs, usings, members);
+            => NamespaceDeclaration(attributeLists: default, modifiers: default, name, externs, usings, members);
 
-        public static NamespaceDeclarationSyntax NamespaceDeclaration(SyntaxToken namespaceKeyword, NameSyntax name, SyntaxToken openBraceToken, SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
-            => NamespaceDeclaration(attributeLists: default, modifiers: default,
-                namespaceKeyword, name, openBraceToken, externs, usings, members, closeBraceToken, semicolonToken);
+        public static NamespaceDeclarationSyntax NamespaceDeclaration(SyntaxToken namespaceKeyword, NameSyntax name, SyntaxToken postNameSemicolonToken, SyntaxToken openBraceToken, SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
+            => NamespaceDeclaration(attributeLists: default, modifiers: default, namespaceKeyword, name, postNameSemicolonToken, openBraceToken, externs, usings, members, closeBraceToken, semicolonToken);
 
         /// <summary>Creates a new EventDeclarationSyntax instance.</summary>
         public static EventDeclarationSyntax EventDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken eventKeyword, TypeSyntax type, ExplicitInterfaceSpecifierSyntax explicitInterfaceSpecifier, SyntaxToken identifier, AccessorListSyntax accessorList)
