@@ -20,20 +20,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Utilities
 
         public int Compare(SyntaxToken x, SyntaxToken y)
         {
-            if (_specialCaseSystem &&
-                x.GetPreviousToken(includeSkipped: true).IsKind(SyntaxKind.UsingKeyword, SyntaxKind.StaticKeyword) &&
-                y.GetPreviousToken(includeSkipped: true).IsKind(SyntaxKind.UsingKeyword, SyntaxKind.StaticKeyword))
+            if (_specialCaseSystem)
             {
-                var token1IsSystem = x.ValueText == nameof(System);
-                var token2IsSystem = y.ValueText == nameof(System);
+                var xPrevToken = x.GetPreviousToken(includeSkipped: true);
+                var yPrevToken = y.GetPreviousToken(includeSkipped: true);
 
-                if (token1IsSystem && !token2IsSystem)
+                if ((xPrevToken.IsKind(SyntaxKind.StaticKeyword) || xPrevToken.Text == "import") &&
+                    (yPrevToken.IsKind(SyntaxKind.StaticKeyword) || yPrevToken.Text == "import")
+                    )
                 {
-                    return -1;
-                }
-                else if (!token1IsSystem && token2IsSystem)
-                {
-                    return 1;
+                    var token1IsSystem = x.ValueText == nameof(System);
+                    var token2IsSystem = y.ValueText == nameof(System);
+
+                    if (token1IsSystem && !token2IsSystem)
+                    {
+                        return -1;
+                    }
+                    else if (!token1IsSystem && token2IsSystem)
+                    {
+                        return 1;
+                    }
                 }
             }
 
