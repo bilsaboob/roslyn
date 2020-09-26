@@ -4739,11 +4739,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         /// <summary>Creates a new ExternAliasDirectiveSyntax instance.</summary>
         public static ExternAliasDirectiveSyntax ExternAliasDirective(SyntaxToken identifier)
-            => SyntaxFactory.ExternAliasDirective(SyntaxFactory.Token(SyntaxKind.ExternKeyword), SyntaxFactory.Token(SyntaxKind.AliasKeyword), identifier, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+            => SyntaxFactory.ExternAliasDirective(SyntaxFactory.Token(SyntaxKind.ExternKeyword), SyntaxFactory.Token(SyntaxKind.AliasKeyword), identifier, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";"));
 
         /// <summary>Creates a new ExternAliasDirectiveSyntax instance.</summary>
         public static ExternAliasDirectiveSyntax ExternAliasDirective(string identifier)
-            => SyntaxFactory.ExternAliasDirective(SyntaxFactory.Token(SyntaxKind.ExternKeyword), SyntaxFactory.Token(SyntaxKind.AliasKeyword), SyntaxFactory.Identifier(identifier), SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+            => SyntaxFactory.ExternAliasDirective(SyntaxFactory.Token(SyntaxKind.ExternKeyword), SyntaxFactory.Token(SyntaxKind.AliasKeyword), SyntaxFactory.Identifier(identifier), SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";"));
 
         /// <summary>Creates a new UsingDirectiveSyntax instance.</summary>
         public static UsingDirectiveSyntax UsingDirective(SyntaxToken importKeyword, SyntaxToken staticKeyword, NameEqualsSyntax? alias, NameSyntax name, SyntaxToken semicolonToken)
@@ -4756,11 +4756,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         /// <summary>Creates a new UsingDirectiveSyntax instance.</summary>
         public static UsingDirectiveSyntax UsingDirective(SyntaxToken staticKeyword, NameEqualsSyntax? alias, NameSyntax name)
-            => SyntaxFactory.UsingDirective(SyntaxFactory.Token(SyntaxKind.ImportKeyword), staticKeyword, alias, name, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+            => SyntaxFactory.UsingDirective(SyntaxFactory.Token(SyntaxKind.ImportKeyword), staticKeyword, alias, name, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";"));
 
         /// <summary>Creates a new UsingDirectiveSyntax instance.</summary>
         public static UsingDirectiveSyntax UsingDirective(NameSyntax name)
-            => SyntaxFactory.UsingDirective(SyntaxFactory.Token(SyntaxKind.ImportKeyword), default, default, name, SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+            => SyntaxFactory.UsingDirective(SyntaxFactory.Token(SyntaxKind.ImportKeyword), default, default, name, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";"));
 
         /// <summary>Creates a new NamespaceDeclarationSyntax instance.</summary>
         public static NamespaceDeclarationSyntax NamespaceDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken namespaceKeyword, NameSyntax name, SyntaxToken postNameSemicolonToken, SyntaxToken openBraceToken, SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
