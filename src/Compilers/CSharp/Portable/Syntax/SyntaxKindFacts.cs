@@ -39,7 +39,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public static bool IsReservedKeyword(SyntaxKind kind)
         {
-            return kind >= SyntaxKind.BoolKeyword && kind <= SyntaxKind.ImplicitKeyword;
+            return kind >= SyntaxKind.BoolKeyword && kind <= SyntaxKind.ImportKeyword;
         }
 
         public static bool IsAttributeTargetSpecifier(SyntaxKind kind)
@@ -965,6 +965,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return SyntaxKind.NamespaceKeyword;
                 case "using":
                     return SyntaxKind.UsingKeyword;
+                case "import":
+                    return SyntaxKind.ImportKeyword;
                 case "class":
                     return SyntaxKind.ClassKeyword;
                 case "struct":
@@ -1545,6 +1547,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return "namespace";
                 case SyntaxKind.UsingKeyword:
                     return "using";
+                case SyntaxKind.ImportKeyword:
+                    return "import";
                 case SyntaxKind.ClassKeyword:
                     return "class";
                 case SyntaxKind.StructKeyword:
