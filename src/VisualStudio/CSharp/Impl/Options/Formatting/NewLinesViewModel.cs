@@ -46,7 +46,7 @@ class C {
 //]
 }";
 
-        private const string s_tryCatchFinallyPreview = @"using System;
+        private const string s_tryCatchFinallyPreview = @"import System
 class C {
     void Goo() {
 //[
@@ -80,7 +80,7 @@ class C {
     }
 }";
 
-        private const string s_lambdaPreview = @"using System;
+        private const string s_lambdaPreview = @"import System
 class C {
     void Goo() {
 //[
@@ -90,7 +90,7 @@ class C {
 //]
     }
 }";
-        private const string s_anonymousMethodPreview = @"using System;
+        private const string s_anonymousMethodPreview = @"import System
 
 delegate int D(int x);
 
@@ -104,7 +104,7 @@ class C {
     }
 }";
 
-        private const string s_anonymousTypePreview = @"using System;
+        private const string s_anonymousTypePreview = @"import System
 class C {
     void Goo() {
 //[
@@ -114,8 +114,8 @@ class C {
 //]
     }
 }";
-        private const string s_InitializerPreviewTrue = @"using System;
-using System.Collections.Generic;
+        private const string s_InitializerPreviewTrue = @"import System
+import System.Collections.Generic
 
 class C {
     void Goo() {
@@ -142,8 +142,8 @@ class B {
     public int A { get; set; }
     public int B { get; set; }
 }";
-        private const string s_InitializerPreviewFalse = @"using System;
-using System.Collections.Generic;
+        private const string s_InitializerPreviewFalse = @"import System
+import System.Collections.Generic
 
 class C {
     void Goo() {
@@ -167,7 +167,7 @@ class B {
     public int A { get; set; }
     public int B { get; set; }
 }";
-        private const string s_objectInitializerPreview = @"using System;
+        private const string s_objectInitializerPreview = @"import System
 class C {
     void Goo() {
 //[
@@ -182,9 +182,9 @@ class B {
     public int A { get; set; }
     public int B { get; set; }
 }";
-        private const string s_queryExpressionPreview = @"using System;
-using System.Linq;
-using System.Collections.Generic;
+        private const string s_queryExpressionPreview = @"import System
+import System.Linq
+import System.Collections.Generic
 class C {
     void Goo(IEnumerable<int> e) {
 //[

@@ -12,7 +12,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.KeywordRecommenders
     internal class UsingKeywordRecommender : AbstractSyntacticSingleKeywordRecommender
     {
         public UsingKeywordRecommender()
-            : base(SyntaxKind.UsingKeyword)
+            : base(SyntaxKind.ImportKeyword)
         {
         }
 

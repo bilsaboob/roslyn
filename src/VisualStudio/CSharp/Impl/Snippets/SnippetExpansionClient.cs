@@ -146,7 +146,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Snippets
                     continue;
                 }
 
-                var candidateUsing = SyntaxFactory.ParseCompilationUnit("using " + namespaceToImport + ";").DescendantNodes().OfType<UsingDirectiveSyntax>().FirstOrDefault();
+                var candidateUsing = SyntaxFactory.ParseCompilationUnit("import " + namespaceToImport).DescendantNodes().OfType<UsingDirectiveSyntax>().FirstOrDefault();
                 if (candidateUsing == null)
                 {
                     continue;
@@ -155,7 +155,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Snippets
                 {
                     // Retry by parsing the namespace as a name and constructing a using directive from it
                     candidateUsing = SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(namespaceToImport))
-                        .WithUsingKeyword(SyntaxFactory.Token(SyntaxKind.UsingKeyword).WithTrailingTrivia(SyntaxFactory.Space));
+                        .WithImportKeyword(SyntaxFactory.Token(SyntaxKind.ImportKeyword).WithTrailingTrivia(SyntaxFactory.Space));
                 }
 
                 if (!existingUsings.Any(u => u.IsEquivalentTo(candidateUsing, topLevel: false)))
