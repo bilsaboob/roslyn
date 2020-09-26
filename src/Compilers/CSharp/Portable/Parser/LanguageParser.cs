@@ -810,7 +810,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var alias = this.IsNamedAssignment() ? ParseNameEquals() : null;
 
             NameSyntax name;
-            SyntaxToken semicolon;
 
             if (IsPossibleNamespaceMemberDeclaration())
             {
@@ -831,19 +830,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 //using directive, so there's no danger in checking the error case first.
 
                 name = WithAdditionalDiagnostics(CreateMissingIdentifierName(), GetExpectedTokenError(SyntaxKind.IdentifierToken, this.CurrentToken.Kind));
-                semicolon = SyntaxFactory.MissingToken(SyntaxKind.SemicolonToken);
             }
             else
             {
                 name = this.ParseQualifiedName();
-                if (name.IsMissing && this.PeekToken(1).Kind == SyntaxKind.SemicolonToken)
+                if (name.IsMissing && (this.PeekToken(1).Kind == SyntaxKind.SemicolonToken || IsTokenOnNewline(this.PeekToken(1), CurrentToken)))
                 {
                     //if we can see a semicolon ahead, then the current token was
                     //probably supposed to be an identifier
                     name = AddTrailingSkippedSyntax(name, this.EatToken());
                 }
-                semicolon = this.EatToken(SyntaxKind.SemicolonToken);
             }
+
+            var semicolon = TryParseEndOfLineSemicolon(optional: true);
 
             var usingDirective = _syntaxFactory.UsingDirective(usingToken, staticToken, alias, name, semicolon);
             if (staticToken != null)
@@ -10228,15 +10227,7 @@ tryAgain:
                 if (arg.IsMissing) arg = null;
             }
 
-            SyntaxToken semicolon = null;
-            if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
-            {
-                semicolon = this.EatToken(SyntaxKind.SemicolonToken);
-            }
-            else if (IsProbablyStatementEnd())
-            {
-                semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
-            }
+            var semicolon = TryParseEndOfLineSemicolon(optional: true);
             return _syntaxFactory.ReturnStatement(attributes, @return, arg, semicolon);
         }
 
@@ -10417,15 +10408,7 @@ tryAgain:
                 arg = this.ParseExpressionCore();
             }
 
-            SyntaxToken semicolon = null;
-            if (CurrentToken.Kind == SyntaxKind.SemicolonToken)
-            {
-                semicolon = this.EatToken(SyntaxKind.SemicolonToken);
-            }
-            else if (IsProbablyStatementEnd())
-            {
-                semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
-            }
+            var semicolon = TryParseEndOfLineSemicolon(optional: true);
             return _syntaxFactory.ThrowStatement(attributes, @throw, arg, semicolon);
         }
 
