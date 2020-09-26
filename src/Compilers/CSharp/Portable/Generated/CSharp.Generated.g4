@@ -10,7 +10,7 @@ extern_alias_directive
   ;
 
 using_directive
-  : 'using' ('static' | name_equals)? name ';'
+  : import_keyword ('static' | name_equals)? name ';'
   ;
 
 name_equals
@@ -1284,6 +1284,10 @@ expression_or_pattern
   ;
 
 identifier_token
+  : /* see lexical specification */
+  ;
+
+import_keyword
   : /* see lexical specification */
   ;
 

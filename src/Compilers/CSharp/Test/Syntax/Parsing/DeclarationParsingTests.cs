@@ -50,7 +50,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestUsing()
         {
-            var text = "using a;";
+            var text = "import a;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -60,8 +60,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
             var ud = file.Usings[0];
 
-            Assert.NotEqual(default, ud.UsingKeyword);
-            Assert.Equal(SyntaxKind.UsingKeyword, ud.UsingKeyword.Kind());
+            Assert.NotEqual(default, ud.ImportKeyword);
+            Assert.Equal(SyntaxKind.UsingKeyword, ud.ImportKeyword.Kind());
             Assert.Null(ud.Alias);
             Assert.True(ud.StaticKeyword == default(SyntaxToken));
             Assert.NotNull(ud.Name);
@@ -72,7 +72,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestUsingStatic()
         {
-            var text = "using static a;";
+            var text = "import static a;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -82,8 +82,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
             var ud = file.Usings[0];
 
-            Assert.NotEqual(default, ud.UsingKeyword);
-            Assert.Equal(SyntaxKind.UsingKeyword, ud.UsingKeyword.Kind());
+            Assert.NotEqual(default, ud.ImportKeyword);
+            Assert.Equal(SyntaxKind.UsingKeyword, ud.ImportKeyword.Kind());
             Assert.Equal(SyntaxKind.StaticKeyword, ud.StaticKeyword.Kind());
             Assert.Null(ud.Alias);
             Assert.NotNull(ud.Name);
@@ -94,7 +94,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestUsingStaticInWrongOrder()
         {
-            var text = "static using a;";
+            var text = "import using a;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -109,7 +109,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestDuplicateStatic()
         {
-            var text = "using static static a;";
+            var text = "import static static a;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -124,7 +124,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestUsingNamespace()
         {
-            var text = "using namespace a;";
+            var text = "import namespace a;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -139,7 +139,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestUsingDottedName()
         {
-            var text = "using a.b;";
+            var text = "import a.b;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -149,8 +149,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
             var ud = file.Usings[0];
 
-            Assert.NotEqual(default, ud.UsingKeyword);
-            Assert.Equal(SyntaxKind.UsingKeyword, ud.UsingKeyword.Kind());
+            Assert.NotEqual(default, ud.ImportKeyword);
+            Assert.Equal(SyntaxKind.UsingKeyword, ud.ImportKeyword.Kind());
             Assert.True(ud.StaticKeyword == default(SyntaxToken));
             Assert.Null(ud.Alias);
             Assert.NotNull(ud.Name);
@@ -161,7 +161,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestUsingStaticDottedName()
         {
-            var text = "using static a.b;";
+            var text = "import static a.b;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -171,8 +171,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
             var ud = file.Usings[0];
 
-            Assert.NotEqual(default, ud.UsingKeyword);
-            Assert.Equal(SyntaxKind.UsingKeyword, ud.UsingKeyword.Kind());
+            Assert.NotEqual(default, ud.ImportKeyword);
+            Assert.Equal(SyntaxKind.UsingKeyword, ud.ImportKeyword.Kind());
             Assert.Equal(SyntaxKind.StaticKeyword, ud.StaticKeyword.Kind());
             Assert.Null(ud.Alias);
             Assert.NotNull(ud.Name);
@@ -183,7 +183,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestUsingStaticGenericName()
         {
-            var text = "using static a<int?>;";
+            var text = "import static a<int?>;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -193,8 +193,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
             var ud = file.Usings[0];
 
-            Assert.NotEqual(default, ud.UsingKeyword);
-            Assert.Equal(SyntaxKind.UsingKeyword, ud.UsingKeyword.Kind());
+            Assert.NotEqual(default, ud.ImportKeyword);
+            Assert.Equal(SyntaxKind.UsingKeyword, ud.ImportKeyword.Kind());
             Assert.Equal(SyntaxKind.StaticKeyword, ud.StaticKeyword.Kind());
             Assert.Null(ud.Alias);
             Assert.NotNull(ud.Name);
@@ -205,7 +205,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestUsingAliasName()
         {
-            var text = "using a = b;";
+            var text = "import a = b;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -215,8 +215,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
             var ud = file.Usings[0];
 
-            Assert.NotEqual(default, ud.UsingKeyword);
-            Assert.Equal(SyntaxKind.UsingKeyword, ud.UsingKeyword.Kind());
+            Assert.NotEqual(default, ud.ImportKeyword);
+            Assert.Equal(SyntaxKind.UsingKeyword, ud.ImportKeyword.Kind());
             Assert.NotNull(ud.Alias);
             Assert.NotNull(ud.Alias.Name);
             Assert.Equal("a", ud.Alias.Name.ToString());
@@ -229,7 +229,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void TestUsingAliasGenericName()
         {
-            var text = "using a = b<c>;";
+            var text = "import a = b<c>;";
             var file = this.ParseFile(text);
 
             Assert.NotNull(file);
@@ -239,8 +239,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
             var ud = file.Usings[0];
 
-            Assert.NotEqual(default, ud.UsingKeyword);
-            Assert.Equal(SyntaxKind.UsingKeyword, ud.UsingKeyword.Kind());
+            Assert.NotEqual(default, ud.ImportKeyword);
+            Assert.Equal(SyntaxKind.UsingKeyword, ud.ImportKeyword.Kind());
             Assert.NotNull(ud.Alias);
             Assert.NotNull(ud.Alias.Name);
             Assert.Equal("a", ud.Alias.Name.ToString());
