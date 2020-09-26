@@ -38,6 +38,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                     else if (prevTokenOfInterest?.Text == "import")
                         return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.PreserveLines);
                 }
+                else if (currentToken.IsKind(SyntaxKind.NamespaceKeyword) && !currentToken.IsFirstTokenOnLine())
+                {
+                    return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
+                }
             }
 
             if (nextToken.IsKind(SyntaxKind.ClassKeyword))

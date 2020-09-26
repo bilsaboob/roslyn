@@ -775,7 +775,7 @@ namespace Microsoft.CodeAnalysis.Editing
         /// </summary>
         /// <param name="name">The name of the namespace being imported.</param>
         public SyntaxNode NamespaceImportDeclaration(string name)
-            => NamespaceImportDeclaration(DottedName(name));
+            => NamespaceImportDeclaration(DottedName(name)?.WithTrailingTrivia(Whitespace(" ")));
 
         /// <summary>
         /// Creates an alias import declaration.
@@ -783,7 +783,7 @@ namespace Microsoft.CodeAnalysis.Editing
         /// <param name="aliasIdentifierName">The name of the alias.</param>
         /// <param name="symbol">The namespace or type to be aliased.</param>
         public SyntaxNode AliasImportDeclaration(string aliasIdentifierName, INamespaceOrTypeSymbol symbol)
-            => AliasImportDeclaration(aliasIdentifierName, NameExpression(symbol));
+            => AliasImportDeclaration(aliasIdentifierName, NameExpression(symbol)?.WithTrailingTrivia(Whitespace(" ")));
 
         /// <summary>
         /// Creates an alias import declaration.
