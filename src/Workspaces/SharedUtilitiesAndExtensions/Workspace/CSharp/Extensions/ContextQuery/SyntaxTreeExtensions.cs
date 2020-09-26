@@ -701,7 +701,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             // Note: we take care of the using alias case in the IsTypeContext
             // call below.
 
-            if (token.IsKind(SyntaxKind.UsingKeyword))
+            if (token.IsKind(SyntaxKind.ImportKeyword))
             {
                 var usingDirective = token.GetAncestor<UsingDirectiveSyntax>();
                 if (usingDirective != null)

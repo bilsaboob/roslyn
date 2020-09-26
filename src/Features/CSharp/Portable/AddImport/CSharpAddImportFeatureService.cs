@@ -281,7 +281,7 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImport
         }
 
         protected override string GetDescription(IReadOnlyList<string> nameParts)
-            => $"using { string.Join(".", nameParts) };";
+            => $"import { string.Join(".", nameParts) }";
 
         protected override (string description, bool hasExistingImport) GetDescription(
             Document document,
@@ -328,8 +328,8 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImport
         {
             var displayString = namespaceOrTypeSymbol.ToDisplayString();
             return namespaceOrTypeSymbol.IsKind(SymbolKind.Namespace)
-                ? $"using {displayString};"
-                : $"using static {displayString};";
+                ? $"import {displayString}"
+                : $"import static {displayString}";
         }
 
         protected override async Task<Document> AddImportAsync(

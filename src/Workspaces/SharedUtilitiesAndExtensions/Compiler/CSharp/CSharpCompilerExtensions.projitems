@@ -70,6 +70,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Formatting\FormattingHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatting\Rules\AnchorIndentationFormattingRule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatting\Rules\BaseFormattingRule.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatting\Rules\CSharpNewlineFormattingRule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatting\Rules\ElasticTriviaFormattingRule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatting\Rules\EndOfFileTokenFormattingRule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatting\Rules\IndentBlockFormattingRule.cs" />

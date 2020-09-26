@@ -40,6 +40,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             _rules = ImmutableList.Create<AbstractFormattingRule>(
                 new WrappingFormattingRule(),
                 new SpacingFormattingRule(),
+                new CSharpNewlineFormattingRule(),
                 new NewLineUserSettingFormattingRule(),
                 new IndentUserSettingsFormattingRule(),
                 new ElasticTriviaFormattingRule(),

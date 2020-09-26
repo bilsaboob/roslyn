@@ -15,17 +15,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
         public static bool IsUsingOrExternKeyword(this SyntaxToken token)
         {
             return
-                token.Kind() == SyntaxKind.UsingKeyword ||
+                token.Kind() == SyntaxKind.ImportKeyword ||
                 token.Kind() == SyntaxKind.ExternKeyword;
         }
 
         public static bool IsUsingKeywordInUsingDirective(this SyntaxToken token)
         {
-            if (token.IsKind(SyntaxKind.UsingKeyword))
+            if (token.IsKind(SyntaxKind.ImportKeyword))
             {
                 var usingDirective = token.GetAncestor<UsingDirectiveSyntax>();
                 if (usingDirective != null &&
-                    usingDirective.UsingKeyword == token)
+                    usingDirective.ImportKeyword == token)
                 {
                     return true;
                 }

@@ -529,7 +529,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                                 break;
                             }
 
-                        case SyntaxKind.UsingKeyword:
+                        case SyntaxKind.ImportKeyword:
                             if (isGlobal && (this.PeekToken(1).Kind == SyntaxKind.OpenParenToken || (!IsScript && IsPossibleTopLevelUsingLocalDeclarationStatement())))
                             {
                                 // Top-level using statement or using local declaration
@@ -707,7 +707,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             switch (this.CurrentToken.Kind)
             {
                 case SyntaxKind.ExternKeyword:
-                case SyntaxKind.UsingKeyword:
+                case SyntaxKind.ImportKeyword:
                 case SyntaxKind.NamespaceKeyword:
                     return true;
                 case SyntaxKind.IdentifierToken:
@@ -802,9 +802,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 return (UsingDirectiveSyntax)this.EatNode();
             }
 
-            Debug.Assert(this.CurrentToken.Kind == SyntaxKind.UsingKeyword);
+            Debug.Assert(this.CurrentToken.Kind == SyntaxKind.ImportKeyword);
 
-            var usingToken = this.EatToken(SyntaxKind.UsingKeyword);
+            var importToken = this.EatToken(SyntaxKind.ImportKeyword);
             var staticToken = this.TryEatToken(SyntaxKind.StaticKeyword);
 
             var alias = this.IsNamedAssignment() ? ParseNameEquals() : null;
@@ -844,7 +844,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             var semicolon = TryParseEndOfLineSemicolon(optional: true);
 
-            var usingDirective = _syntaxFactory.UsingDirective(usingToken, staticToken, alias, name, semicolon);
+            var usingDirective = _syntaxFactory.UsingDirective(importToken, staticToken, alias, name, semicolon);
             if (staticToken != null)
             {
                 usingDirective = CheckFeatureAvailability(usingDirective, MessageID.IDS_FeatureUsingStatic);

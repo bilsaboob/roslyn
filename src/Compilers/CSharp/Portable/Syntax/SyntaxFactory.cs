@@ -2509,7 +2509,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public static UsingDirectiveSyntax UsingDirective(NameEqualsSyntax alias, NameSyntax name)
         {
             return UsingDirective(
-                usingKeyword: Token(SyntaxKind.UsingKeyword),
+                importKeyword: Token(SyntaxKind.ImportKeyword),
                 staticKeyword: default(SyntaxToken),
                 alias: alias,
                 name: name,
