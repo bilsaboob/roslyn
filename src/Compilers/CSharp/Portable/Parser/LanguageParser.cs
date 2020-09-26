@@ -8296,6 +8296,10 @@ done:;
                             case SyntaxKind.SemicolonToken:
                                 return true;
                         }
+
+                        // check if followed by newline or looks like start of a new statement
+                        if (IsProbablyStatementEnd()) 
+                            return true;
                     }
                 }
                 finally
