@@ -290,7 +290,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             else
             {
-                if (IsCurrentTokenOnNewline)
+                if (IsCurrentTokenOnNewline || IsCurrentTokenEndOfFile)
                 {
                     maybeFlatNamespace = true;
                 }
