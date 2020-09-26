@@ -344,7 +344,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ConvertLinq.ConvertForEachToLinqQuery
                 namespaceSymbol.ContainingNamespace.Name == nameof(System)) &&
                 root is CompilationUnitSyntax compilationUnit)
             {
-                return compilationUnit.AddUsings(SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System.Linq")));
+                return compilationUnit.AddUsings(SyntaxFactory.UsingDirective(null, SyntaxFactory.ParseName("System.Linq")));
             }
 
             return root;

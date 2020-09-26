@@ -387,8 +387,7 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImport
         {
             var root = GetCompilationUnitSyntaxNode(contextNode, cancellationToken);
 
-            var usingDirective = SyntaxFactory.UsingDirective(
-                CreateNameSyntax(namespaceParts, namespaceParts.Count - 1));
+            var usingDirective = SyntaxFactory.UsingDirective(null, CreateNameSyntax(namespaceParts, namespaceParts.Count - 1));
 
             var compilation = await document.Project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             var service = document.GetLanguageService<IAddImportsService>();
@@ -447,7 +446,7 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImport
             // from it if necessary).  So we first create a dummy using directive just to
             // determine which container we're going in.  Then we'll use the container to
             // help create the final using.
-            var dummyUsing = SyntaxFactory.UsingDirective(nameSyntax);
+            var dummyUsing = SyntaxFactory.UsingDirective(null, nameSyntax);
 
             var container = addImportService.GetImportContainer(root, contextNode, dummyUsing);
             var namespaceToAddTo = container as NamespaceDeclarationSyntax;
@@ -476,7 +475,7 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImport
                 nameSyntax = RemoveGlobalAliasIfUnnecessary(semanticModel, nameSyntax, namespaceToAddTo);
             }
 
-            var usingDirective = SyntaxFactory.UsingDirective(nameSyntax)
+            var usingDirective = SyntaxFactory.UsingDirective(null, nameSyntax)
                                               .WithAdditionalAnnotations(Formatter.Annotation);
 
             usingDirective = namespaceOrTypeSymbol.IsKind(SymbolKind.Namespace)

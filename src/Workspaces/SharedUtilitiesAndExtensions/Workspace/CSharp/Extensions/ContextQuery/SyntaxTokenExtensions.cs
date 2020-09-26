@@ -16,6 +16,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
         {
             return
                 token.Kind() == SyntaxKind.ImportKeyword ||
+                token.Kind() == SyntaxKind.UsingKeyword ||
                 token.Kind() == SyntaxKind.ExternKeyword;
         }
 
@@ -25,7 +26,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
             {
                 var usingDirective = token.GetAncestor<UsingDirectiveSyntax>();
                 if (usingDirective != null &&
-                    usingDirective.ImportKeyword == token)
+                    (usingDirective.ImportKeyword == token || usingDirective.UsingKeyword == token))
                 {
                     return true;
                 }

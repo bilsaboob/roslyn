@@ -149,7 +149,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 var name = GenerateName(namespaceOrType);
                 if (name != null)
                 {
-                    return SyntaxFactory.UsingDirective(name);
+                    return SyntaxFactory.UsingDirective(null, name);
                 }
             }
 

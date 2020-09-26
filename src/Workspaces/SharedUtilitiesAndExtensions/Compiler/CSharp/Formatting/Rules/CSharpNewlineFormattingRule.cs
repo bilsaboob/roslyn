@@ -19,28 +19,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             var nextToken = currentToken.GetNextToken(includeZeroWidth: false, includeSkipped: false);
             var prevToken = currentToken.GetPreviousToken(includeZeroWidth: false, includeSkipped: false);
 
-            var nextTokenText = nextToken.Text;
-            var currentTokenText = currentToken.Text;
-            var prevTokenText = prevToken.Text;
-
             // newline before "import" keyword - if the previous line was another UsingDirective or a NamespaceDeclaration
-            if (currentToken.IsKeyword() && currentToken.Text == "import")
+            if (!currentToken.IsKind(SyntaxKind.IdentifierToken, SyntaxKind.DotToken))
             {
-                var prevTokenOfInterest = currentToken.FindPreviousToken(t => t.IsKind(SyntaxKind.NamespaceKeyword) || t.Text == "import" || t.IsFirstTokenOnLine(), includeZeroWidth: false, includeSkipped: false);
-                if (prevTokenOfInterest?.IsKind(SyntaxKind.NamespaceKeyword) == true)
-                    return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
-                else if(prevTokenOfInterest?.Text == "import")
-                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.PreserveLines);
+                if (currentToken.IsKeyword() && currentToken.Text == "import")
+                {
+                    var prevTokenOfInterest = currentToken.FindPreviousToken(t => t.IsKind(SyntaxKind.NamespaceKeyword) || t.Text == "import" || t.IsFirstTokenOnLine(), includeZeroWidth: false, includeSkipped: false);
+                    if (prevTokenOfInterest?.IsKind(SyntaxKind.NamespaceKeyword) == true)
+                        return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
+                    else if (prevTokenOfInterest?.Text == "import")
+                        return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.PreserveLines);
+                }
+                else if (nextToken.IsKeyword() && nextToken.Text == "import")
+                {
+                    var prevTokenOfInterest = currentToken.FindPreviousToken(t => t.IsKind(SyntaxKind.NamespaceKeyword) || t.Text == "import" || t.IsFirstTokenOnLine(), includeZeroWidth: false, includeSkipped: false);
+                    if (prevTokenOfInterest?.IsKind(SyntaxKind.NamespaceKeyword) == true)
+                        return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
+                    else if (prevTokenOfInterest?.Text == "import")
+                        return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.PreserveLines);
+                }
             }
-            else if (nextToken.IsKeyword() && nextToken.Text == "import")
-            {
-                var prevTokenOfInterest = currentToken.FindPreviousToken(t => t.IsKind(SyntaxKind.NamespaceKeyword) || t.Text == "import" || t.IsFirstTokenOnLine(), includeZeroWidth: false, includeSkipped: false);
-                if (prevTokenOfInterest?.IsKind(SyntaxKind.NamespaceKeyword) == true)
-                    return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
-                else if (prevTokenOfInterest?.Text == "import")
-                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.PreserveLines);
-            }
-            else if (nextToken.IsKind(SyntaxKind.ClassKeyword))
+
+            if (nextToken.IsKind(SyntaxKind.ClassKeyword))
             {
                 var prevTokenOfInterest = currentToken.FindPreviousToken(t => t.Text == "import" || t.IsFirstTokenOnLine(), includeZeroWidth: false, includeSkipped: false);
                 if (prevTokenOfInterest?.Text == "import")

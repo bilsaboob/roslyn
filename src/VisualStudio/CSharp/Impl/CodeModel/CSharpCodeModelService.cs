@@ -1783,7 +1783,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
             }
             else
             {
-                return SyntaxFactory.UsingDirective(nameSyntax);
+                return SyntaxFactory.UsingDirective(null, nameSyntax);
             }
         }
 

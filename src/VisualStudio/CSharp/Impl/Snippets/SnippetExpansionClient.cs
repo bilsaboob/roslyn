@@ -154,7 +154,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.Snippets
                 else if (candidateUsing.ContainsDiagnostics && !namespaceToImport.Contains("="))
                 {
                     // Retry by parsing the namespace as a name and constructing a using directive from it
-                    candidateUsing = SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(namespaceToImport))
+                    candidateUsing = SyntaxFactory.UsingDirective(null, SyntaxFactory.ParseName(namespaceToImport))
                         .WithImportKeyword(SyntaxFactory.Token(SyntaxKind.ImportKeyword).WithTrailingTrivia(SyntaxFactory.Space));
                 }
 

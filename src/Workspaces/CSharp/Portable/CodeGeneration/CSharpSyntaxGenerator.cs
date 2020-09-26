@@ -157,7 +157,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         }
 
         public override SyntaxNode NamespaceImportDeclaration(SyntaxNode name)
-            => SyntaxFactory.UsingDirective((NameSyntax)name);
+            => SyntaxFactory.UsingDirective(null, (NameSyntax)name);
 
         public override SyntaxNode AliasImportDeclaration(string aliasIdentifierName, SyntaxNode name)
             => SyntaxFactory.UsingDirective(SyntaxFactory.NameEquals(aliasIdentifierName), (NameSyntax)name);
