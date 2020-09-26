@@ -2510,10 +2510,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return UsingDirective(
                 importKeyword: Token(SyntaxKind.ImportKeyword),
+                usingKeyword: default(SyntaxToken),
                 staticKeyword: default(SyntaxToken),
                 alias: alias,
                 name: name,
-                semicolonToken: Token(SyntaxKind.SemicolonToken));
+                semicolonToken: FakeToken(SyntaxKind.SemicolonToken, ";"));
         }
 
         /// <summary>Creates a new ClassOrStructConstraintSyntax instance.</summary>

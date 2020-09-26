@@ -2985,9 +2985,14 @@
   </Node>
   <Node Name="UsingDirectiveSyntax" Base="CSharpSyntaxNode">
     <Kind Name="UsingDirective"/>
-    <Field Name="ImportKeyword" Type="SyntaxToken">
-      <Kind Name="ImportKeyword"/>
-    </Field>
+    <Choice Optional="true">
+      <Field Name="ImportKeyword" Type="SyntaxToken">
+        <Kind Name="ImportKeyword"/>
+      </Field>
+      <Field Name="UsingKeyword" Type="SyntaxToken">
+        <Kind Name="UsingKeyword"/>
+      </Field>
+    </Choice>
     <Choice Optional="true">
       <Field Name="StaticKeyword" Type="SyntaxToken"/>
       <Field Name="Alias" Type="NameEqualsSyntax"/>

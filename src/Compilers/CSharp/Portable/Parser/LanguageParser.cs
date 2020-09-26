@@ -529,6 +529,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                                 break;
                             }
 
+                        case SyntaxKind.UsingKeyword:
                         case SyntaxKind.ImportKeyword:
                             if (isGlobal && (this.PeekToken(1).Kind == SyntaxKind.OpenParenToken || (!IsScript && IsPossibleTopLevelUsingLocalDeclarationStatement())))
                             {
@@ -708,6 +709,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 case SyntaxKind.ExternKeyword:
                 case SyntaxKind.ImportKeyword:
+                case SyntaxKind.UsingKeyword:
                 case SyntaxKind.NamespaceKeyword:
                     return true;
                 case SyntaxKind.IdentifierToken:
@@ -802,9 +804,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 return (UsingDirectiveSyntax)this.EatNode();
             }
 
-            Debug.Assert(this.CurrentToken.Kind == SyntaxKind.ImportKeyword);
+            var importToken = this.TryEatToken(SyntaxKind.ImportKeyword);
+            var usingToken = this.TryEatToken(SyntaxKind.UsingKeyword);
 
-            var importToken = this.EatToken(SyntaxKind.ImportKeyword);
             var staticToken = this.TryEatToken(SyntaxKind.StaticKeyword);
 
             var alias = this.IsNamedAssignment() ? ParseNameEquals() : null;
@@ -844,7 +846,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             var semicolon = TryParseEndOfLineSemicolon(optional: true);
 
-            var usingDirective = _syntaxFactory.UsingDirective(importToken, staticToken, alias, name, semicolon);
+            var usingDirective = _syntaxFactory.UsingDirective(importToken, usingToken, staticToken, alias, name, semicolon);
             if (staticToken != null)
             {
                 usingDirective = CheckFeatureAvailability(usingDirective, MessageID.IDS_FeatureUsingStatic);
