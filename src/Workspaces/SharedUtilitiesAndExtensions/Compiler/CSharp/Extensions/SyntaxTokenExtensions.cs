@@ -4,6 +4,7 @@
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -137,6 +138,32 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         public static SyntaxToken GetNextNonZeroWidthTokenOrEndOfFile(this SyntaxToken token)
             => token.GetNextTokenOrEndOfFile();
 
+        public static SyntaxToken? FindFirstTokenOnLine(this SyntaxToken token, SourceText? text = null)
+        {
+            text ??= token.Parent?.SyntaxTree?.GetText();
+            return token.FindPreviousToken(t => t.IsFirstTokenOnLine(text));
+        }
+
+        public static SyntaxToken? FindPreviousToken(this SyntaxToken token, Func<SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false)
+        {
+            while (true)
+            {
+                token = token.GetPreviousToken(includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
+                if (predicate(token)) return token;
+                if (token.Kind() == SyntaxKind.None && token.Width() == 0) return null;
+            }
+        }
+
+        public static SyntaxToken? FindNextToken(this SyntaxToken token, Func<SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false)
+        {
+            while (true)
+            {
+                token = token.GetNextToken(includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
+                if (predicate(token)) return token;
+                if (token.Kind() == SyntaxKind.None && token.Width() == 0) return null;
+            }
+        }
+
         public static bool IsFirstTokenOnLine(this SyntaxToken token) => token.IsFirstTokenOnLine(token.Parent?.SyntaxTree?.GetText());
 
         /// <summary>
@@ -144,7 +171,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         /// </summary>
         public static bool IsFirstTokenOnLine(this SyntaxToken token, SourceText text)
         {
-            var previousToken = token.GetPreviousToken(includeSkipped: true, includeDirectives: true, includeDocumentationComments: true);
+            var previousToken = token.GetPreviousToken(includeZeroWidth: false, includeSkipped: true, includeDirectives: true, includeDocumentationComments: true);
             if (previousToken.Kind() == SyntaxKind.None)
             {
                 return true;
@@ -164,7 +191,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             if (token.Kind() == SyntaxKind.EndOfFileToken) return true;
 
-            var nextToken = token.GetNextToken(includeSkipped: true, includeDirectives: true, includeDocumentationComments: true);
+            var nextToken = token.GetNextToken(includeZeroWidth: false, includeSkipped: true, includeDirectives: true, includeDocumentationComments: true);
             if (nextToken.Kind() == SyntaxKind.None)
             {
                 return true;

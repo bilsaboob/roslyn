@@ -14,6 +14,7 @@ Microsoft.CodeAnalysis.SyntaxNode.HasErrors.get -> bool
 Microsoft.CodeAnalysis.SyntaxNodeOrToken.FullSpanInternal.get -> Microsoft.CodeAnalysis.Text.TextSpan
 Microsoft.CodeAnalysis.SyntaxToken.FindNextToken(System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false) -> Microsoft.CodeAnalysis.SyntaxToken?
 Microsoft.CodeAnalysis.SyntaxToken.FindPreviousToken(System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false) -> Microsoft.CodeAnalysis.SyntaxToken?
+Microsoft.CodeAnalysis.SyntaxToken.GetFirstTokenOnLine(bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false) -> Microsoft.CodeAnalysis.SyntaxToken?
 Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider
 Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider.SyntaxTreeOptionsProvider() -> void
 abstract Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider.IsGenerated(Microsoft.CodeAnalysis.SyntaxTree tree) -> bool?
