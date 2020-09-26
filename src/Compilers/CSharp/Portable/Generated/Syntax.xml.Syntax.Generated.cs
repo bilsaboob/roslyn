@@ -8124,7 +8124,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         {
         }
 
-        public SyntaxToken UsingKeyword => new SyntaxToken(this, ((Syntax.InternalSyntax.UsingDirectiveSyntax)this.Green).usingKeyword, Position, 0);
+        public SyntaxToken ImportKeyword => new SyntaxToken(this, ((Syntax.InternalSyntax.UsingDirectiveSyntax)this.Green).importKeyword, Position, 0);
 
         public SyntaxToken StaticKeyword
         {
@@ -8161,11 +8161,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitUsingDirective(this);
 
-        public UsingDirectiveSyntax Update(SyntaxToken usingKeyword, SyntaxToken staticKeyword, NameEqualsSyntax? alias, NameSyntax name, SyntaxToken semicolonToken)
+        public UsingDirectiveSyntax Update(SyntaxToken importKeyword, SyntaxToken staticKeyword, NameEqualsSyntax? alias, NameSyntax name, SyntaxToken semicolonToken)
         {
-            if (usingKeyword != this.UsingKeyword || staticKeyword != this.StaticKeyword || alias != this.Alias || name != this.Name || semicolonToken != this.SemicolonToken)
+            if (importKeyword != this.ImportKeyword || staticKeyword != this.StaticKeyword || alias != this.Alias || name != this.Name || semicolonToken != this.SemicolonToken)
             {
-                var newNode = SyntaxFactory.UsingDirective(usingKeyword, staticKeyword, alias, name, semicolonToken);
+                var newNode = SyntaxFactory.UsingDirective(importKeyword, staticKeyword, alias, name, semicolonToken);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -8173,11 +8173,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return this;
         }
 
-        public UsingDirectiveSyntax WithUsingKeyword(SyntaxToken usingKeyword) => Update(usingKeyword, this.StaticKeyword, this.Alias, this.Name, this.SemicolonToken);
-        public UsingDirectiveSyntax WithStaticKeyword(SyntaxToken staticKeyword) => Update(this.UsingKeyword, staticKeyword, this.Alias, this.Name, this.SemicolonToken);
-        public UsingDirectiveSyntax WithAlias(NameEqualsSyntax? alias) => Update(this.UsingKeyword, this.StaticKeyword, alias, this.Name, this.SemicolonToken);
-        public UsingDirectiveSyntax WithName(NameSyntax name) => Update(this.UsingKeyword, this.StaticKeyword, this.Alias, name, this.SemicolonToken);
-        public UsingDirectiveSyntax WithSemicolonToken(SyntaxToken semicolonToken) => Update(this.UsingKeyword, this.StaticKeyword, this.Alias, this.Name, semicolonToken);
+        public UsingDirectiveSyntax WithImportKeyword(SyntaxToken importKeyword) => Update(importKeyword, this.StaticKeyword, this.Alias, this.Name, this.SemicolonToken);
+        public UsingDirectiveSyntax WithStaticKeyword(SyntaxToken staticKeyword) => Update(this.ImportKeyword, staticKeyword, this.Alias, this.Name, this.SemicolonToken);
+        public UsingDirectiveSyntax WithAlias(NameEqualsSyntax? alias) => Update(this.ImportKeyword, this.StaticKeyword, alias, this.Name, this.SemicolonToken);
+        public UsingDirectiveSyntax WithName(NameSyntax name) => Update(this.ImportKeyword, this.StaticKeyword, this.Alias, name, this.SemicolonToken);
+        public UsingDirectiveSyntax WithSemicolonToken(SyntaxToken semicolonToken) => Update(this.ImportKeyword, this.StaticKeyword, this.Alias, this.Name, semicolonToken);
     }
 
     /// <summary>Member declaration syntax.</summary>
