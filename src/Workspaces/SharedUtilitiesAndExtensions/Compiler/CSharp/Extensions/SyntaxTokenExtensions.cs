@@ -137,7 +137,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         public static SyntaxToken GetNextNonZeroWidthTokenOrEndOfFile(this SyntaxToken token)
             => token.GetNextTokenOrEndOfFile();
 
-        public static bool IsFirstTokenOnLine(this SyntaxToken token) => token.IsFirstTokenOnLine(token.Parent?.GetText());
+        public static bool IsFirstTokenOnLine(this SyntaxToken token) => token.IsFirstTokenOnLine(token.Parent?.SyntaxTree?.GetText());
 
         /// <summary>
         /// Determines whether the given SyntaxToken is the first token on a line in the specified SourceText.
@@ -153,6 +153,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
             var tokenLine = text.Lines.IndexOf(token.SpanStart);
             var previousTokenLine = text.Lines.IndexOf(previousToken.SpanStart);
             return tokenLine > previousTokenLine;
+        }
+
+        public static bool IsLastTokenOnLine(this SyntaxToken token) => token.IsLastTokenOnLine(token.Parent?.SyntaxTree?.GetText());
+
+        /// <summary>
+        /// Determines whether the given SyntaxToken is the last token on a line in the specified SourceText.
+        /// </summary>
+        public static bool IsLastTokenOnLine(this SyntaxToken token, SourceText text)
+        {
+            if (token.Kind() == SyntaxKind.EndOfFileToken) return true;
+
+            var nextToken = token.GetNextToken(includeSkipped: true, includeDirectives: true, includeDocumentationComments: true);
+            if (nextToken.Kind() == SyntaxKind.None)
+            {
+                return true;
+            }
+
+            var tokenLine = text.Lines.IndexOf(token.SpanStart);
+            var nextTokenLine = text.Lines.IndexOf(nextToken.SpanStart);
+            return tokenLine < nextTokenLine;
         }
 
         public static bool SpansPreprocessorDirective(this IEnumerable<SyntaxToken> tokens)

@@ -99,12 +99,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
 
         private static IndentationResult? GetIndentationBasedOnTokenAndNode(Indenter indenter, SyntaxToken prevToken)
         {
-            var tokenOpt = indenter.TryGetCurrentVisibleToken(out var isTokenWithin);
-            if (tokenOpt == null) return null;
-
-            var token = tokenOpt.Value;
             var sourceText = indenter.LineToBeIndented.Text;
-            var isTokenOnNewline = token.IsFirstTokenOnLine(sourceText);
+
+            var tokenOpt = indenter.TryGetCurrentVisibleToken(out var isTokenWithin);
+            var token = tokenOpt ?? prevToken;
+
+            // if the token is on a new line, we can handle some special cases
+            var isTokenOnNewline = prevToken.IsLastTokenOnLine(sourceText);
+            if (isTokenOnNewline)
+            {
+                if (token.Parent?.Parent?.IsKind(SyntaxKind.NamespaceDeclaration) == true)
+                {
+                    // since we are directly in a namespace, check if it's a flat namespace, and in that case don't indent
+                    var nsToken = token.Parent.Parent.GetFirstToken().GetNextToken();
+                    var openBraceToken = nsToken.FindNextToken(t => t.IsKind(SyntaxKind.OpenBraceToken) || t.IsFirstTokenOnLine(sourceText));
+                    if (openBraceToken?.Kind() != SyntaxKind.OpenBraceToken)
+                        return GetIndentationFromTokenLine(indenter, token, additionalSpace: 0);
+                }
+            }
+
+            // for the remainder we really need the token
+            if (tokenOpt == null) return null;
+            isTokenOnNewline = token.IsFirstTokenOnLine(sourceText);
             var isPrevTokenOnNewline = prevToken.IsFirstTokenOnLine(sourceText);
 
             var prevStatement = GetAncestorStatementOrDeclaration(prevToken);
