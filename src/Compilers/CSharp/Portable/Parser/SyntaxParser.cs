@@ -318,6 +318,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
+        protected bool IsTokenOnNewline(SyntaxToken token, SyntaxToken prevToken)
+        {
+            if (token.LeadingTrivia.Any((int)SyntaxKind.EndOfLineTrivia)) return true;
+            if (prevToken != null && prevToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia)) return true;
+            return false;
+        }
+
         protected bool IsTokenAfterWhitespace(SyntaxToken token, SyntaxToken prevToken)
         {
             if (token.LeadingTrivia.Any((int)SyntaxKind.WhitespaceTrivia)) return true;
