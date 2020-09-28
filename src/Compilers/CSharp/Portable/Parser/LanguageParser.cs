@@ -3346,11 +3346,14 @@ parse_member_name:;
                     // if we have a 'finally', try parsing as fake "try/catch" statement
                     if (catchClauses?.Count > 0 || finallyBlock != null)
                     {
+                        // finalize the parts - generating default fallbacks if required
+                        var (finalTryBlock, finalCatchClauses, finallyClause) = FinalizeTryCatchParts(blockBody, catchClauses, finallyToken, finallyBlock);
+
                         // create a fake "try {...}" block where we inject the "try" token and keep the method body block as the "{...}" part
                         var tryStatement = SyntaxFactory.FakeTryStatement(
                             syntaxFactory: _syntaxFactory,
-                            tryBlock: blockBody,
-                            catchClauses: catchClauses ?? default,
+                            tryBlock: finalTryBlock,
+                            catchClauses: finalCatchClauses,
                             finallyToken: finallyToken, finallyBlock: finallyBlock
                         );
 
@@ -9156,6 +9159,20 @@ done:;
                 parseFinally: true
             );
 
+            var (finalTryBlock, finalCatchClauses, finallyClause) = FinalizeTryCatchParts(tryBlock, catchClauses, finallyToken, finallyBlock);
+
+            // if we don't have the try block, we need to generate one at least
+            tryToken ??= SyntaxFactory.MissingToken(SyntaxKind.TryKeyword);
+            finalTryBlock ??= SyntaxFactory.MissingBlock();
+
+            // we are done
+            return _syntaxFactory.TryStatement(attributes, tryToken, finalTryBlock, finalCatchClauses, finallyClause);
+        }
+
+        private (BlockSyntax, SyntaxList<CatchClauseSyntax>, FinallyClauseSyntax) FinalizeTryCatchParts(
+            BlockSyntax tryBlock, SyntaxList<CatchClauseSyntax>? catchClauses, SyntaxToken finallyToken, BlockSyntax finallyBlock
+            )
+        {
             FinallyClauseSyntax finallyClause = null;
 
             // create the finally clause if we have a finally block
@@ -9165,18 +9182,21 @@ done:;
                 finallyClause = _syntaxFactory.FinallyClause(finallyToken, finallyBlock);
             }
 
-            // make sure we close the try block - must either exist a "catch" or "finally" block ... otherwise we will need to append a missing "finally" block ...
+            // make sure we close the try block - must either exist a "catch" or "finally" block ... otherwise we will need to append a missing "catch" block ...
             var hasCatches = catchClauses?.Count > 0;
             if (finallyBlock == null && !hasCatches && tryBlock != null)
             {
-                finallyClause = _syntaxFactory.FinallyClause(
-                    finallyKeyword: SyntaxFactory.FakeToken(SyntaxKind.FinallyKeyword),
+                var catchClause = _syntaxFactory.CatchClause(
+                    catchKeyword: SyntaxFactory.FakeToken(SyntaxKind.CatchKeyword),
+                    declaration: null,
+                    filter: null,
                     block: SyntaxFactory.FakeBlock()
                 );
+
+                catchClauses = SyntaxFactory.List(catchClause);
             }
 
-            // we are done
-            return _syntaxFactory.TryStatement(attributes, tryToken, tryBlock, catchClauses ?? default, finallyClause);
+            return (tryBlock, catchClauses ?? default, finallyClause);
         }
 
         private ((SyntaxToken, BlockSyntax), SyntaxList<CatchClauseSyntax>?, (SyntaxToken, BlockSyntax)) TryParseTryCatchParts(
@@ -9375,6 +9395,7 @@ done:;
             CatchDeclarationSyntax decl = null;
             CatchFilterClauseSyntax filter = null;
             GreenNode badTokens = null;
+            BlockSyntax catchBlock = null;
 
             var saveTerm = _termState;
 
@@ -9397,65 +9418,106 @@ done:;
                 SyntaxToken name = null;
                 TypeSyntax type = null;
 
-                // try parsing name and then the type, if we only have the name, then it's acutally a type
-                var typeOrName = TryParseType();
-                if (typeOrName is SimpleNameSyntax simpleName)
+                // we also allow simple "catch DoSomeExpression()" ... which means that if we are at an identifier, then we will try to parse a simple expression
+                if (openParen == null && CurrentKind == SyntaxKind.IdentifierToken &&
+                    !IsPredefinedType(CurrentKind) &&
+                    CurrentToken.Text != "when" &&
+                    !CurrentToken.Text.ToLowerInvariant().Contains("exception")
+                    )
                 {
-                    // this could be a name ... so lets check if we are at the type ...
-                    type = TryParseType(allowKeywordName: false);
-
-                    // now the tricky part is that we want to support the following syntaxes (both of which are ambiguous):
-                    // *** the difficulty is to say whether it's a Type or a Variable ***
-                    //     - we simply say that if the name doesn't contain "Exception" ... then it's not an exception type
-                    // 1. specialization on exception type only - allows custom handling of different exception types
-                    //   catch SpecialExcpetion => ...
-                    //   catch AnotherSpecialExcpetion => ...
-                    //   catch Excpetion => ...
-                    // 2. shorthand exeption variable - makes it easy & convenient to handle exception
-                    //   catch e => ...
-
-                    if (type != null)
+                    var resetPoint = GetResetPoint();
+                    try
                     {
-                        // OK, we have a type following anyway, so no worries
-                        name = simpleName.Identifier;
+                        var exprStatBlock = ParseExprStatementBlock(simpleExpr: true);
+                        if (!exprStatBlock.ContainsDiagnostics && exprStatBlock.Statements.Count == 1 && exprStatBlock.Statements[0] is ExpressionStatementSyntax exprStat)
+                        {
+                            // accept the block if no errors - and may not be a simple name... then it's actually probably a declaration
+                            var expr = exprStat.Expression;
+                            if (!(expr is NameSyntax))
+                            {
+                                catchBlock = exprStatBlock;
+                            }
+                        }
+
+                        if (catchBlock == null)
+                        {
+                            // undo the expr parsing ... we will skip the syntax and say missing block later ...
+                            Reset(ref resetPoint);
+                        }
+                    }
+                    finally
+                    {
+                        Release(ref resetPoint);
+                    }
+                }
+
+                if (catchBlock == null)
+                {
+                    // try parsing name and then the type, if we only have the name, then it's acutally a type
+                    var typeOrName = TryParseType(allowKeywordName: false);
+                    if (typeOrName is SimpleNameSyntax simpleName)
+                    {
+                        // this could be a name ... so lets check if we are at the type ...
+                        type = TryParseType(allowKeywordName: false);
+
+                        // now the tricky part is that we want to support the following syntaxes (both of which are ambiguous):
+                        // *** the difficulty is to say whether it's a Type or a Variable ***
+                        //     - we simply say that if the name doesn't contain "Exception" ... then it's not an exception type
+                        // 1. specialization on exception type only - allows custom handling of different exception types
+                        //   catch SpecialExcpetion => ...
+                        //   catch AnotherSpecialExcpetion => ...
+                        //   catch Excpetion => ...
+                        // 2. shorthand exeption variable - makes it easy & convenient to handle exception
+                        //   catch e => ...
+
+                        if (type != null)
+                        {
+                            // OK, we have a type following anyway, so no worries
+                            name = simpleName.Identifier;
+                        }
+                        else
+                        {
+                            // check if the name contains "type"
+                            if (simpleName.Identifier?.Text?.ToLowerInvariant()?.Contains("exception") == true)
+                                type = typeOrName;
+                            else
+                                name = simpleName.Identifier;
+                        }
                     }
                     else
                     {
-                        // check if the name contains "type"
-                        if (simpleName.Identifier?.Text?.ToLowerInvariant()?.Contains("exception") == true)
-                            type = typeOrName;
-                        else
-                            name = simpleName.Identifier;
+                        // it must be a type
+                        type = typeOrName;
                     }
-                }
 
-                if (type == null)
-                {
-                    // we need at least the type ... lets create a fake one ...
-                    type = SyntaxFactory.FakeTypeIdentifier();
-                }
+                    if (type == null)
+                    {
+                        // we need at least the type ... lets create a fake one ...
+                        type = SyntaxFactory.FakeTypeIdentifier();
+                    }
 
-                _termState = saveTerm;
+                    _termState = saveTerm;
 
-                if (openParen != null)
-                {
-                    // we should have a closing paren!
-                    closeParen = this.EatToken(SyntaxKind.CloseParenToken);
-                }
-                else
-                {
-                    // we allow broken syntax by consuming a close paren if its that
-                    closeParen = this.TryEatToken(SyntaxKind.CloseParenToken);
-                }
+                    if (openParen != null)
+                    {
+                        // we should have a closing paren!
+                        closeParen = this.EatToken(SyntaxKind.CloseParenToken);
+                    }
+                    else
+                    {
+                        // we allow broken syntax by consuming a close paren if its that
+                        closeParen = this.TryEatToken(SyntaxKind.CloseParenToken);
+                    }
 
-                // only create a declaration if there is at least something
-                if (openParen?.Width > 0 || name?.Width > 0 || type?.Width > 0 || closeParen?.Width > 0)
-                {
-                    decl = _syntaxFactory.CatchDeclaration(openParen, name, type, closeParen);
+                    // only create a declaration if there is at least something
+                    if (openParen?.Width > 0 || name?.Width > 0 || type?.Width > 0 || closeParen?.Width > 0)
+                    {
+                        decl = _syntaxFactory.CatchDeclaration(openParen, name, type, closeParen);
 
-                    // skip tokens until next possible part
-                    badTokens = skipUntilWhenFilter();
-                    decl = AddTrailingSkippedSyntax(decl, badTokens);
+                        // skip tokens until next possible part
+                        badTokens = skipUntilWhenFilter();
+                        decl = AddTrailingSkippedSyntax(decl, badTokens);
+                    }
                 }
             }
 
@@ -9464,7 +9526,7 @@ done:;
             catchToken = AddTrailingSkippedSyntax(catchToken, badTokens);
 
             // parse the filter if we are at the "when" keyword
-            if (CurrentContextualKind == SyntaxKind.WhenKeyword)
+            if (catchBlock == null && CurrentContextualKind == SyntaxKind.WhenKeyword)
             {
                 SyntaxToken whenKeyword;
                 SyntaxToken openParen = null;
@@ -9514,30 +9576,29 @@ done:;
             badTokens = skipUntilCatchBlock();
             catchToken = AddTrailingSkippedSyntax(catchToken, badTokens);
 
-            BlockSyntax block = null;
-            if (CurrentKind == SyntaxKind.EqualsGreaterThanToken)
+            if (catchBlock == null && CurrentKind == SyntaxKind.EqualsGreaterThanToken)
             {
                 var catchBlockSveTerm = _termState;
                 _termState |= TerminatorState.IsEndOfCatchBlock;
 
-                block = ParseArrowExprStatementBlock(simpleExpr: true);
+                catchBlock = ParseArrowExprStatementBlock(simpleExpr: true);
 
                 _termState = catchBlockSveTerm;
             }
-            else if (CurrentKind == SyntaxKind.OpenBraceToken)
+            else if (catchBlock == null && CurrentKind == SyntaxKind.OpenBraceToken)
             {
                 var catchBlockSveTerm = _termState;
                 _termState |= TerminatorState.IsEndOfCatchBlock;
 
                 // must be a brace body
-                block = this.ParsePossiblyAttributedBlock();
+                catchBlock = this.ParsePossiblyAttributedBlock();
 
                 _termState = catchBlockSveTerm;
             }
 
-            if (block == null)
+            if (catchBlock == null)
             {
-                block = _syntaxFactory.Block(
+                catchBlock = _syntaxFactory.Block(
                     attributeLists: default,
                     SyntaxToken.CreateMissing(SyntaxKind.OpenBraceToken, null, null),
                     default(SyntaxList<StatementSyntax>),
@@ -9547,7 +9608,7 @@ done:;
 
             _termState = saveTerm;
 
-            return _syntaxFactory.CatchClause(catchToken, decl, filter, block);
+            return _syntaxFactory.CatchClause(catchToken, decl, filter, catchBlock);
 
             GreenNode skipUntilWhenFilter()
             {
@@ -12113,15 +12174,21 @@ tryAgain:
                     // TODO: this should not be a compound name.. (disallow dots)
                     return this.ParseQualifiedName(NameOptions.InExpression);
                 case SyntaxKind.EqualsGreaterThanToken:
-                    return this.ParseLambdaExpression();
+                    {
+                        if (AllowLambdaExpression) return this.ParseLambdaExpression();
+                        return this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_InvalidExprTerm, this.CurrentToken.Text);
+                    }
                 case SyntaxKind.OpenBraceToken:
-                    return this.ParseLambdaExpression();
+                    {
+                        if (AllowLambdaExpression) return this.ParseLambdaExpression();
+                        return this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_InvalidExprTerm, this.CurrentToken.Text);
+                    }
                 case SyntaxKind.StaticKeyword:
                     if (this.IsPossibleAnonymousMethodExpression())
                     {
                         return this.ParseAnonymousMethodExpression();
                     }
-                    else if (this.IsPossibleLambdaExpression(precedence))
+                    else if (AllowLambdaExpression && this.IsPossibleLambdaExpression(precedence))
                     {
                         return this.ParseLambdaExpression();
                     }
@@ -12135,7 +12202,7 @@ tryAgain:
                         // check for special case lambdas:
                         // 1. async { ... }
                         // 2. async => ...
-                        if (this.CurrentToken.ContextualKind == SyntaxKind.AsyncKeyword)
+                        if (AllowLambdaExpression && this.CurrentToken.ContextualKind == SyntaxKind.AsyncKeyword)
                         {
                             var peekIndex = 1;
 

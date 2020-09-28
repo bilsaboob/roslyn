@@ -18,6 +18,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return !TryKeyword.IsMissing && TryKeyword.Width == 0 && Parent is BlockSyntax;
         }
     }
+
+    public partial class CatchDeclarationSyntax
+    {
+        public bool HasExplicitType()
+        {
+            var noExplicitType = Type.Kind() == SyntaxKind.IdentifierName && Type.Width == 0;
+            return !noExplicitType;
+        }
+    }
 }
 
 namespace Microsoft.CodeAnalysis.CSharp

@@ -400,5 +400,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 return syntaxFactory.Block(attributeLists, openBraceToken, statements, closeBraceToken);
             return SyntaxFactory.Block(attributeLists, openBraceToken, statements, closeBraceToken);
         }
+
+        public static BlockSyntax MissingBlock(
+            ContextAwareSyntax syntaxFactory = null,
+            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists = default,
+            SyntaxToken openBraceToken = null,
+            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<StatementSyntax> statements = default,
+            SyntaxToken closeBraceToken = null)
+        {
+            openBraceToken ??= SyntaxFactory.MissingToken(SyntaxKind.OpenBraceToken);
+            closeBraceToken ??= SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken);
+            if (syntaxFactory != null)
+                return syntaxFactory.Block(attributeLists, openBraceToken, statements, closeBraceToken);
+            return SyntaxFactory.Block(attributeLists, openBraceToken, statements, closeBraceToken);
+        }
     }
 }

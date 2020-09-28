@@ -46,7 +46,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         private BlockSyntax ParseExprStatementBlock(SyntaxList<AttributeListSyntax> attributes = default, bool semicolonRequired = false, bool simpleExpr = true)
         {
             var wasSimpleExpression = IsSimpleExpression;
+            var didAllowLambdaExpression = AllowLambdaExpression;
             IsSimpleExpression = simpleExpr;
+            AllowLambdaExpression = !simpleExpr;
             try
             {
                 var exprStat = ParseExpressionStatement(attributes, semicolonRequired: semicolonRequired);
@@ -59,6 +61,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             finally
             {
                 IsSimpleExpression = wasSimpleExpression;
+                AllowLambdaExpression = didAllowLambdaExpression;
             }
         }
     }
