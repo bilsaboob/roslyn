@@ -3457,7 +3457,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         public override SyntaxNode CatchClause(SyntaxNode type, string name, IEnumerable<SyntaxNode> statements)
         {
             return SyntaxFactory.CatchClause(
-                SyntaxFactory.CatchDeclaration((TypeSyntax)type, name.ToIdentifierToken()),
+                SyntaxFactory.CatchDeclaration(name.ToIdentifierToken(), (TypeSyntax)type),
                 filter: null,
                 block: CreateBlock(statements));
         }
