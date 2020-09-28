@@ -2969,6 +2969,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             return catchBlocks.ToImmutableAndFree();
         }
 
+        protected TypeWithAnnotations BindCatchDeclType(CatchDeclarationSyntax declaration, DiagnosticBag diagnostics)
+        {
+            if (!declaration.HasExplicitType())
+            {
+                // bind per default to standard "Exception" if no explicit type is specified
+                var exceptionType = this.GetWellKnownType(WellKnownType.System_Exception, diagnostics, declaration.Location);
+                return TypeWithAnnotations.Create(exceptionType);
+            }
+            else
+            {
+                // bind the type as usual
+                return this.BindType(declaration.Type, diagnostics);
+            }
+        }
+
         private BoundCatchBlock BindCatchBlock(CatchClauseSyntax node, ArrayBuilder<BoundCatchBlock> previousBlocks, DiagnosticBag diagnostics)
         {
             bool hasError = false;
@@ -2981,7 +2996,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // LocalSymbol.Type ignores diagnostics so it seems cleaner to bind the type here
                 // as well. However, if LocalSymbol.Type is changed to report diagnostics, we'll
                 // need to avoid binding here since that will result in duplicate diagnostics.
-                type = this.BindType(declaration.Type, diagnostics).Type;
+
+                type = BindCatchDeclType(declaration, diagnostics).Type;
+
                 Debug.Assert((object)type != null);
 
                 if (type.IsErrorType())
@@ -3074,7 +3091,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             var block = BindEmbeddedBlock(node.Block, diagnostics);
-            return new BoundCatchBlock(node, locals, exceptionSource, type, exceptionFilterPrologueOpt: null, boundFilter, block, hasError);
+            var catchBlock = new BoundCatchBlock(node, locals, exceptionSource, type, exceptionFilterPrologueOpt: null, boundFilter, block, hasError);
+            if (block.WasCompilerGenerated)
+                catchBlock.WasCompilerGenerated = true;
+
+            return catchBlock;
         }
 
         private BoundExpression BindCatchFilter(CatchFilterClauseSyntax filter, DiagnosticBag diagnostics)
