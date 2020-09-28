@@ -2429,7 +2429,6 @@ foundParent:;
 
                 block = base.BindEmbeddedBlock(node, diagnostics);
 
-                Debug.Assert(!block.WasCompilerGenerated);
                 return block;
             }
 
