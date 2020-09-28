@@ -932,7 +932,7 @@ oneMoreTime:
                 // Also in Dev12 the exception variable scope span starts right after the stloc instruction and 
                 // ends right before leave instruction. So when stopped at the sequence point Dev12 inserts,
                 // the exception variable is not visible. 
-                if (_emitPdbSequencePoints)
+                if (_emitPdbSequencePoints && !catchBlock.WasCompilerGenerated)
                 {
                     var syntax = catchBlock.Syntax as CatchClauseSyntax;
                     if (syntax != null)

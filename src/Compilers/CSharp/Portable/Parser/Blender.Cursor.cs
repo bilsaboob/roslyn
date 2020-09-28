@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 using System;
+using System.Linq;
 
 namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 {
@@ -24,14 +25,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         /// </summary>
         private struct Cursor
         {
-            public readonly SyntaxNodeOrToken CurrentNodeOrToken;
+            private SyntaxNodeOrToken _currentNodeOrToken;
             private readonly int _indexInParent;
+            private GreenNode _leadingTriviaToken;
 
             private Cursor(SyntaxNodeOrToken node, int indexInParent)
+                : this(node, indexInParent, null)
             {
-                this.CurrentNodeOrToken = node;
-                _indexInParent = indexInParent;
             }
+
+            private Cursor(SyntaxNodeOrToken node, int indexInParent, GreenNode leadingTriviaToken)
+            {
+                _currentNodeOrToken = node;
+
+                if (leadingTriviaToken != null)
+                {
+                    CurrentNodeOrToken = new SyntaxNodeOrToken(node.Parent, leadingTriviaToken, node.Position, node.TokenIndex);
+                }
+                else
+                {
+                    CurrentNodeOrToken = node;
+                }
+
+                _indexInParent = indexInParent;
+                _leadingTriviaToken = leadingTriviaToken;
+            }
+
+            public readonly SyntaxNodeOrToken CurrentNodeOrToken;
 
             public static Cursor FromRoot(CSharp.CSharpSyntaxNode node)
             {
@@ -55,6 +75,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             public Cursor MoveToNextSibling()
             {
+                if (_leadingTriviaToken != null)
+                {
+                    // we are at the leading trivia, so just move to the token next - but, since this is a reused token, clear the trivia from it... we have already returned it as tokens...
+                    var newLeadingTrivia = _currentNodeOrToken.GetLeadingTrivia().Where(t => !t.IsSkippedTokensTrivia);
+                    var actualTokenOrNode = _currentNodeOrToken.WithLeadingTrivia(newLeadingTrivia);
+                    return new Cursor(actualTokenOrNode, _indexInParent);
+                }
+
                 if (this.CurrentNodeOrToken.Parent != null)
                 {
                     // First, look to the nodes to the right of this one in our parent's child list
@@ -65,7 +93,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                         var sibling = siblings[i];
                         if (IsNonZeroWidthOrIsEndOfFile(sibling))
                         {
-                            return new Cursor(sibling, i);
+                            return CreateCursor(sibling, i);
                         }
                     }
 
@@ -133,7 +161,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     var child = Microsoft.CodeAnalysis.ChildSyntaxList.ItemInternal(node, 0);
                     if (IsNonZeroWidthOrIsEndOfFile(child))
                     {
-                        return new Cursor(child, 0);
+                        return CreateCursor(child, 0);
                     }
                 }
 
@@ -143,13 +171,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 {
                     if (IsNonZeroWidthOrIsEndOfFile(child))
                     {
-                        return new Cursor(child, index);
+                        return CreateCursor(child, index);
                     }
-
-                    index++;
+                    else
+                    {
+                        index++;
+                    }
                 }
 
                 return new Cursor();
+            }
+
+            private Cursor CreateCursor(SyntaxNodeOrToken child, int childIndex)
+            {
+                if (child.IsToken && child.HasLeadingTrivia)
+                {
+                    var skippedTriviaNode = child.GetLeadingTrivia().LastOrDefault(t => t.IsSkippedTokensTrivia);
+                    if (skippedTriviaNode.Width > 0)
+                    {
+                        var lastTriviaToken = skippedTriviaNode.RequiredUnderlyingNode.GetLastNonZeroWidthTerminal();
+                        if (lastTriviaToken != null)
+                        {
+                            return new Cursor(child, childIndex, lastTriviaToken);
+                        }
+                    }
+                }
+
+                return new Cursor(child, childIndex);
             }
 
             public Cursor MoveToFirstToken()

@@ -2901,14 +2901,14 @@
   </Node>
   <Node Name="CatchDeclarationSyntax" Base="CSharpSyntaxNode">
     <Kind Name="CatchDeclaration"/>
-    <Field Name="OpenParenToken" Type="SyntaxToken">
+    <Field Name="OpenParenToken" Type="SyntaxToken" Optional="true">
       <Kind Name="OpenParenToken"/>
     </Field>
-    <Field Name="Type" Type="TypeSyntax"/>
     <Field Name="Identifier" Type="SyntaxToken" Optional="true">
       <Kind Name="IdentifierToken"/>
     </Field>
-    <Field Name="CloseParenToken" Type="SyntaxToken">
+    <Field Name="Type" Type="TypeSyntax"/>
+    <Field Name="CloseParenToken" Type="SyntaxToken" Optional="true">
       <Kind Name="CloseParenToken"/>
     </Field>
   </Node>
@@ -2917,11 +2917,11 @@
     <Field Name="WhenKeyword" Type="SyntaxToken">
       <Kind Name="WhenKeyword"/>
     </Field>
-    <Field Name="OpenParenToken" Type="SyntaxToken">
+    <Field Name="OpenParenToken" Type="SyntaxToken" Optional="true">
       <Kind Name="OpenParenToken"/>
     </Field>
     <Field Name="FilterExpression" Type="ExpressionSyntax"/>
-    <Field Name="CloseParenToken" Type="SyntaxToken">
+    <Field Name="CloseParenToken" Type="SyntaxToken" Optional="true">
       <Kind Name="CloseParenToken"/>
     </Field>
   </Node>

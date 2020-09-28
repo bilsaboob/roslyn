@@ -644,11 +644,11 @@ catch_clause
   ;
 
 catch_declaration
-  : '(' type identifier_token? ')'
+  : '('? identifier_token? type ')'?
   ;
 
 catch_filter_clause
-  : 'when' '(' expression ')'
+  : 'when' '('? expression ')'?
   ;
 
 finally_clause

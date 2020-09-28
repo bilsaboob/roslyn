@@ -53,7 +53,7 @@ namespace Microsoft.CodeAnalysis
 
         internal static Func<SyntaxToken, bool> GetPredicateFunction(bool includeZeroWidth)
         {
-            return includeZeroWidth ? SyntaxToken.Any : SyntaxToken.NonZeroWidthOrFake;
+            return includeZeroWidth ? SyntaxToken.Any : SyntaxToken.NonZeroWidth;
         }
 
         private static bool Matches(Func<SyntaxToken, bool>? predicate, SyntaxToken token)

@@ -40,6 +40,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             return locals.ToImmutableAndFree();
         }
 
+        internal override TypeWithAnnotations BindTypeOrVarKeyword(TypeSyntax syntax, DiagnosticBag diagnostics, out bool isVar)
+        {
+            if (_syntax.Declaration != null && syntax == _syntax.Declaration.Type && !_syntax.Declaration.HasExplicitType())
+            {
+                isVar = false;
+                return BindCatchDeclType(_syntax.Declaration, diagnostics);
+            }
+
+            return base.BindTypeOrVarKeyword(syntax, diagnostics, out isVar);
+        }
+
         internal override ImmutableArray<LocalSymbol> GetDeclaredLocalsForScope(SyntaxNode scopeDesignator)
         {
             if (_syntax == scopeDesignator)

@@ -7871,34 +7871,48 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         {
         }
 
-        public SyntaxToken OpenParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.CatchDeclarationSyntax)this.Green).openParenToken, Position, 0);
-
-        public TypeSyntax Type => GetRed(ref this.type, 1)!;
+        public SyntaxToken OpenParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.CatchDeclarationSyntax)this.Green).openParenToken;
+                return slot != null ? new SyntaxToken(this, slot, Position, 0) : default;
+            }
+        }
 
         public SyntaxToken Identifier
         {
             get
             {
                 var slot = ((Syntax.InternalSyntax.CatchDeclarationSyntax)this.Green).identifier;
-                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(2), GetChildIndex(2)) : default;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(1), GetChildIndex(1)) : default;
             }
         }
 
-        public SyntaxToken CloseParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.CatchDeclarationSyntax)this.Green).closeParenToken, GetChildPosition(3), GetChildIndex(3));
+        public TypeSyntax Type => GetRed(ref this.type, 2)!;
 
-        internal override SyntaxNode? GetNodeSlot(int index) => index == 1 ? GetRed(ref this.type, 1)! : null;
+        public SyntaxToken CloseParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.CatchDeclarationSyntax)this.Green).closeParenToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(3), GetChildIndex(3)) : default;
+            }
+        }
 
-        internal override SyntaxNode? GetCachedSlot(int index) => index == 1 ? this.type : null;
+        internal override SyntaxNode? GetNodeSlot(int index) => index == 2 ? GetRed(ref this.type, 2)! : null;
+
+        internal override SyntaxNode? GetCachedSlot(int index) => index == 2 ? this.type : null;
 
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitCatchDeclaration(this);
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitCatchDeclaration(this);
 
-        public CatchDeclarationSyntax Update(SyntaxToken openParenToken, TypeSyntax type, SyntaxToken identifier, SyntaxToken closeParenToken)
+        public CatchDeclarationSyntax Update(SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken closeParenToken)
         {
-            if (openParenToken != this.OpenParenToken || type != this.Type || identifier != this.Identifier || closeParenToken != this.CloseParenToken)
+            if (openParenToken != this.OpenParenToken || identifier != this.Identifier || type != this.Type || closeParenToken != this.CloseParenToken)
             {
-                var newNode = SyntaxFactory.CatchDeclaration(openParenToken, type, identifier, closeParenToken);
+                var newNode = SyntaxFactory.CatchDeclaration(openParenToken, identifier, type, closeParenToken);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -7906,10 +7920,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return this;
         }
 
-        public CatchDeclarationSyntax WithOpenParenToken(SyntaxToken openParenToken) => Update(openParenToken, this.Type, this.Identifier, this.CloseParenToken);
-        public CatchDeclarationSyntax WithType(TypeSyntax type) => Update(this.OpenParenToken, type, this.Identifier, this.CloseParenToken);
-        public CatchDeclarationSyntax WithIdentifier(SyntaxToken identifier) => Update(this.OpenParenToken, this.Type, identifier, this.CloseParenToken);
-        public CatchDeclarationSyntax WithCloseParenToken(SyntaxToken closeParenToken) => Update(this.OpenParenToken, this.Type, this.Identifier, closeParenToken);
+        public CatchDeclarationSyntax WithOpenParenToken(SyntaxToken openParenToken) => Update(openParenToken, this.Identifier, this.Type, this.CloseParenToken);
+        public CatchDeclarationSyntax WithIdentifier(SyntaxToken identifier) => Update(this.OpenParenToken, identifier, this.Type, this.CloseParenToken);
+        public CatchDeclarationSyntax WithType(TypeSyntax type) => Update(this.OpenParenToken, this.Identifier, type, this.CloseParenToken);
+        public CatchDeclarationSyntax WithCloseParenToken(SyntaxToken closeParenToken) => Update(this.OpenParenToken, this.Identifier, this.Type, closeParenToken);
     }
 
     public sealed partial class CatchFilterClauseSyntax : CSharpSyntaxNode
@@ -7923,11 +7937,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
         public SyntaxToken WhenKeyword => new SyntaxToken(this, ((Syntax.InternalSyntax.CatchFilterClauseSyntax)this.Green).whenKeyword, Position, 0);
 
-        public SyntaxToken OpenParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.CatchFilterClauseSyntax)this.Green).openParenToken, GetChildPosition(1), GetChildIndex(1));
+        public SyntaxToken OpenParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.CatchFilterClauseSyntax)this.Green).openParenToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(1), GetChildIndex(1)) : default;
+            }
+        }
 
         public ExpressionSyntax FilterExpression => GetRed(ref this.filterExpression, 2)!;
 
-        public SyntaxToken CloseParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.CatchFilterClauseSyntax)this.Green).closeParenToken, GetChildPosition(3), GetChildIndex(3));
+        public SyntaxToken CloseParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.CatchFilterClauseSyntax)this.Green).closeParenToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(3), GetChildIndex(3)) : default;
+            }
+        }
 
         internal override SyntaxNode? GetNodeSlot(int index) => index == 2 ? GetRed(ref this.filterExpression, 2)! : null;
 

@@ -1,3 +1,4 @@
+Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.FindToken(int position, bool findInsideTrivia = false, bool findInsideSkippedTrivia = false) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.CSharp.Conversion.IsConditionalExpression.get -> bool
 Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax.AddModifiers(params Microsoft.CodeAnalysis.SyntaxToken[] items) -> Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax.WithModifiers(Microsoft.CodeAnalysis.SyntaxTokenList modifiers) -> Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax
@@ -56,9 +57,6 @@ Microsoft.CodeAnalysis.CSharp.SyntaxKind.ImportKeyword = 8385 -> Microsoft.CodeA
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.LambdaFunctionType = 9034 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 abstract Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax.Modifiers.get -> Microsoft.CodeAnalysis.SyntaxTokenList
 abstract Microsoft.CodeAnalysis.CSharp.Syntax.CommonForEachStatementSyntax.EqualsGreaterThanToken.get -> Microsoft.CodeAnalysis.SyntaxToken
-override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.ToFullString() -> string
-override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.ToString() -> string
-override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.WriteTo(System.IO.TextWriter writer) -> void
 override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitDefaultConstraint(Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax node) -> Microsoft.CodeAnalysis.SyntaxNode
 override Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousMethodExpressionSyntax.Modifiers.get -> Microsoft.CodeAnalysis.SyntaxTokenList
 override Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax.Accept(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor visitor) -> void
@@ -77,6 +75,7 @@ static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.AnonymousMethodExpression(Mic
 Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions.WithSyntaxTreeOptionsProvider(Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider provider) -> Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.ArgumentList(Microsoft.CodeAnalysis.SeparatedSyntaxList<Microsoft.CodeAnalysis.CSharp.Syntax.ArgumentSyntax> arguments, Microsoft.CodeAnalysis.CSharp.Syntax.ParenthesizedLambdaExpressionSyntax trailingLambdaBlock) -> Microsoft.CodeAnalysis.CSharp.Syntax.ArgumentListSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.ArgumentList(Microsoft.CodeAnalysis.SyntaxToken openParenToken, Microsoft.CodeAnalysis.SeparatedSyntaxList<Microsoft.CodeAnalysis.CSharp.Syntax.ArgumentSyntax> arguments, Microsoft.CodeAnalysis.SyntaxToken closeParenToken, Microsoft.CodeAnalysis.CSharp.Syntax.ParenthesizedLambdaExpressionSyntax trailingLambdaBlock) -> Microsoft.CodeAnalysis.CSharp.Syntax.ArgumentListSyntax
+static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.CatchDeclaration(Microsoft.CodeAnalysis.SyntaxToken identifier, Microsoft.CodeAnalysis.CSharp.Syntax.TypeSyntax type) -> Microsoft.CodeAnalysis.CSharp.Syntax.CatchDeclarationSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.DefaultConstraint() -> Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.DefaultConstraint(Microsoft.CodeAnalysis.SyntaxToken defaultKeyword) -> Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.EventFieldDeclaration(Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclarationSyntax declaration = null) -> Microsoft.CodeAnalysis.CSharp.Syntax.EventFieldDeclarationSyntax

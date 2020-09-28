@@ -18317,74 +18317,92 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
     internal sealed partial class CatchDeclarationSyntax : CSharpSyntaxNode
     {
-        internal readonly SyntaxToken openParenToken;
-        internal readonly TypeSyntax type;
+        internal readonly SyntaxToken? openParenToken;
         internal readonly SyntaxToken? identifier;
-        internal readonly SyntaxToken closeParenToken;
+        internal readonly TypeSyntax type;
+        internal readonly SyntaxToken? closeParenToken;
 
-        internal CatchDeclarationSyntax(SyntaxKind kind, SyntaxToken openParenToken, TypeSyntax type, SyntaxToken? identifier, SyntaxToken closeParenToken, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+        internal CatchDeclarationSyntax(SyntaxKind kind, SyntaxToken? openParenToken, SyntaxToken? identifier, TypeSyntax type, SyntaxToken? closeParenToken, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
           : base(kind, diagnostics, annotations)
         {
             this.SlotCount = 4;
-            this.AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
-            this.AdjustFlagsAndWidth(type);
-            this.type = type;
+            if (openParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             if (identifier != null)
             {
                 this.AdjustFlagsAndWidth(identifier);
                 this.identifier = identifier;
             }
-            this.AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            this.AdjustFlagsAndWidth(type);
+            this.type = type;
+            if (closeParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
         }
 
-        internal CatchDeclarationSyntax(SyntaxKind kind, SyntaxToken openParenToken, TypeSyntax type, SyntaxToken? identifier, SyntaxToken closeParenToken, SyntaxFactoryContext context)
+        internal CatchDeclarationSyntax(SyntaxKind kind, SyntaxToken? openParenToken, SyntaxToken? identifier, TypeSyntax type, SyntaxToken? closeParenToken, SyntaxFactoryContext context)
           : base(kind)
         {
             this.SetFactoryContext(context);
             this.SlotCount = 4;
-            this.AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
-            this.AdjustFlagsAndWidth(type);
-            this.type = type;
+            if (openParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             if (identifier != null)
             {
                 this.AdjustFlagsAndWidth(identifier);
                 this.identifier = identifier;
             }
-            this.AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            this.AdjustFlagsAndWidth(type);
+            this.type = type;
+            if (closeParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
         }
 
-        internal CatchDeclarationSyntax(SyntaxKind kind, SyntaxToken openParenToken, TypeSyntax type, SyntaxToken? identifier, SyntaxToken closeParenToken)
+        internal CatchDeclarationSyntax(SyntaxKind kind, SyntaxToken? openParenToken, SyntaxToken? identifier, TypeSyntax type, SyntaxToken? closeParenToken)
           : base(kind)
         {
             this.SlotCount = 4;
-            this.AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
-            this.AdjustFlagsAndWidth(type);
-            this.type = type;
+            if (openParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             if (identifier != null)
             {
                 this.AdjustFlagsAndWidth(identifier);
                 this.identifier = identifier;
             }
-            this.AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            this.AdjustFlagsAndWidth(type);
+            this.type = type;
+            if (closeParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
         }
 
-        public SyntaxToken OpenParenToken => this.openParenToken;
-        public TypeSyntax Type => this.type;
+        public SyntaxToken? OpenParenToken => this.openParenToken;
         public SyntaxToken? Identifier => this.identifier;
-        public SyntaxToken CloseParenToken => this.closeParenToken;
+        public TypeSyntax Type => this.type;
+        public SyntaxToken? CloseParenToken => this.closeParenToken;
 
         internal override GreenNode? GetSlot(int index)
             => index switch
             {
                 0 => this.openParenToken,
-                1 => this.type,
-                2 => this.identifier,
+                1 => this.identifier,
+                2 => this.type,
                 3 => this.closeParenToken,
                 _ => null,
             };
@@ -18394,11 +18412,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitCatchDeclaration(this);
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitCatchDeclaration(this);
 
-        public CatchDeclarationSyntax Update(SyntaxToken openParenToken, TypeSyntax type, SyntaxToken identifier, SyntaxToken closeParenToken)
+        public CatchDeclarationSyntax Update(SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken closeParenToken)
         {
-            if (openParenToken != this.OpenParenToken || type != this.Type || identifier != this.Identifier || closeParenToken != this.CloseParenToken)
+            if (openParenToken != this.OpenParenToken || identifier != this.Identifier || type != this.Type || closeParenToken != this.CloseParenToken)
             {
-                var newNode = SyntaxFactory.CatchDeclaration(openParenToken, type, identifier, closeParenToken);
+                var newNode = SyntaxFactory.CatchDeclaration(openParenToken, identifier, type, closeParenToken);
                 var diags = GetDiagnostics();
                 if (diags?.Length > 0)
                     newNode = newNode.WithDiagnosticsGreen(diags);
@@ -18412,38 +18430,44 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
 
         internal override GreenNode SetDiagnostics(DiagnosticInfo[]? diagnostics)
-            => new CatchDeclarationSyntax(this.Kind, this.openParenToken, this.type, this.identifier, this.closeParenToken, diagnostics, GetAnnotations());
+            => new CatchDeclarationSyntax(this.Kind, this.openParenToken, this.identifier, this.type, this.closeParenToken, diagnostics, GetAnnotations());
 
         internal override GreenNode SetAnnotations(SyntaxAnnotation[]? annotations)
-            => new CatchDeclarationSyntax(this.Kind, this.openParenToken, this.type, this.identifier, this.closeParenToken, GetDiagnostics(), annotations);
+            => new CatchDeclarationSyntax(this.Kind, this.openParenToken, this.identifier, this.type, this.closeParenToken, GetDiagnostics(), annotations);
 
         internal CatchDeclarationSyntax(ObjectReader reader)
           : base(reader)
         {
             this.SlotCount = 4;
-            var openParenToken = (SyntaxToken)reader.ReadValue();
-            AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
-            var type = (TypeSyntax)reader.ReadValue();
-            AdjustFlagsAndWidth(type);
-            this.type = type;
+            var openParenToken = (SyntaxToken?)reader.ReadValue();
+            if (openParenToken != null)
+            {
+                AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             var identifier = (SyntaxToken?)reader.ReadValue();
             if (identifier != null)
             {
                 AdjustFlagsAndWidth(identifier);
                 this.identifier = identifier;
             }
-            var closeParenToken = (SyntaxToken)reader.ReadValue();
-            AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            var type = (TypeSyntax)reader.ReadValue();
+            AdjustFlagsAndWidth(type);
+            this.type = type;
+            var closeParenToken = (SyntaxToken?)reader.ReadValue();
+            if (closeParenToken != null)
+            {
+                AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
         }
 
         internal override void WriteTo(ObjectWriter writer)
         {
             base.WriteTo(writer);
             writer.WriteValue(this.openParenToken);
-            writer.WriteValue(this.type);
             writer.WriteValue(this.identifier);
+            writer.WriteValue(this.type);
             writer.WriteValue(this.closeParenToken);
         }
 
@@ -18456,57 +18480,75 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
     internal sealed partial class CatchFilterClauseSyntax : CSharpSyntaxNode
     {
         internal readonly SyntaxToken whenKeyword;
-        internal readonly SyntaxToken openParenToken;
+        internal readonly SyntaxToken? openParenToken;
         internal readonly ExpressionSyntax filterExpression;
-        internal readonly SyntaxToken closeParenToken;
+        internal readonly SyntaxToken? closeParenToken;
 
-        internal CatchFilterClauseSyntax(SyntaxKind kind, SyntaxToken whenKeyword, SyntaxToken openParenToken, ExpressionSyntax filterExpression, SyntaxToken closeParenToken, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+        internal CatchFilterClauseSyntax(SyntaxKind kind, SyntaxToken whenKeyword, SyntaxToken? openParenToken, ExpressionSyntax filterExpression, SyntaxToken? closeParenToken, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
           : base(kind, diagnostics, annotations)
         {
             this.SlotCount = 4;
             this.AdjustFlagsAndWidth(whenKeyword);
             this.whenKeyword = whenKeyword;
-            this.AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
+            if (openParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             this.AdjustFlagsAndWidth(filterExpression);
             this.filterExpression = filterExpression;
-            this.AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            if (closeParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
         }
 
-        internal CatchFilterClauseSyntax(SyntaxKind kind, SyntaxToken whenKeyword, SyntaxToken openParenToken, ExpressionSyntax filterExpression, SyntaxToken closeParenToken, SyntaxFactoryContext context)
+        internal CatchFilterClauseSyntax(SyntaxKind kind, SyntaxToken whenKeyword, SyntaxToken? openParenToken, ExpressionSyntax filterExpression, SyntaxToken? closeParenToken, SyntaxFactoryContext context)
           : base(kind)
         {
             this.SetFactoryContext(context);
             this.SlotCount = 4;
             this.AdjustFlagsAndWidth(whenKeyword);
             this.whenKeyword = whenKeyword;
-            this.AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
+            if (openParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             this.AdjustFlagsAndWidth(filterExpression);
             this.filterExpression = filterExpression;
-            this.AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            if (closeParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
         }
 
-        internal CatchFilterClauseSyntax(SyntaxKind kind, SyntaxToken whenKeyword, SyntaxToken openParenToken, ExpressionSyntax filterExpression, SyntaxToken closeParenToken)
+        internal CatchFilterClauseSyntax(SyntaxKind kind, SyntaxToken whenKeyword, SyntaxToken? openParenToken, ExpressionSyntax filterExpression, SyntaxToken? closeParenToken)
           : base(kind)
         {
             this.SlotCount = 4;
             this.AdjustFlagsAndWidth(whenKeyword);
             this.whenKeyword = whenKeyword;
-            this.AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
+            if (openParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             this.AdjustFlagsAndWidth(filterExpression);
             this.filterExpression = filterExpression;
-            this.AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            if (closeParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
         }
 
         public SyntaxToken WhenKeyword => this.whenKeyword;
-        public SyntaxToken OpenParenToken => this.openParenToken;
+        public SyntaxToken? OpenParenToken => this.openParenToken;
         public ExpressionSyntax FilterExpression => this.filterExpression;
-        public SyntaxToken CloseParenToken => this.closeParenToken;
+        public SyntaxToken? CloseParenToken => this.closeParenToken;
 
         internal override GreenNode? GetSlot(int index)
             => index switch
@@ -18553,15 +18595,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var whenKeyword = (SyntaxToken)reader.ReadValue();
             AdjustFlagsAndWidth(whenKeyword);
             this.whenKeyword = whenKeyword;
-            var openParenToken = (SyntaxToken)reader.ReadValue();
-            AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
+            var openParenToken = (SyntaxToken?)reader.ReadValue();
+            if (openParenToken != null)
+            {
+                AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             var filterExpression = (ExpressionSyntax)reader.ReadValue();
             AdjustFlagsAndWidth(filterExpression);
             this.filterExpression = filterExpression;
-            var closeParenToken = (SyntaxToken)reader.ReadValue();
-            AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            var closeParenToken = (SyntaxToken?)reader.ReadValue();
+            if (closeParenToken != null)
+            {
+                AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
         }
 
         internal override void WriteTo(ObjectWriter writer)
@@ -33666,7 +33714,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             => node.Update((SyntaxToken)Visit(node.CatchKeyword), (CatchDeclarationSyntax)Visit(node.Declaration), (CatchFilterClauseSyntax)Visit(node.Filter), (BlockSyntax)Visit(node.Block));
 
         public override CSharpSyntaxNode VisitCatchDeclaration(CatchDeclarationSyntax node)
-            => node.Update((SyntaxToken)Visit(node.OpenParenToken), (TypeSyntax)Visit(node.Type), (SyntaxToken)Visit(node.Identifier), (SyntaxToken)Visit(node.CloseParenToken));
+            => node.Update((SyntaxToken)Visit(node.OpenParenToken), (SyntaxToken)Visit(node.Identifier), (TypeSyntax)Visit(node.Type), (SyntaxToken)Visit(node.CloseParenToken));
 
         public override CSharpSyntaxNode VisitCatchFilterClause(CatchFilterClauseSyntax node)
             => node.Update((SyntaxToken)Visit(node.WhenKeyword), (SyntaxToken)Visit(node.OpenParenToken), (ExpressionSyntax)Visit(node.FilterExpression), (SyntaxToken)Visit(node.CloseParenToken));
@@ -36885,12 +36933,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new CatchClauseSyntax(SyntaxKind.CatchClause, catchKeyword, declaration, filter, block, this.context);
         }
 
-        public CatchDeclarationSyntax CatchDeclaration(SyntaxToken openParenToken, TypeSyntax type, SyntaxToken? identifier, SyntaxToken closeParenToken)
+        public CatchDeclarationSyntax CatchDeclaration(SyntaxToken? openParenToken, SyntaxToken? identifier, TypeSyntax type, SyntaxToken? closeParenToken)
         {
 #if DEBUG
-            if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
-            if (openParenToken.Kind != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
-            if (type == null) throw new ArgumentNullException(nameof(type));
+            if (openParenToken != null)
+            {
+                switch (openParenToken.Kind)
+                {
+                    case SyntaxKind.OpenParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(openParenToken));
+                }
+            }
             if (identifier != null)
             {
                 switch (identifier.Kind)
@@ -36900,23 +36954,45 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     default: throw new ArgumentException(nameof(identifier));
                 }
             }
-            if (closeParenToken == null) throw new ArgumentNullException(nameof(closeParenToken));
-            if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
+            if (type == null) throw new ArgumentNullException(nameof(type));
+            if (closeParenToken != null)
+            {
+                switch (closeParenToken.Kind)
+                {
+                    case SyntaxKind.CloseParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(closeParenToken));
+                }
+            }
 #endif
 
-            return new CatchDeclarationSyntax(SyntaxKind.CatchDeclaration, openParenToken, type, identifier, closeParenToken, this.context);
+            return new CatchDeclarationSyntax(SyntaxKind.CatchDeclaration, openParenToken, identifier, type, closeParenToken, this.context);
         }
 
-        public CatchFilterClauseSyntax CatchFilterClause(SyntaxToken whenKeyword, SyntaxToken openParenToken, ExpressionSyntax filterExpression, SyntaxToken closeParenToken)
+        public CatchFilterClauseSyntax CatchFilterClause(SyntaxToken whenKeyword, SyntaxToken? openParenToken, ExpressionSyntax filterExpression, SyntaxToken? closeParenToken)
         {
 #if DEBUG
             if (whenKeyword == null) throw new ArgumentNullException(nameof(whenKeyword));
             if (whenKeyword.Kind != SyntaxKind.WhenKeyword) throw new ArgumentException(nameof(whenKeyword));
-            if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
-            if (openParenToken.Kind != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
+            if (openParenToken != null)
+            {
+                switch (openParenToken.Kind)
+                {
+                    case SyntaxKind.OpenParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(openParenToken));
+                }
+            }
             if (filterExpression == null) throw new ArgumentNullException(nameof(filterExpression));
-            if (closeParenToken == null) throw new ArgumentNullException(nameof(closeParenToken));
-            if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
+            if (closeParenToken != null)
+            {
+                switch (closeParenToken.Kind)
+                {
+                    case SyntaxKind.CloseParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(closeParenToken));
+                }
+            }
 #endif
 
             return new CatchFilterClauseSyntax(SyntaxKind.CatchFilterClause, whenKeyword, openParenToken, filterExpression, closeParenToken, this.context);
@@ -41748,12 +41824,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new CatchClauseSyntax(SyntaxKind.CatchClause, catchKeyword, declaration, filter, block);
         }
 
-        public static CatchDeclarationSyntax CatchDeclaration(SyntaxToken openParenToken, TypeSyntax type, SyntaxToken? identifier, SyntaxToken closeParenToken)
+        public static CatchDeclarationSyntax CatchDeclaration(SyntaxToken? openParenToken, SyntaxToken? identifier, TypeSyntax type, SyntaxToken? closeParenToken)
         {
 #if DEBUG
-            if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
-            if (openParenToken.Kind != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
-            if (type == null) throw new ArgumentNullException(nameof(type));
+            if (openParenToken != null)
+            {
+                switch (openParenToken.Kind)
+                {
+                    case SyntaxKind.OpenParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(openParenToken));
+                }
+            }
             if (identifier != null)
             {
                 switch (identifier.Kind)
@@ -41763,23 +41845,45 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     default: throw new ArgumentException(nameof(identifier));
                 }
             }
-            if (closeParenToken == null) throw new ArgumentNullException(nameof(closeParenToken));
-            if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
+            if (type == null) throw new ArgumentNullException(nameof(type));
+            if (closeParenToken != null)
+            {
+                switch (closeParenToken.Kind)
+                {
+                    case SyntaxKind.CloseParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(closeParenToken));
+                }
+            }
 #endif
 
-            return new CatchDeclarationSyntax(SyntaxKind.CatchDeclaration, openParenToken, type, identifier, closeParenToken);
+            return new CatchDeclarationSyntax(SyntaxKind.CatchDeclaration, openParenToken, identifier, type, closeParenToken);
         }
 
-        public static CatchFilterClauseSyntax CatchFilterClause(SyntaxToken whenKeyword, SyntaxToken openParenToken, ExpressionSyntax filterExpression, SyntaxToken closeParenToken)
+        public static CatchFilterClauseSyntax CatchFilterClause(SyntaxToken whenKeyword, SyntaxToken? openParenToken, ExpressionSyntax filterExpression, SyntaxToken? closeParenToken)
         {
 #if DEBUG
             if (whenKeyword == null) throw new ArgumentNullException(nameof(whenKeyword));
             if (whenKeyword.Kind != SyntaxKind.WhenKeyword) throw new ArgumentException(nameof(whenKeyword));
-            if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
-            if (openParenToken.Kind != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
+            if (openParenToken != null)
+            {
+                switch (openParenToken.Kind)
+                {
+                    case SyntaxKind.OpenParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(openParenToken));
+                }
+            }
             if (filterExpression == null) throw new ArgumentNullException(nameof(filterExpression));
-            if (closeParenToken == null) throw new ArgumentNullException(nameof(closeParenToken));
-            if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
+            if (closeParenToken != null)
+            {
+                switch (closeParenToken.Kind)
+                {
+                    case SyntaxKind.CloseParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(closeParenToken));
+                }
+            }
 #endif
 
             return new CatchFilterClauseSyntax(SyntaxKind.CatchFilterClause, whenKeyword, openParenToken, filterExpression, closeParenToken);

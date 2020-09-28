@@ -15,14 +15,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
         public bool IsInlineBlockStatement()
         {
-            return OpenBraceToken.Width == 0 && CloseBraceToken.Width == 0 && Statements.Count == 1;
+            return OpenBraceToken.Width == 0 && CloseBraceToken.Width == 0 && Statements.Count <= 1;
         }
 
-        public bool TryGetInlineBlockStatement(out StatementSyntax statement)
+        public bool TryGetInlineBlockStatement(out SyntaxNode statement)
         {
             statement = null;
             if (!IsInlineBlockStatement()) return false;
-            statement = Statements[0];
+            if (Statements.Count == 1)
+                statement = Statements[0];
+            else
+                statement = this;
             return true;
         }
     }
