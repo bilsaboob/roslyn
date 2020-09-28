@@ -2019,7 +2019,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update(VisitToken(node.CatchKeyword), (CatchDeclarationSyntax?)Visit(node.Declaration), (CatchFilterClauseSyntax?)Visit(node.Filter), (BlockSyntax?)Visit(node.Block) ?? throw new ArgumentNullException("block"));
 
         public override SyntaxNode? VisitCatchDeclaration(CatchDeclarationSyntax node)
-            => node.Update(VisitToken(node.OpenParenToken), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"), VisitToken(node.Identifier), VisitToken(node.CloseParenToken));
+            => node.Update(VisitToken(node.OpenParenToken), VisitToken(node.Identifier), (TypeSyntax?)Visit(node.Type) ?? throw new ArgumentNullException("type"), VisitToken(node.CloseParenToken));
 
         public override SyntaxNode? VisitCatchFilterClause(CatchFilterClauseSyntax node)
             => node.Update(VisitToken(node.WhenKeyword), VisitToken(node.OpenParenToken), (ExpressionSyntax?)Visit(node.FilterExpression) ?? throw new ArgumentNullException("filterExpression"), VisitToken(node.CloseParenToken));
@@ -4664,41 +4664,61 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.CatchClause(SyntaxFactory.Token(SyntaxKind.CatchKeyword), default, default, SyntaxFactory.Block());
 
         /// <summary>Creates a new CatchDeclarationSyntax instance.</summary>
-        public static CatchDeclarationSyntax CatchDeclaration(SyntaxToken openParenToken, TypeSyntax type, SyntaxToken identifier, SyntaxToken closeParenToken)
+        public static CatchDeclarationSyntax CatchDeclaration(SyntaxToken openParenToken, SyntaxToken identifier, TypeSyntax type, SyntaxToken closeParenToken)
         {
-            if (openParenToken.Kind() != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
-            if (type == null) throw new ArgumentNullException(nameof(type));
+            switch (openParenToken.Kind())
+            {
+                case SyntaxKind.OpenParenToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(openParenToken));
+            }
             switch (identifier.Kind())
             {
                 case SyntaxKind.IdentifierToken:
                 case SyntaxKind.None: break;
                 default: throw new ArgumentException(nameof(identifier));
             }
-            if (closeParenToken.Kind() != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
-            return (CatchDeclarationSyntax)Syntax.InternalSyntax.SyntaxFactory.CatchDeclaration((Syntax.InternalSyntax.SyntaxToken)openParenToken.Node!, (Syntax.InternalSyntax.TypeSyntax)type.Green, (Syntax.InternalSyntax.SyntaxToken?)identifier.Node, (Syntax.InternalSyntax.SyntaxToken)closeParenToken.Node!).CreateRed();
+            if (type == null) throw new ArgumentNullException(nameof(type));
+            switch (closeParenToken.Kind())
+            {
+                case SyntaxKind.CloseParenToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(closeParenToken));
+            }
+            return (CatchDeclarationSyntax)Syntax.InternalSyntax.SyntaxFactory.CatchDeclaration((Syntax.InternalSyntax.SyntaxToken?)openParenToken.Node, (Syntax.InternalSyntax.SyntaxToken?)identifier.Node, (Syntax.InternalSyntax.TypeSyntax)type.Green, (Syntax.InternalSyntax.SyntaxToken?)closeParenToken.Node).CreateRed();
         }
 
         /// <summary>Creates a new CatchDeclarationSyntax instance.</summary>
-        public static CatchDeclarationSyntax CatchDeclaration(TypeSyntax type, SyntaxToken identifier)
-            => SyntaxFactory.CatchDeclaration(SyntaxFactory.Token(SyntaxKind.OpenParenToken), type, identifier, SyntaxFactory.Token(SyntaxKind.CloseParenToken));
+        public static CatchDeclarationSyntax CatchDeclaration(SyntaxToken identifier, TypeSyntax type)
+            => SyntaxFactory.CatchDeclaration(default, identifier, type, default);
 
         /// <summary>Creates a new CatchDeclarationSyntax instance.</summary>
         public static CatchDeclarationSyntax CatchDeclaration(TypeSyntax type)
-            => SyntaxFactory.CatchDeclaration(SyntaxFactory.Token(SyntaxKind.OpenParenToken), type, default, SyntaxFactory.Token(SyntaxKind.CloseParenToken));
+            => SyntaxFactory.CatchDeclaration(default, default, type, default);
 
         /// <summary>Creates a new CatchFilterClauseSyntax instance.</summary>
         public static CatchFilterClauseSyntax CatchFilterClause(SyntaxToken whenKeyword, SyntaxToken openParenToken, ExpressionSyntax filterExpression, SyntaxToken closeParenToken)
         {
             if (whenKeyword.Kind() != SyntaxKind.WhenKeyword) throw new ArgumentException(nameof(whenKeyword));
-            if (openParenToken.Kind() != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
+            switch (openParenToken.Kind())
+            {
+                case SyntaxKind.OpenParenToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(openParenToken));
+            }
             if (filterExpression == null) throw new ArgumentNullException(nameof(filterExpression));
-            if (closeParenToken.Kind() != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
-            return (CatchFilterClauseSyntax)Syntax.InternalSyntax.SyntaxFactory.CatchFilterClause((Syntax.InternalSyntax.SyntaxToken)whenKeyword.Node!, (Syntax.InternalSyntax.SyntaxToken)openParenToken.Node!, (Syntax.InternalSyntax.ExpressionSyntax)filterExpression.Green, (Syntax.InternalSyntax.SyntaxToken)closeParenToken.Node!).CreateRed();
+            switch (closeParenToken.Kind())
+            {
+                case SyntaxKind.CloseParenToken:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(closeParenToken));
+            }
+            return (CatchFilterClauseSyntax)Syntax.InternalSyntax.SyntaxFactory.CatchFilterClause((Syntax.InternalSyntax.SyntaxToken)whenKeyword.Node!, (Syntax.InternalSyntax.SyntaxToken?)openParenToken.Node, (Syntax.InternalSyntax.ExpressionSyntax)filterExpression.Green, (Syntax.InternalSyntax.SyntaxToken?)closeParenToken.Node).CreateRed();
         }
 
         /// <summary>Creates a new CatchFilterClauseSyntax instance.</summary>
         public static CatchFilterClauseSyntax CatchFilterClause(ExpressionSyntax filterExpression)
-            => SyntaxFactory.CatchFilterClause(SyntaxFactory.Token(SyntaxKind.WhenKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), filterExpression, SyntaxFactory.Token(SyntaxKind.CloseParenToken));
+            => SyntaxFactory.CatchFilterClause(SyntaxFactory.Token(SyntaxKind.WhenKeyword), default, filterExpression, default);
 
         /// <summary>Creates a new FinallyClauseSyntax instance.</summary>
         public static FinallyClauseSyntax FinallyClause(SyntaxToken finallyKeyword, BlockSyntax block)

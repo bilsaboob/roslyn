@@ -419,10 +419,10 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => InternalSyntaxFactory.CatchClause(InternalSyntaxFactory.Token(SyntaxKind.CatchKeyword), null, null, GenerateBlock());
 
         private static Syntax.InternalSyntax.CatchDeclarationSyntax GenerateCatchDeclaration()
-            => InternalSyntaxFactory.CatchDeclaration(InternalSyntaxFactory.Token(SyntaxKind.OpenParenToken), GenerateIdentifierName(), null, InternalSyntaxFactory.Token(SyntaxKind.CloseParenToken));
+            => InternalSyntaxFactory.CatchDeclaration(null, null, GenerateIdentifierName(), null);
 
         private static Syntax.InternalSyntax.CatchFilterClauseSyntax GenerateCatchFilterClause()
-            => InternalSyntaxFactory.CatchFilterClause(InternalSyntaxFactory.Token(SyntaxKind.WhenKeyword), InternalSyntaxFactory.Token(SyntaxKind.OpenParenToken), GenerateIdentifierName(), InternalSyntaxFactory.Token(SyntaxKind.CloseParenToken));
+            => InternalSyntaxFactory.CatchFilterClause(InternalSyntaxFactory.Token(SyntaxKind.WhenKeyword), null, GenerateIdentifierName(), null);
 
         private static Syntax.InternalSyntax.FinallyClauseSyntax GenerateFinallyClause()
             => InternalSyntaxFactory.FinallyClause(InternalSyntaxFactory.Token(SyntaxKind.FinallyKeyword), GenerateBlock());
@@ -2384,10 +2384,10 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             var node = GenerateCatchDeclaration();
 
-            Assert.Equal(SyntaxKind.OpenParenToken, node.OpenParenToken.Kind);
-            Assert.NotNull(node.Type);
+            Assert.Null(node.OpenParenToken);
             Assert.Null(node.Identifier);
-            Assert.Equal(SyntaxKind.CloseParenToken, node.CloseParenToken.Kind);
+            Assert.NotNull(node.Type);
+            Assert.Null(node.CloseParenToken);
 
             AttachAndCheckDiagnostics(node);
         }
@@ -2398,9 +2398,9 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             var node = GenerateCatchFilterClause();
 
             Assert.Equal(SyntaxKind.WhenKeyword, node.WhenKeyword.Kind);
-            Assert.Equal(SyntaxKind.OpenParenToken, node.OpenParenToken.Kind);
+            Assert.Null(node.OpenParenToken);
             Assert.NotNull(node.FilterExpression);
-            Assert.Equal(SyntaxKind.CloseParenToken, node.CloseParenToken.Kind);
+            Assert.Null(node.CloseParenToken);
 
             AttachAndCheckDiagnostics(node);
         }
@@ -9931,10 +9931,10 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => SyntaxFactory.CatchClause(SyntaxFactory.Token(SyntaxKind.CatchKeyword), default(CatchDeclarationSyntax), default(CatchFilterClauseSyntax), GenerateBlock());
 
         private static CatchDeclarationSyntax GenerateCatchDeclaration()
-            => SyntaxFactory.CatchDeclaration(SyntaxFactory.Token(SyntaxKind.OpenParenToken), GenerateIdentifierName(), default(SyntaxToken), SyntaxFactory.Token(SyntaxKind.CloseParenToken));
+            => SyntaxFactory.CatchDeclaration(default(SyntaxToken), default(SyntaxToken), GenerateIdentifierName(), default(SyntaxToken));
 
         private static CatchFilterClauseSyntax GenerateCatchFilterClause()
-            => SyntaxFactory.CatchFilterClause(SyntaxFactory.Token(SyntaxKind.WhenKeyword), SyntaxFactory.Token(SyntaxKind.OpenParenToken), GenerateIdentifierName(), SyntaxFactory.Token(SyntaxKind.CloseParenToken));
+            => SyntaxFactory.CatchFilterClause(SyntaxFactory.Token(SyntaxKind.WhenKeyword), default(SyntaxToken), GenerateIdentifierName(), default(SyntaxToken));
 
         private static FinallyClauseSyntax GenerateFinallyClause()
             => SyntaxFactory.FinallyClause(SyntaxFactory.Token(SyntaxKind.FinallyKeyword), GenerateBlock());
@@ -11896,11 +11896,11 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             var node = GenerateCatchDeclaration();
 
-            Assert.Equal(SyntaxKind.OpenParenToken, node.OpenParenToken.Kind());
-            Assert.NotNull(node.Type);
+            Assert.Equal(SyntaxKind.None, node.OpenParenToken.Kind());
             Assert.Equal(SyntaxKind.None, node.Identifier.Kind());
-            Assert.Equal(SyntaxKind.CloseParenToken, node.CloseParenToken.Kind());
-            var newNode = node.WithOpenParenToken(node.OpenParenToken).WithType(node.Type).WithIdentifier(node.Identifier).WithCloseParenToken(node.CloseParenToken);
+            Assert.NotNull(node.Type);
+            Assert.Equal(SyntaxKind.None, node.CloseParenToken.Kind());
+            var newNode = node.WithOpenParenToken(node.OpenParenToken).WithIdentifier(node.Identifier).WithType(node.Type).WithCloseParenToken(node.CloseParenToken);
             Assert.Equal(node, newNode);
         }
 
@@ -11910,9 +11910,9 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             var node = GenerateCatchFilterClause();
 
             Assert.Equal(SyntaxKind.WhenKeyword, node.WhenKeyword.Kind());
-            Assert.Equal(SyntaxKind.OpenParenToken, node.OpenParenToken.Kind());
+            Assert.Equal(SyntaxKind.None, node.OpenParenToken.Kind());
             Assert.NotNull(node.FilterExpression);
-            Assert.Equal(SyntaxKind.CloseParenToken, node.CloseParenToken.Kind());
+            Assert.Equal(SyntaxKind.None, node.CloseParenToken.Kind());
             var newNode = node.WithWhenKeyword(node.WhenKeyword).WithOpenParenToken(node.OpenParenToken).WithFilterExpression(node.FilterExpression).WithCloseParenToken(node.CloseParenToken);
             Assert.Equal(node, newNode);
         }

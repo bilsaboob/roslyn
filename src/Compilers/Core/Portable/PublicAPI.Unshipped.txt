@@ -9,9 +9,10 @@ Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalysisResultAsy
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalysisResultAsync(Microsoft.CodeAnalysis.AdditionalText file, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.CodeAnalysis.Diagnostics.AnalysisResult>
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.get -> int
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.set -> void
+Microsoft.CodeAnalysis.SyntaxNode.FindToken(int position, bool findInsideTrivia = false, bool findInsideSkippedTrivia = false) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.SyntaxNode.GetLastToken(bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false, System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> predicate = null) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.SyntaxNode.HasErrors.get -> bool
-Microsoft.CodeAnalysis.SyntaxNodeOrToken.FullSpanInternal.get -> Microsoft.CodeAnalysis.Text.TextSpan
+Microsoft.CodeAnalysis.SyntaxNodeOrToken.TokenIndex.get -> int
 Microsoft.CodeAnalysis.SyntaxToken.FindNextToken(System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false) -> Microsoft.CodeAnalysis.SyntaxToken?
 Microsoft.CodeAnalysis.SyntaxToken.FindPreviousToken(System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false) -> Microsoft.CodeAnalysis.SyntaxToken?
 Microsoft.CodeAnalysis.SyntaxToken.GetFirstTokenOnLine(bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false) -> Microsoft.CodeAnalysis.SyntaxToken?

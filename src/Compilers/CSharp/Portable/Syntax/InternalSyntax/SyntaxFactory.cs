@@ -389,9 +389,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         public static BlockSyntax FakeBlock(
             ContextAwareSyntax syntaxFactory = null,
-            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists = default, 
-            SyntaxToken openBraceToken = null, 
-            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<StatementSyntax> statements = default, 
+            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists = default,
+            SyntaxToken openBraceToken = null,
+            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<StatementSyntax> statements = default,
             SyntaxToken closeBraceToken = null)
         {
             openBraceToken ??= SyntaxFactory.FakeToken(SyntaxKind.OpenBraceToken, "{");
