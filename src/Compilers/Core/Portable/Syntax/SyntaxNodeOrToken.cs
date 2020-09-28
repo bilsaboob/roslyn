@@ -131,6 +131,8 @@ namespace Microsoft.CodeAnalysis
 
         internal int Position => _position;
 
+        public int TokenIndex => _tokenIndex;
+
         /// <summary>
         /// Determines whether this <see cref="SyntaxNodeOrToken"/> is wrapping a token.
         /// </summary>
