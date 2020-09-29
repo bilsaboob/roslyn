@@ -3738,7 +3738,7 @@ parse_member_name:;
                     finally
                     {
                         // restore the parse state if didn't parse the accessor list
-                        if(!parsedAccessorList) Reset(ref resetPoint);
+                        if (!parsedAccessorList) Reset(ref resetPoint);
                         Release(ref resetPoint);
                     }
                 }
