@@ -117,7 +117,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
         }
 
-        private TypeSyntax GetTypeSyntax(SyntaxNode syntax) => ((BasePropertyDeclarationSyntax)syntax).Type;
+        private TypeSyntax GetTypeSyntax(SyntaxNode syntax) => (syntax as BasePropertyDeclarationSyntax)?.Type;
 
         protected override Location TypeLocation
             => GetTypeSyntax(CSharpSyntaxNode).Location;
@@ -375,11 +375,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             refKind = RefKind.None;
 
             var propDeclSyntax = syntax as PropertyDeclarationSyntax ?? CSharpSyntaxNode as PropertyDeclarationSyntax;
-            if (propDeclSyntax == null) return default;
+            var indexerDeclSyntax = syntax as IndexerDeclarationSyntax ?? CSharpSyntaxNode as IndexerDeclarationSyntax;
+            if (propDeclSyntax == null && indexerDeclSyntax == null) return default;
 
             binder ??= CreateBinderForTypeAndParameters();
 
-            var typeSyntax = GetTypeSyntax(propDeclSyntax).SkipRef(out refKind);
+            var typeSyntax = GetTypeSyntax(propDeclSyntax as SyntaxNode ?? indexerDeclSyntax as SyntaxNode).SkipRef(out refKind);
             var type = binder.BindType(typeSyntax, diagnostics);
 
             return type;
@@ -394,14 +395,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         protected override TypeWithAnnotations ComputeType(Binder? binder, SyntaxNode syntax, DiagnosticBag diagnostics)
         {
-            if (_lazyType != null) return _lazyType.Value;
+            if (_lazyType != null && !(_lazyType.Value.Type is null)) return _lazyType.Value;
 
             var propDeclSyntax = syntax as PropertyDeclarationSyntax ?? CSharpSyntaxNode as PropertyDeclarationSyntax;
-            if (propDeclSyntax == null) return default;
+            var indexerDeclSyntax = syntax as IndexerDeclarationSyntax ?? CSharpSyntaxNode as IndexerDeclarationSyntax;
+            if (propDeclSyntax == null && indexerDeclSyntax == null) return default;
+
+            syntax = propDeclSyntax as SyntaxNode ?? indexerDeclSyntax as SyntaxNode;
 
             TypeWithAnnotations type = default;
             var refKind = RefKind.None;
-            if (propDeclSyntax.HasExplicitReturnType())
+            if (propDeclSyntax?.HasExplicitReturnType() == true || indexerDeclSyntax?.HasExplicitReturnType() == true)
             {
                 // try returning the bound explicit type
                 type = GetExplicitReturnTypeWithAnnotations(binder, syntax, diagnostics, out refKind);

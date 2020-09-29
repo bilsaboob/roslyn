@@ -5306,7 +5306,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>Creates a new MethodDeclarationSyntax instance.</summary>
         public static MethodDeclarationSyntax MethodDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier, SyntaxToken identifier, TypeParameterListSyntax? typeParameterList, ParameterListSyntax parameterList, TypeSyntax returnType, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, BlockSyntax? body, ArrowExpressionClauseSyntax? expressionBody, SyntaxToken semicolonToken)
         {
-            if (identifier.Kind() != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
+            switch (identifier.Kind())
+            {
+                case SyntaxKind.IdentifierToken:
+                case SyntaxKind.ThisKeyword: break;
+                default: throw new ArgumentException(nameof(identifier));
+            }
             if (parameterList == null) throw new ArgumentNullException(nameof(parameterList));
             if (returnType == null) throw new ArgumentNullException(nameof(returnType));
             switch (semicolonToken.Kind())
@@ -5325,10 +5330,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>Creates a new MethodDeclarationSyntax instance.</summary>
         public static MethodDeclarationSyntax MethodDeclaration(SyntaxToken identifier, TypeSyntax returnType)
             => SyntaxFactory.MethodDeclaration(default, default(SyntaxTokenList), default, identifier, default, SyntaxFactory.ParameterList(), returnType, default, default, default, default);
-
-        /// <summary>Creates a new MethodDeclarationSyntax instance.</summary>
-        public static MethodDeclarationSyntax MethodDeclaration(string identifier, TypeSyntax returnType)
-            => SyntaxFactory.MethodDeclaration(default, default(SyntaxTokenList), default, SyntaxFactory.Identifier(identifier), default, SyntaxFactory.ParameterList(), returnType, default, default, default, default);
 
         /// <summary>Creates a new OperatorDeclarationSyntax instance.</summary>
         public static OperatorDeclarationSyntax OperatorDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, TypeSyntax returnType, SyntaxToken operatorKeyword, SyntaxToken operatorToken, ParameterListSyntax parameterList, BlockSyntax? body, ArrowExpressionClauseSyntax? expressionBody, SyntaxToken semicolonToken)
@@ -5412,7 +5413,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>Creates a new ConstructorDeclarationSyntax instance.</summary>
         public static ConstructorDeclarationSyntax ConstructorDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken identifier, ParameterListSyntax parameterList, ConstructorInitializerSyntax? initializer, BlockSyntax? body, ArrowExpressionClauseSyntax? expressionBody, SyntaxToken semicolonToken)
         {
-            if (identifier.Kind() != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
+            switch (identifier.Kind())
+            {
+                case SyntaxKind.IdentifierToken:
+                case SyntaxKind.ThisKeyword: break;
+                default: throw new ArgumentException(nameof(identifier));
+            }
             if (parameterList == null) throw new ArgumentNullException(nameof(parameterList));
             switch (semicolonToken.Kind())
             {
@@ -5430,10 +5436,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>Creates a new ConstructorDeclarationSyntax instance.</summary>
         public static ConstructorDeclarationSyntax ConstructorDeclaration(SyntaxToken identifier)
             => SyntaxFactory.ConstructorDeclaration(default, default(SyntaxTokenList), identifier, SyntaxFactory.ParameterList(), default, default, default, default);
-
-        /// <summary>Creates a new ConstructorDeclarationSyntax instance.</summary>
-        public static ConstructorDeclarationSyntax ConstructorDeclaration(string identifier)
-            => SyntaxFactory.ConstructorDeclaration(default, default(SyntaxTokenList), SyntaxFactory.Identifier(identifier), SyntaxFactory.ParameterList(), default, default, default, default);
 
         /// <summary>Creates a new ConstructorInitializerSyntax instance.</summary>
         public static ConstructorInitializerSyntax ConstructorInitializer(SyntaxKind kind, SyntaxToken colonToken, SyntaxToken thisOrBaseKeyword, ArgumentListSyntax argumentList)

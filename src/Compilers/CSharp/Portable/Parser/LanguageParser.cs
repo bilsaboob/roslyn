@@ -2265,7 +2265,7 @@ tryAgain:
                 MemberDeclarationSyntax result;
 
                 // Check for constructor form
-                if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken && this.PeekToken(1).Kind == SyntaxKind.OpenParenToken)
+                if ((CurrentKind == SyntaxKind.IdentifierToken || CurrentKind == SyntaxKind.ThisKeyword) && this.PeekToken(1).Kind == SyntaxKind.OpenParenToken)
                 {
                     // Script: 
                     // Constructor definitions are not allowed. We parse them as method calls with semicolon missing error:
@@ -2466,6 +2466,12 @@ parse_member_name:;
 
                     // check availability of readonly members feature for indexers, properties and methods
                     CheckForVersionSpecificModifiers(modifiers, SyntaxKind.ReadOnlyKeyword, MessageID.IDS_FeatureReadOnlyMembers);
+
+                    // check for "this()" constructor form
+                    if (CurrentKind == SyntaxKind.ThisKeyword && this.PeekToken(1).Kind == SyntaxKind.OpenParenToken && typeParameterListOpt == null)
+                    {
+                        return ParseConstructorDeclaration(attributes, modifiers);
+                    }
 
                     if (TryParseIndexerOrPropertyDeclaration(attributes, modifiers, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt, out result))
                     {
@@ -2822,9 +2828,9 @@ parse_member_name:;
                 this.ParseModifiers(modifiers, forAccessors: false);
 
                 // Check for constructor form
-                if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken && this.PeekToken(1).Kind == SyntaxKind.OpenParenToken)
+                if ((CurrentKind == SyntaxKind.IdentifierToken || CurrentKind == SyntaxKind.ThisKeyword) && this.PeekToken(1).Kind == SyntaxKind.OpenParenToken)
                 {
-                    if (parentName == null || parentName.Text == this.CurrentToken.Text)
+                    if (parentName == null || parentName.Text == this.CurrentToken.Text || CurrentKind == SyntaxKind.ThisKeyword)
                     {
                         return this.ParseConstructorDeclaration(attributes, modifiers);
                     }
@@ -3078,7 +3084,7 @@ parse_member_name:;
         private ConstructorDeclarationSyntax ParseConstructorDeclaration(
             SyntaxList<AttributeListSyntax> attributes, SyntaxListBuilder modifiers)
         {
-            var name = this.ParseIdentifierToken();
+            SyntaxToken name = TryEatToken(SyntaxKind.ThisKeyword) ?? this.ParseIdentifierToken();
             var saveTerm = _termState;
             _termState |= TerminatorState.IsEndOfMethodSignature;
             try
@@ -3732,7 +3738,7 @@ parse_member_name:;
                     finally
                     {
                         // restore the parse state if didn't parse the accessor list
-                        if(!parsedAccessorList) Reset(ref resetPoint);
+                        if (!parsedAccessorList) Reset(ref resetPoint);
                         Release(ref resetPoint);
                     }
                 }

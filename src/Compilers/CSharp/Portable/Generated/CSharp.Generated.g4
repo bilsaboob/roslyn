@@ -151,7 +151,7 @@ base_method_declaration
   ;
 
 constructor_declaration
-  : attribute_list* modifier* identifier_token parameter_list constructor_initializer? (block | (arrow_expression_clause ';'))
+  : attribute_list* modifier* (identifier_token | 'this') parameter_list constructor_initializer? (block | (arrow_expression_clause ';'))
   ;
 
 parameter_list
@@ -191,7 +191,7 @@ destructor_declaration
   ;
 
 method_declaration
-  : attribute_list* modifier* explicit_interface_specifier? identifier_token type_parameter_list? parameter_list type type_parameter_constraint_clause* (block | (arrow_expression_clause ';'))
+  : attribute_list* modifier* explicit_interface_specifier? (identifier_token | 'this') type_parameter_list? parameter_list type type_parameter_constraint_clause* (block | (arrow_expression_clause ';'))
   ;
 
 explicit_interface_specifier

@@ -37682,7 +37682,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
 #if DEBUG
             if (identifier == null) throw new ArgumentNullException(nameof(identifier));
-            if (identifier.Kind != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
+            switch (identifier.Kind)
+            {
+                case SyntaxKind.IdentifierToken:
+                case SyntaxKind.ThisKeyword: break;
+                default: throw new ArgumentException(nameof(identifier));
+            }
             if (parameterList == null) throw new ArgumentNullException(nameof(parameterList));
             if (returnType == null) throw new ArgumentNullException(nameof(returnType));
             if (semicolonToken != null)
@@ -37780,7 +37785,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
 #if DEBUG
             if (identifier == null) throw new ArgumentNullException(nameof(identifier));
-            if (identifier.Kind != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
+            switch (identifier.Kind)
+            {
+                case SyntaxKind.IdentifierToken:
+                case SyntaxKind.ThisKeyword: break;
+                default: throw new ArgumentException(nameof(identifier));
+            }
             if (parameterList == null) throw new ArgumentNullException(nameof(parameterList));
             if (semicolonToken != null)
             {
@@ -42573,7 +42583,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
 #if DEBUG
             if (identifier == null) throw new ArgumentNullException(nameof(identifier));
-            if (identifier.Kind != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
+            switch (identifier.Kind)
+            {
+                case SyntaxKind.IdentifierToken:
+                case SyntaxKind.ThisKeyword: break;
+                default: throw new ArgumentException(nameof(identifier));
+            }
             if (parameterList == null) throw new ArgumentNullException(nameof(parameterList));
             if (returnType == null) throw new ArgumentNullException(nameof(returnType));
             if (semicolonToken != null)
@@ -42671,7 +42686,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
 #if DEBUG
             if (identifier == null) throw new ArgumentNullException(nameof(identifier));
-            if (identifier.Kind != SyntaxKind.IdentifierToken) throw new ArgumentException(nameof(identifier));
+            switch (identifier.Kind)
+            {
+                case SyntaxKind.IdentifierToken:
+                case SyntaxKind.ThisKeyword: break;
+                default: throw new ArgumentException(nameof(identifier));
+            }
             if (parameterList == null) throw new ArgumentNullException(nameof(parameterList));
             if (semicolonToken != null)
             {

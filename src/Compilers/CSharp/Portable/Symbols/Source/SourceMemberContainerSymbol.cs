@@ -1679,10 +1679,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // If method1 is a constructor only because its return type is missing, then
             // we've already produced a diagnostic for the missing return type and we suppress the
             // diagnostic about duplicate signature.
-            if (method1.MethodKind == MethodKind.Constructor &&
-                ((ConstructorDeclarationSyntax)method1.SyntaxRef.GetSyntax()).Identifier.ValueText != this.Name)
+            if (method1.MethodKind == MethodKind.Constructor)
             {
-                return;
+                var identifier = ((ConstructorDeclarationSyntax)method1.SyntaxRef.GetSyntax()).Identifier;
+                if (identifier.ValueText != this.Name && !identifier.IsKind(SyntaxKind.ThisKeyword))
+                    return;
             }
 
             Debug.Assert(method1.ParameterCount == method2.ParameterCount);

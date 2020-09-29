@@ -37,7 +37,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var declarationModifiers = this.MakeModifiers(syntax.Modifiers, methodKind, hasBody, location, diagnostics, out modifierErrors);
             this.MakeFlags(methodKind, declarationModifiers, returnsVoid: true, isExtensionMethod: false);
 
-            if (syntax.Identifier.ValueText != containingType.Name)
+            if (syntax.Identifier.ValueText != containingType.Name && !syntax.Identifier.IsKind(SyntaxKind.ThisKeyword))
             {
                 // This is probably a method declaration with the type missing.
                 diagnostics.Add(ErrorCode.ERR_MemberNeedsType, location);
