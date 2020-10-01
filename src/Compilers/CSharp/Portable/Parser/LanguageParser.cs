@@ -10182,13 +10182,17 @@ tryAgain:
             SyntaxToken closeParen = null;
             if (hasOpenParen)
             {
-                if (this.CurrentToken.Kind != SyntaxKind.CloseParenToken)
+                if (this.CurrentToken.Kind == SyntaxKind.CloseParenToken)
                 {
                     closeParen = this.EatToken(SyntaxKind.CloseParenToken);
                 }
                 else if (this.CurrentToken.Kind != SyntaxKind.OpenBraceToken && !IsCurrentTokenOnNewline)
                 {
                     closeParen = this.EatTokenAsKind(SyntaxKind.CloseParenToken);
+                }
+                else
+                {
+                    closeParen = this.EatToken(SyntaxKind.CloseParenToken);
                 }
             }
             else if (this.CurrentToken.Kind == SyntaxKind.CloseParenToken)
@@ -10471,18 +10475,197 @@ tryAgain:
             return _syntaxFactory.GotoStatement(kind, attributes, @goto, caseOrDefault, arg, semicolon);
         }
 
-        private IfStatementSyntax ParseIfStatement(SyntaxList<AttributeListSyntax> attributes)
+        #region if / else
+        private bool IsInIfStatement { get; set; }
+
+        private IfStatementSyntax ParseIfStatement(SyntaxList<AttributeListSyntax> attributes = default)
         {
             Debug.Assert(this.CurrentToken.Kind == SyntaxKind.IfKeyword);
 
+            SyntaxToken ifKeyword;
+            SyntaxToken openParen = null;
+            SyntaxToken closeParen = null;
+            ExpressionSyntax expression = null;
+            StatementSyntax ifStatement = null;
+            ElseClauseSyntax elseClause = null;
+
+            // must have the if keyword
+            ifKeyword = this.EatToken(SyntaxKind.IfKeyword);
+
+            // following should be the "expression", which could be parenthesized
+            //   however - we also would like to allow "declarations" like:
+            //     if value := GetValue() != null {}
+            //   so we need to do some lookaheads to identify these cases:
+            //     < identifier > followed by < , > means it's probably a tuple like assignment declaration
+            //     < identifier > followed by < := > means it's sure a declaration
+
+            // check for parens - it's optional
+            var hasOpenParen = true;
+            if (CurrentKind == SyntaxKind.OpenParenToken)
+            {
+                openParen = EatToken(SyntaxKind.OpenParenToken);
+            }
+            else
+            {
+                openParen = SyntaxFactory.FakeToken(SyntaxKind.OpenParenToken);
+                hasOpenParen = false;
+            }
+
+            // check for any bad tokens
+            var badTokens = SkipBadTokensUntil(() =>
+                CurrentKind == SyntaxKind.OpenBraceToken ||
+                CurrentKind == SyntaxKind.CloseParenToken ||
+                CurrentKind == SyntaxKind.EqualsGreaterThanToken ||
+                CurrentKind == SyntaxKind.ElseKeyword ||
+                CurrentKind == SyntaxKind.IdentifierToken ||
+                IsProbablyStatementEnd() ||
+                IsPossibleExpression(),
+                ErrorCode.ERR_UnexpectedToken
+            );
+            if (openParen != null) openParen = AddTrailingSkippedSyntax(openParen, badTokens);
+            else if (ifKeyword != null) ifKeyword = AddTrailingSkippedSyntax(ifKeyword, badTokens);
+
+            // check for the expression - lookahea for the "," and ":=" if following an identifier
+            expression = ParseExpressionCoreWithOptions(simpleExpr: true, allowTrailingLambda: false);
+
+            // check for any bad tokens
+            badTokens = SkipBadTokensUntil(() =>
+                CurrentKind == SyntaxKind.OpenBraceToken ||
+                CurrentKind == SyntaxKind.CloseParenToken ||
+                CurrentKind == SyntaxKind.EqualsGreaterThanToken ||
+                CurrentKind == SyntaxKind.ElseKeyword ||
+                IsProbablyStatementEnd(),
+                ErrorCode.ERR_UnexpectedToken
+            );
+            if (expression != null) expression = AddTrailingSkippedSyntax(expression, badTokens);
+            else if (openParen != null) openParen = AddTrailingSkippedSyntax(openParen, badTokens);
+            else if (ifKeyword != null) ifKeyword = AddTrailingSkippedSyntax(ifKeyword, badTokens);
+
+            // check for the closing parenthesis
+            if (hasOpenParen)
+            {
+                if (this.CurrentToken.Kind == SyntaxKind.CloseParenToken)
+                {
+                    closeParen = this.EatToken(SyntaxKind.CloseParenToken);
+                }
+                else if (this.CurrentToken.Kind != SyntaxKind.OpenBraceToken && !IsCurrentTokenOnNewline)
+                {
+                    closeParen = this.EatTokenAsKind(SyntaxKind.CloseParenToken);
+                }
+                else
+                {
+                    closeParen = this.EatToken(SyntaxKind.CloseParenToken);
+                }
+            }
+            else if (this.CurrentToken.Kind == SyntaxKind.CloseParenToken)
+            {
+                closeParen = this.AddError(this.EatToken(SyntaxKind.CloseParenToken), ErrorCode.ERR_UnexpectedToken);
+            }
+
+            // check for any bad tokens
+            badTokens = SkipBadTokensUntil(() =>
+                CurrentKind == SyntaxKind.OpenBraceToken ||
+                CurrentKind == SyntaxKind.EqualsGreaterThanToken ||
+                CurrentKind == SyntaxKind.ElseKeyword ||
+                IsProbablyStatementEnd() ||
+                (hasOpenParen && IsPossibleExpression()),
+                ErrorCode.ERR_UnexpectedToken
+            );
+            if (closeParen != null) closeParen = AddTrailingSkippedSyntax(closeParen, badTokens);
+            else if (expression != null) expression = AddTrailingSkippedSyntax(expression, badTokens);
+            else if (openParen != null) openParen = AddTrailingSkippedSyntax(openParen, badTokens);
+            else if (ifKeyword != null) ifKeyword = AddTrailingSkippedSyntax(ifKeyword, badTokens);
+
+            // following should be the statement of the "if case"
+            //   < { >  block indicator that it's the statement
+            //   < => > lambda like indication that it's the statement
+            //   newline + indentation, is also indicator that it's the statement
+            //   same line, we can try to parse
+
+            // parse the =>, {...} block
+            if (CurrentKind == SyntaxKind.EqualsGreaterThanToken)
+            {
+                var wasInIfStatement = IsInIfStatement;
+                IsInIfStatement = true;
+                try
+                {
+                    ifStatement = ParseArrowExprStatementBlock(simpleExpr: true);
+                }
+                finally
+                {
+                    IsInIfStatement = wasInIfStatement;
+                }
+            }
+            else if (CurrentKind == SyntaxKind.OpenBraceToken)
+            {
+                ifStatement = ParsePossiblyAttributedBlock();
+            }
+            else if (CurrentKind == SyntaxKind.CloseBraceToken)
+            {
+                // we have probably reached the end of a block
+                ifStatement = AddError(SyntaxFactory.EmptyStatement(), ErrorCode.ERR_BadEmbeddedStmt);
+            }
+            else if (CurrentKind != SyntaxKind.ElseKeyword)
+            {
+                if (IsCurrentTokenOnNewline)
+                {
+                    if (IsCurrentLineIndentedRelativeTo(ifKeyword))
+                    {
+                        // OK - the newline is indented relative to the "if()" part
+                        ifStatement = ParseExpressionStatement(semicolonRequired: false);
+                    }
+                    else
+                    {
+                        // following the if expression must be indented on newline - don't parse as a statement... let it be a new "statement"
+                        ifStatement = AddError(SyntaxFactory.EmptyStatement(), ErrorCode.ERR_BadEmbeddedStmt);
+                    }
+                }
+                else
+                {
+                    // we have an "if()" with explicit open parentheis - we can parse a simple expression statement
+                    var wasInIfStatement = IsInIfStatement;
+                    IsInIfStatement = true;
+                    try
+                    {
+                        // since we aren't on newline, only "simple statement" is allowed
+                        ifStatement = ParseExpressionStatement(semicolonRequired: false, simpleExpr: true);
+                    }
+                    finally
+                    {
+                        IsInIfStatement = wasInIfStatement;
+                    }
+                }
+            }
+            else
+            {
+                ifStatement = AddError(SyntaxFactory.EmptyStatement(), ErrorCode.ERR_BadEmbeddedStmt);
+            }
+
+            // check for any bad tokens
+            badTokens = SkipBadTokensUntil(() =>
+                CurrentKind == SyntaxKind.ElseKeyword ||
+                IsProbablyStatementEnd(),
+                ErrorCode.ERR_UnexpectedToken
+            );
+            if (ifStatement != null) ifStatement = AddTrailingSkippedSyntax(ifStatement, badTokens);
+            else if (closeParen != null) closeParen = AddTrailingSkippedSyntax(closeParen, badTokens);
+            else if (expression != null) expression = AddTrailingSkippedSyntax(expression, badTokens);
+            else if (openParen != null) openParen = AddTrailingSkippedSyntax(openParen, badTokens);
+            else if (ifKeyword != null) ifKeyword = AddTrailingSkippedSyntax(ifKeyword, badTokens);
+
+            // following should be the "else case"
+
+            elseClause = ParseElseClauseOpt();
+
             return _syntaxFactory.IfStatement(
                 attributes,
-                this.EatToken(SyntaxKind.IfKeyword),
-                this.EatToken(SyntaxKind.OpenParenToken),
-                this.ParseExpressionCore(),
-                this.EatToken(SyntaxKind.CloseParenToken),
-                this.ParseEmbeddedStatement(),
-                this.ParseElseClauseOpt());
+                ifKeyword,
+                openParen,
+                expression,
+                closeParen,
+                ifStatement,
+                elseClause
+            );
         }
 
         private IfStatementSyntax ParseMisplacedElse(SyntaxList<AttributeListSyntax> attributes)
@@ -10507,9 +10690,54 @@ tryAgain:
             }
 
             var elseToken = this.EatToken(SyntaxKind.ElseKeyword);
-            var elseStatement = this.ParseEmbeddedStatement();
-            return _syntaxFactory.ElseClause(elseToken, elseStatement);
+            StatementSyntax statement = null;
+
+            // parse the =>, {...} block
+            if (CurrentKind == SyntaxKind.EqualsGreaterThanToken)
+            {
+                // try parsing an arrow expression
+                statement = ParseArrowExprStatementBlock(simpleExpr: true);
+            }
+            else if (CurrentKind == SyntaxKind.OpenBraceToken)
+            {
+                // should be the else block
+                statement = ParsePossiblyAttributedBlock();
+            }
+            else if (CurrentKind == SyntaxKind.IfKeyword)
+            {
+                // should be another if statement
+                statement = ParseIfStatement();
+            }
+            else if (CurrentKind == SyntaxKind.CloseBraceToken)
+            {
+                // we have probably reached the end of a block
+                statement = AddError(SyntaxFactory.EmptyStatement(), ErrorCode.ERR_BadEmbeddedStmt);
+            }
+            else
+            {
+                if (IsCurrentTokenOnNewline)
+                {
+                    if (IsCurrentLineIndentedRelativeTo(elseToken))
+                    {
+                        // OK - the newline is indented relative to the "else" part
+                        statement = ParseExpressionStatement(semicolonRequired: false);
+                    }
+                    else
+                    {
+                        // following the if expression must be indented on newline - don't parse as a statement... let it be a new "statement"
+                        statement = AddError(SyntaxFactory.EmptyStatement(), ErrorCode.ERR_BadEmbeddedStmt);
+                    }
+                }
+                else
+                {
+                    // since we aren't on newline, only "simple statement" is allowed
+                    statement = ParseExpressionStatement(semicolonRequired: false, simpleExpr: true);
+                }
+            }
+
+            return _syntaxFactory.ElseClause(elseToken, statement);
         }
+        #endregion
 
         private LockStatementSyntax ParseLockStatement(SyntaxList<AttributeListSyntax> attributes)
         {
@@ -11325,9 +11553,18 @@ tryAgain:
                 semicolon);
         }
 
-        private ExpressionStatementSyntax ParseExpressionStatement(SyntaxList<AttributeListSyntax> attributes, bool semicolonRequired = true)
+        private ExpressionStatementSyntax ParseExpressionStatement(SyntaxList<AttributeListSyntax> attributes = default, bool semicolonRequired = true, bool simpleExpr = false)
         {
-            return ParseExpressionStatement(attributes, this.ParseExpressionCore(), semicolonRequired);
+            var wasSimpleExpression = IsSimpleExpression;
+            IsSimpleExpression = simpleExpr;
+            try
+            {
+                return ParseExpressionStatement(attributes, this.ParseExpressionCore(), semicolonRequired);
+            }
+            finally
+            {
+                IsSimpleExpression = wasSimpleExpression;
+            }
         }
 
         private ExpressionStatementSyntax ParseExpressionStatement(SyntaxList<AttributeListSyntax> attributes, ExpressionSyntax expression, bool semicolonRequired = true)
@@ -11359,7 +11596,7 @@ tryAgain:
                     semicolon = SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";");
 
                     // if there are more tokens on the same line, it can't be a statement! - unless the token is a token that closes a "block"
-                    if (!IsCurrentTokenOnNewline && CurrentToken.Kind != SyntaxKind.CloseBraceToken)
+                    if (!IsCurrentTokenOnNewline && CurrentToken.Kind != SyntaxKind.CloseBraceToken && !(IsInIfStatement && CurrentKind == SyntaxKind.ElseKeyword))
                     {
                         // the expression we parsed is a bad expression...
                         var stat = _syntaxFactory.ExpressionStatement(attributes, expression, semicolon);
@@ -11373,9 +11610,26 @@ tryAgain:
 
         public ExpressionSyntax ParseExpression()
         {
-            return ParseWithStackGuard(
-                this.ParseExpressionCore,
-                this.CreateMissingIdentifierName);
+            return ParseWithStackGuard(ParseExpressionCore, CreateMissingIdentifierName);
+        }
+
+        private ExpressionSyntax ParseExpressionCoreWithOptions(bool? simpleExpr = null, bool? allowTrailingLambda = null)
+        {
+            var wasSimpleExpression = IsSimpleExpression;
+            var wasTrailingLambdaAllowed = IsTrailingLambdaAllowed;
+
+            if (simpleExpr != null) IsSimpleExpression = simpleExpr.Value;
+            if (allowTrailingLambda != null) IsTrailingLambdaAllowed = allowTrailingLambda.Value;
+
+            try
+            {
+                return this.ParseSubExpression(Precedence.Expression);
+            }
+            finally
+            {
+                IsSimpleExpression = wasSimpleExpression;
+                IsTrailingLambdaAllowed = wasTrailingLambdaAllowed;
+            }
         }
 
         private ExpressionSyntax ParseExpressionCore()
