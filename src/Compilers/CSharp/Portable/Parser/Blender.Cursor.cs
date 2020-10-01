@@ -78,8 +78,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 if (_leadingTriviaToken != null)
                 {
                     // we are at the leading trivia, so just move to the token next - but, since this is a reused token, clear the trivia from it... we have already returned it as tokens...
-                    var newLeadingTrivia = _currentNodeOrToken.GetLeadingTrivia().Where(t => !t.IsSkippedTokensTrivia);
-                    var actualTokenOrNode = _currentNodeOrToken.WithLeadingTrivia(newLeadingTrivia);
+                    var newLeadingTrivia = _currentNodeOrToken.GetLeadingTriviaExceptSkippedTokens();
+                    var actualTokenOrNode = _currentNodeOrToken.WithLeadingTrivia(newLeadingTrivia, preservePosition: true);
                     return new Cursor(actualTokenOrNode, _indexInParent);
                 }
 
@@ -186,7 +186,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 if (child.IsToken && child.HasLeadingTrivia)
                 {
-                    var skippedTriviaNode = child.GetLeadingTrivia().LastOrDefault(t => t.IsSkippedTokensTrivia);
+                    var skippedTriviaNode = child.GetLeadingTriviaSkippedTokens().LastOrDefault();
                     if (skippedTriviaNode.Width > 0)
                     {
                         var lastTriviaToken = skippedTriviaNode.RequiredUnderlyingNode.GetLastNonZeroWidthTerminal();

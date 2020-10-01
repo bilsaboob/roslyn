@@ -1550,7 +1550,12 @@ namespace Microsoft.CodeAnalysis.CSharp.LanguageServices
                 return false;
             }
 
-            return IsOnHeader(root, position, node, node.CloseParenToken);
+            var lastToken = node.CloseParenToken;
+            if (lastToken.IsMissing || lastToken.Width() == 0) lastToken = node.Condition.GetLastToken();
+            if (lastToken.IsMissing || lastToken.Width() == 0) lastToken = node.OpenParenToken;
+            if (lastToken.IsMissing || lastToken.Width() == 0) lastToken = node.IfKeyword;
+
+            return IsOnHeader(root, position, node, lastToken);
         }
 
         public bool IsOnWhileStatementHeader(SyntaxNode root, int position, out SyntaxNode whileStatement)

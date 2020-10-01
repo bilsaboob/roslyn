@@ -16623,13 +16623,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
     {
         internal readonly GreenNode? attributeLists;
         internal readonly SyntaxToken ifKeyword;
-        internal readonly SyntaxToken openParenToken;
+        internal readonly SyntaxToken? openParenToken;
         internal readonly ExpressionSyntax condition;
-        internal readonly SyntaxToken closeParenToken;
+        internal readonly SyntaxToken? closeParenToken;
         internal readonly StatementSyntax statement;
         internal readonly ElseClauseSyntax? @else;
 
-        internal IfStatementSyntax(SyntaxKind kind, GreenNode? attributeLists, SyntaxToken ifKeyword, SyntaxToken openParenToken, ExpressionSyntax condition, SyntaxToken closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+        internal IfStatementSyntax(SyntaxKind kind, GreenNode? attributeLists, SyntaxToken ifKeyword, SyntaxToken? openParenToken, ExpressionSyntax condition, SyntaxToken? closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
           : base(kind, diagnostics, annotations)
         {
             this.SlotCount = 7;
@@ -16640,12 +16640,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             this.AdjustFlagsAndWidth(ifKeyword);
             this.ifKeyword = ifKeyword;
-            this.AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
+            if (openParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             this.AdjustFlagsAndWidth(condition);
             this.condition = condition;
-            this.AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            if (closeParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
             this.AdjustFlagsAndWidth(statement);
             this.statement = statement;
             if (@else != null)
@@ -16655,7 +16661,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        internal IfStatementSyntax(SyntaxKind kind, GreenNode? attributeLists, SyntaxToken ifKeyword, SyntaxToken openParenToken, ExpressionSyntax condition, SyntaxToken closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else, SyntaxFactoryContext context)
+        internal IfStatementSyntax(SyntaxKind kind, GreenNode? attributeLists, SyntaxToken ifKeyword, SyntaxToken? openParenToken, ExpressionSyntax condition, SyntaxToken? closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else, SyntaxFactoryContext context)
           : base(kind)
         {
             this.SetFactoryContext(context);
@@ -16667,12 +16673,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             this.AdjustFlagsAndWidth(ifKeyword);
             this.ifKeyword = ifKeyword;
-            this.AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
+            if (openParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             this.AdjustFlagsAndWidth(condition);
             this.condition = condition;
-            this.AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            if (closeParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
             this.AdjustFlagsAndWidth(statement);
             this.statement = statement;
             if (@else != null)
@@ -16682,7 +16694,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        internal IfStatementSyntax(SyntaxKind kind, GreenNode? attributeLists, SyntaxToken ifKeyword, SyntaxToken openParenToken, ExpressionSyntax condition, SyntaxToken closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else)
+        internal IfStatementSyntax(SyntaxKind kind, GreenNode? attributeLists, SyntaxToken ifKeyword, SyntaxToken? openParenToken, ExpressionSyntax condition, SyntaxToken? closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else)
           : base(kind)
         {
             this.SlotCount = 7;
@@ -16693,12 +16705,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             this.AdjustFlagsAndWidth(ifKeyword);
             this.ifKeyword = ifKeyword;
-            this.AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
+            if (openParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             this.AdjustFlagsAndWidth(condition);
             this.condition = condition;
-            this.AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            if (closeParenToken != null)
+            {
+                this.AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
             this.AdjustFlagsAndWidth(statement);
             this.statement = statement;
             if (@else != null)
@@ -16716,7 +16734,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         /// <summary>
         /// Gets a SyntaxToken that represents the open parenthesis before the if statement's condition expression.
         /// </summary>
-        public SyntaxToken OpenParenToken => this.openParenToken;
+        public SyntaxToken? OpenParenToken => this.openParenToken;
         /// <summary>
         /// Gets an ExpressionSyntax that represents the condition of the if statement.
         /// </summary>
@@ -16724,7 +16742,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         /// <summary>
         /// Gets a SyntaxToken that represents the close parenthesis after the if statement's condition expression.
         /// </summary>
-        public SyntaxToken CloseParenToken => this.closeParenToken;
+        public SyntaxToken? CloseParenToken => this.closeParenToken;
         /// <summary>
         /// Gets a StatementSyntax the represents the statement to be executed when the condition is true.
         /// </summary>
@@ -16788,15 +16806,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var ifKeyword = (SyntaxToken)reader.ReadValue();
             AdjustFlagsAndWidth(ifKeyword);
             this.ifKeyword = ifKeyword;
-            var openParenToken = (SyntaxToken)reader.ReadValue();
-            AdjustFlagsAndWidth(openParenToken);
-            this.openParenToken = openParenToken;
+            var openParenToken = (SyntaxToken?)reader.ReadValue();
+            if (openParenToken != null)
+            {
+                AdjustFlagsAndWidth(openParenToken);
+                this.openParenToken = openParenToken;
+            }
             var condition = (ExpressionSyntax)reader.ReadValue();
             AdjustFlagsAndWidth(condition);
             this.condition = condition;
-            var closeParenToken = (SyntaxToken)reader.ReadValue();
-            AdjustFlagsAndWidth(closeParenToken);
-            this.closeParenToken = closeParenToken;
+            var closeParenToken = (SyntaxToken?)reader.ReadValue();
+            if (closeParenToken != null)
+            {
+                AdjustFlagsAndWidth(closeParenToken);
+                this.closeParenToken = closeParenToken;
+            }
             var statement = (StatementSyntax)reader.ReadValue();
             AdjustFlagsAndWidth(statement);
             this.statement = statement;
@@ -36741,16 +36765,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new LockStatementSyntax(SyntaxKind.LockStatement, attributeLists.Node, lockKeyword, openParenToken, expression, closeParenToken, statement, this.context);
         }
 
-        public IfStatementSyntax IfStatement(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken ifKeyword, SyntaxToken openParenToken, ExpressionSyntax condition, SyntaxToken closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else)
+        public IfStatementSyntax IfStatement(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken ifKeyword, SyntaxToken? openParenToken, ExpressionSyntax condition, SyntaxToken? closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else)
         {
 #if DEBUG
             if (ifKeyword == null) throw new ArgumentNullException(nameof(ifKeyword));
             if (ifKeyword.Kind != SyntaxKind.IfKeyword) throw new ArgumentException(nameof(ifKeyword));
-            if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
-            if (openParenToken.Kind != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
+            if (openParenToken != null)
+            {
+                switch (openParenToken.Kind)
+                {
+                    case SyntaxKind.OpenParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(openParenToken));
+                }
+            }
             if (condition == null) throw new ArgumentNullException(nameof(condition));
-            if (closeParenToken == null) throw new ArgumentNullException(nameof(closeParenToken));
-            if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
+            if (closeParenToken != null)
+            {
+                switch (closeParenToken.Kind)
+                {
+                    case SyntaxKind.CloseParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(closeParenToken));
+                }
+            }
             if (statement == null) throw new ArgumentNullException(nameof(statement));
 #endif
 
@@ -41642,16 +41680,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new LockStatementSyntax(SyntaxKind.LockStatement, attributeLists.Node, lockKeyword, openParenToken, expression, closeParenToken, statement);
         }
 
-        public static IfStatementSyntax IfStatement(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken ifKeyword, SyntaxToken openParenToken, ExpressionSyntax condition, SyntaxToken closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else)
+        public static IfStatementSyntax IfStatement(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken ifKeyword, SyntaxToken? openParenToken, ExpressionSyntax condition, SyntaxToken? closeParenToken, StatementSyntax statement, ElseClauseSyntax? @else)
         {
 #if DEBUG
             if (ifKeyword == null) throw new ArgumentNullException(nameof(ifKeyword));
             if (ifKeyword.Kind != SyntaxKind.IfKeyword) throw new ArgumentException(nameof(ifKeyword));
-            if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
-            if (openParenToken.Kind != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
+            if (openParenToken != null)
+            {
+                switch (openParenToken.Kind)
+                {
+                    case SyntaxKind.OpenParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(openParenToken));
+                }
+            }
             if (condition == null) throw new ArgumentNullException(nameof(condition));
-            if (closeParenToken == null) throw new ArgumentNullException(nameof(closeParenToken));
-            if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
+            if (closeParenToken != null)
+            {
+                switch (closeParenToken.Kind)
+                {
+                    case SyntaxKind.CloseParenToken:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(closeParenToken));
+                }
+            }
             if (statement == null) throw new ArgumentNullException(nameof(statement));
 #endif
 

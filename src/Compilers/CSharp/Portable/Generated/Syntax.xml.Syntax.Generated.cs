@@ -7145,7 +7145,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         /// <summary>
         /// Gets a SyntaxToken that represents the open parenthesis before the if statement's condition expression.
         /// </summary>
-        public SyntaxToken OpenParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.IfStatementSyntax)this.Green).openParenToken, GetChildPosition(2), GetChildIndex(2));
+        public SyntaxToken OpenParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.IfStatementSyntax)this.Green).openParenToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(2), GetChildIndex(2)) : default;
+            }
+        }
 
         /// <summary>
         /// Gets an ExpressionSyntax that represents the condition of the if statement.
@@ -7155,7 +7162,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         /// <summary>
         /// Gets a SyntaxToken that represents the close parenthesis after the if statement's condition expression.
         /// </summary>
-        public SyntaxToken CloseParenToken => new SyntaxToken(this, ((Syntax.InternalSyntax.IfStatementSyntax)this.Green).closeParenToken, GetChildPosition(4), GetChildIndex(4));
+        public SyntaxToken CloseParenToken
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.IfStatementSyntax)this.Green).closeParenToken;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(4), GetChildIndex(4)) : default;
+            }
+        }
 
         /// <summary>
         /// Gets a StatementSyntax the represents the statement to be executed when the condition is true.

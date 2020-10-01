@@ -352,6 +352,36 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
+        protected bool IsCurrentLineIndentedRelativeTo(SyntaxToken otherToken)
+        {
+            var i = 0;
+
+            // find the closest newline, so we can calculate the "current line indentation level"
+            var currentLineIndent = GetLineIndent(ref i);
+            if (currentLineIndent == null) return false;
+
+            // now find the next closest newline before the other token
+            var otherTokenIndex = FindPrevTokenIndex(otherToken);
+            if (otherTokenIndex == 0) return true;
+
+            var otherTokenLineIndent = GetLineIndent(ref otherTokenIndex);
+            return (currentLineIndent ?? 0) > (otherTokenLineIndent ?? 0);
+        }
+
+        private int FindPrevTokenIndex(SyntaxToken token)
+        {
+            var i = 0;
+
+            while (true)
+            {
+                var t = PeekPrevToken(i);
+                if (t == null || t == token) break;
+                ++i;
+            }
+
+            return i;
+        }
+
         private int? GetLineIndent(ref int i)
         {
             int? indent = null;
