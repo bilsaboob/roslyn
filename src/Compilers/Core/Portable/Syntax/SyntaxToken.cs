@@ -477,12 +477,12 @@ namespace Microsoft.CodeAnalysis
         /// <summary>
         /// Creates a new token from this token with the leading trivia specified..
         /// </summary>
-        public SyntaxToken WithLeadingTrivia(IEnumerable<SyntaxTrivia>? trivia)
+        public SyntaxToken WithLeadingTrivia(IEnumerable<SyntaxTrivia>? trivia, int position = 0, int index = 0)
         {
             var greenList = trivia?.Select(t => t.RequiredUnderlyingNode);
 
             return Node != null
-                ? new SyntaxToken(null, Node.WithLeadingTrivia(Node.CreateList(greenList)), position: 0, index: 0)
+                ? new SyntaxToken(null, Node.WithLeadingTrivia(Node.CreateList(greenList)), position: position, index: index)
                 : default(SyntaxToken);
         }
 

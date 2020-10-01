@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
@@ -346,6 +347,10 @@ namespace Microsoft.CodeAnalysis
         /// </summary>
         public bool HasLeadingTrivia => this.GetLeadingTrivia().Count > 0;
 
+        public bool HasLeadingTriviaSkippedTokens => HasLeadingTrivia && this.GetLeadingTrivia().Any(t => t.IsSkippedTokensTrivia);
+
+        public bool HasLeadingTriviaExceptSkippedTokens => HasLeadingTrivia && this.GetLeadingTrivia().Any(t => !t.IsSkippedTokensTrivia);
+
         /// <summary>
         /// The list of trivia that appear before the underlying node or token in the source code and are attached to a
         /// token that is a descendant of the underlying node or token.
@@ -364,6 +369,10 @@ namespace Microsoft.CodeAnalysis
 
             return default(SyntaxTriviaList);
         }
+
+        public IEnumerable<SyntaxTrivia> GetLeadingTriviaSkippedTokens() => GetLeadingTrivia().Where(t => t.IsSkippedTokensTrivia);
+
+        public IEnumerable<SyntaxTrivia> GetLeadingTriviaExceptSkippedTokens() => GetLeadingTrivia().Where(t => !t.IsSkippedTokensTrivia);
 
         /// <summary>
         /// Determines whether the underlying node or token has any trailing trivia.
@@ -389,11 +398,18 @@ namespace Microsoft.CodeAnalysis
             return default(SyntaxTriviaList);
         }
 
-        public SyntaxNodeOrToken WithLeadingTrivia(IEnumerable<SyntaxTrivia> trivia)
+        public SyntaxNodeOrToken WithLeadingTrivia(IEnumerable<SyntaxTrivia> trivia, bool preservePosition = false)
         {
             if (_token != null)
             {
-                return AsToken().WithLeadingTrivia(trivia);
+                if (preservePosition)
+                {
+                    return AsToken().WithLeadingTrivia(trivia, _position, _tokenIndex);
+                }
+                else
+                {
+                    return AsToken().WithLeadingTrivia(trivia);
+                }
             }
 
             if (_nodeOrParent != null)

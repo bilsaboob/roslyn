@@ -267,6 +267,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     return false;
                 }
 
+                if (nodeOrToken.IsToken && nodeOrToken.HasLeadingTriviaSkippedTokens)
+                {
+                    return false;
+                }
+
                 if (!nodeOrToken.ContainsDirectives)
                 {
                     return true;
