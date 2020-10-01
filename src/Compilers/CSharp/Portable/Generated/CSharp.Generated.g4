@@ -486,7 +486,7 @@ goto_statement
   ;
 
 if_statement
-  : attribute_list* 'if' '(' expression ')' statement else_clause?
+  : attribute_list* 'if' '('? expression ')'? statement else_clause?
   ;
 
 else_clause

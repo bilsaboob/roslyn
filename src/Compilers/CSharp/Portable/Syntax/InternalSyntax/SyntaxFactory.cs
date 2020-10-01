@@ -414,5 +414,23 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 return syntaxFactory.Block(attributeLists, openBraceToken, statements, closeBraceToken);
             return SyntaxFactory.Block(attributeLists, openBraceToken, statements, closeBraceToken);
         }
+
+        public static EmptyStatementSyntax EmptyStatement(SyntaxToken semicolonToken = null)
+        {
+            Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists = default;
+            semicolonToken ??= SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken);
+
+            int hash;
+            var cached = SyntaxNodeCache.TryGetNode((int)SyntaxKind.EmptyStatement, attributeLists.Node, semicolonToken, out hash);
+            if (cached != null) return (EmptyStatementSyntax)cached;
+
+            var result = new EmptyStatementSyntax(SyntaxKind.EmptyStatement, attributeLists.Node, semicolonToken);
+            if (hash >= 0)
+            {
+                SyntaxNodeCache.AddNode(result, hash);
+            }
+
+            return result;
+        }
     }
 }
