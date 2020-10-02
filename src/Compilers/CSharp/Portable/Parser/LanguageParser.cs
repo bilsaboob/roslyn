@@ -12234,8 +12234,16 @@ tryAgain:
                         opToken = CheckFeatureAvailability(opToken, MessageID.IDS_FeatureCoalesceAssignmentExpression);
                     }
 
+                    // convert simple expression into a variable declaration argument
+                    if (leftOperand is IdentifierNameSyntax identName)
+                    {
+                        var designation = _syntaxFactory.SingleVariableDesignation(identName.Identifier);
+                        var declType = SyntaxFactory.FakeTypeIdentifier(_syntaxFactory, isVar: true);
+                        var decl = _syntaxFactory.DeclarationExpression(designation, declType);
+                        leftOperand = _syntaxFactory.AssignmentExpression(opKind, decl, opToken, rhs);
+                    }
                     // convert the tuple expression into a tuple expression with declarations if possible - only for "identifier" expressions
-                    if (leftOperand is TupleExpressionSyntax tupleExpr)
+                    else if (leftOperand is TupleExpressionSyntax tupleExpr)
                     {
                         var invalidDeclaration = false;
                         var arguments = SeparatedSyntaxListBuilder<ArgumentSyntax>.Create();
