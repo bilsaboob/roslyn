@@ -591,9 +591,35 @@ namespace Microsoft.CodeAnalysis.CSharp
             return GetBinaryExpression(token) != SyntaxKind.None;
         }
 
+        public static bool IsBinaryRelationExpression(SyntaxKind token)
+        {
+            return GetBinaryRelationExpression(token) != SyntaxKind.None;
+        }
+
         public static bool IsBinaryExpressionOperatorToken(SyntaxKind token)
         {
             return GetBinaryExpression(token) != SyntaxKind.None;
+        }
+
+        public static SyntaxKind GetBinaryRelationExpression(SyntaxKind token)
+        {
+            switch (token)
+            {
+                case SyntaxKind.GreaterThanEqualsToken:
+                    return SyntaxKind.GreaterThanOrEqualExpression;
+                case SyntaxKind.GreaterThanToken:
+                    return SyntaxKind.GreaterThanExpression;
+                case SyntaxKind.LessThanEqualsToken:
+                    return SyntaxKind.LessThanOrEqualExpression;
+                case SyntaxKind.LessThanToken:
+                    return SyntaxKind.LessThanExpression;
+                case SyntaxKind.EqualsEqualsToken:
+                    return SyntaxKind.EqualsExpression;
+                case SyntaxKind.ExclamationEqualsToken:
+                    return SyntaxKind.NotEqualsExpression;
+                default:
+                    return SyntaxKind.None;
+            }
         }
 
         public static SyntaxKind GetBinaryExpression(SyntaxKind token)
