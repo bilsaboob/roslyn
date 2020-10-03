@@ -7836,6 +7836,49 @@ done:;
         private StatementSyntax ParsePossiblyAttributedStatement()
             => ParseStatementCore(ParseAttributeDeclarations(), isGlobal: false);
 
+        private StatementSyntax ParseStatementCore(
+            SyntaxList<AttributeListSyntax> attributes = default,
+            bool isGlobal = false,
+            bool semicolonRequired = false,
+            bool? isSimpleExpr = null,
+            bool? allowLambdaExpr = null
+            )
+        {
+            var wasSimpleExpression = IsSimpleExpression;
+            var didAllowLambdaExpr = AllowLambdaExpression;
+
+            if (isSimpleExpr.HasValue) IsSimpleExpression = isSimpleExpr.Value;
+            if (allowLambdaExpr.HasValue) AllowLambdaExpression = allowLambdaExpr.Value;
+
+            try
+            {
+                var stat = ParseStatementCore(attributes, isGlobal);
+
+                // always return some statement
+                if (stat == null) return null;
+
+                // check if we should treat missing semicolon as error or not
+                if (!semicolonRequired)
+                {
+                    if (stat is ExpressionStatementSyntax exprStat)
+                    {
+                        if (exprStat.SemicolonToken.IsMissing)
+                        {
+                            // replace the semicolon with a fake token
+                            stat = exprStat.Update(exprStat.AttributeLists, exprStat.Expression, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken));
+                        }
+                    }
+                }
+
+                return stat;
+            }
+            finally
+            {
+                IsSimpleExpression = wasSimpleExpression;
+                AllowLambdaExpression = didAllowLambdaExpr;
+            }
+        }
+
         /// <param name="isGlobal">If we're being called while parsing a C# top-level statements (Script or Simple Program).
         /// At the top level in Script, we allow most statements *except* for local-decls/local-funcs.
         /// Those will instead be parsed out as script-fields/methods.</param>
@@ -10589,7 +10632,7 @@ tryAgain:
                 IsInIfStatement = true;
                 try
                 {
-                    ifStatement = ParseArrowExprStatementBlock(simpleExpr: true);
+                    ifStatement = ParseArrowStatementBlock(isSimpleExpr: false);
                 }
                 finally
                 {
@@ -10612,7 +10655,7 @@ tryAgain:
                     if (IsCurrentLineIndentedRelativeTo(ifKeyword))
                     {
                         // OK - the newline is indented relative to the "if()" part
-                        ifStatement = ParseExpressionStatement(semicolonRequired: false);
+                        ifStatement = ParseSimpleStatement(isSimpleExpr: false);
                     }
                     else
                     {
@@ -10628,7 +10671,7 @@ tryAgain:
                     try
                     {
                         // since we aren't on newline, only "simple statement" is allowed
-                        ifStatement = ParseExpressionStatement(semicolonRequired: false, simpleExpr: true);
+                        ifStatement = ParseSimpleStatement(isSimpleExpr: false);
                     }
                     finally
                     {
@@ -10696,7 +10739,7 @@ tryAgain:
             if (CurrentKind == SyntaxKind.EqualsGreaterThanToken)
             {
                 // try parsing an arrow expression
-                statement = ParseArrowExprStatementBlock(simpleExpr: true);
+                statement = ParseArrowStatementBlock(isSimpleExpr: false);
             }
             else if (CurrentKind == SyntaxKind.OpenBraceToken)
             {
@@ -10720,7 +10763,7 @@ tryAgain:
                     if (IsCurrentLineIndentedRelativeTo(elseToken))
                     {
                         // OK - the newline is indented relative to the "else" part
-                        statement = ParseExpressionStatement(semicolonRequired: false);
+                        statement = ParseSimpleStatement(isSimpleExpr: false);
                     }
                     else
                     {
@@ -10731,7 +10774,7 @@ tryAgain:
                 else
                 {
                     // since we aren't on newline, only "simple statement" is allowed
-                    statement = ParseExpressionStatement(semicolonRequired: false, simpleExpr: true);
+                    statement = ParseSimpleStatement(isSimpleExpr: false);
                 }
             }
 
