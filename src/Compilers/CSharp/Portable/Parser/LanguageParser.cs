@@ -12001,9 +12001,9 @@ tryAgain:
             return SyntaxFacts.IsBinaryExpression(kind);
         }
 
-        private static bool IsBinaryRelationOperator(SyntaxKind kind)
+        private static bool IsBinaryBooleanConditionOperator(SyntaxKind kind)
         {
-            return SyntaxFacts.IsBinaryRelationExpression(kind);
+            return SyntaxFacts.IsBinaryBooleanConditionOperator(kind);
         }
 
         private static bool IsExpectedAssignmentOperator(SyntaxKind kind)
@@ -12252,7 +12252,7 @@ tryAgain:
                     break;
                 }
 
-                if (!IsBinaryRelationExpressionAllowed && IsBinaryRelationOperator(tk))
+                if (!IsBinaryRelationExpressionAllowed && IsBinaryBooleanConditionOperator(tk))
                 {
                     break;
                 }
@@ -12282,7 +12282,7 @@ tryAgain:
 
                     // check for special case where the LHS is an assignment - then followed by a relational operator or i operator
                     var lhsAssignmentComparison = IsSimpleAssignment && leftOperand is AssignmentExpressionSyntax && (
-                        IsBinaryRelationOperator(tk) || tk == SyntaxKind.IsExpression
+                        IsBinaryBooleanConditionOperator(tk) || tk == SyntaxKind.IsExpression
                     );
 
                     if (!lhsAssignmentComparison)
