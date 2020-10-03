@@ -763,7 +763,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return disposeMethod;
         }
 
-        private TypeWithAnnotations BindVariableTypeWithAnnotations(CSharpSyntaxNode declarationNode, DiagnosticBag diagnostics, TypeSyntax typeSyntax, ref bool isConst, out bool isVar, out AliasSymbol alias)
+        private TypeWithAnnotations BindVariableTypeWithAnnotations(CSharpSyntaxNode declarationNode, DiagnosticBag diagnostics, TypeSyntax typeSyntax, ref bool isConst, out bool isVar, out AliasSymbol alias, bool makeVar = false)
         {
             Debug.Assert(
                 declarationNode is VariableDesignationSyntax ||
@@ -789,6 +789,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                 }
             }
+
+            if (makeVar) isVar = true;
 
             Debug.Assert(declType.HasType || isVar);
 
@@ -973,13 +975,39 @@ namespace Microsoft.CodeAnalysis.CSharp
             bool includeBoundType,
             CSharpSyntaxNode associatedSyntaxNode = null)
         {
-            Debug.Assert(declarator != null);
+            return BindVariableDeclaration(
+                localSymbol,
+                kind,
+                isVar,
+                declarator.Initializer,
+                typeSyntax,
+                declTypeOpt,
+                aliasOpt,
+                diagnostics,
+                includeBoundType,
+                associatedSyntaxNode ?? declarator
+            );
+        }
+
+        protected BoundLocalDeclaration BindVariableDeclaration(
+            SourceLocalSymbol localSymbol,
+            LocalDeclarationKind kind,
+            bool isVar,
+            EqualsValueClauseSyntax equalsClauseSyntax,
+            TypeSyntax typeSyntax,
+            TypeWithAnnotations declTypeOpt,
+            AliasSymbol aliasOpt,
+            DiagnosticBag diagnostics,
+            bool includeBoundType,
+            CSharpSyntaxNode associatedSyntaxNode = null,
+            VariableDeclaratorSyntax declarator = null)
+        {
             Debug.Assert(declTypeOpt.HasType || isVar);
             Debug.Assert(typeSyntax != null);
 
             var localDiagnostics = DiagnosticBag.GetInstance();
             // if we are not given desired syntax, we use declarator
-            associatedSyntaxNode = associatedSyntaxNode ?? declarator;
+            associatedSyntaxNode = associatedSyntaxNode ?? declarator as CSharpSyntaxNode ?? equalsClauseSyntax;
 
             // Check for variable declaration errors.
             // Use the binder that owns the scope for the local because this (the current) binder
@@ -992,11 +1020,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 CheckRefLocalInAsyncOrIteratorMethod(localSymbol.IdentifierToken, diagnostics);
             }
 
-            EqualsValueClauseSyntax equalsClauseSyntax = declarator.Initializer;
-
             BindValueKind valueKind;
             ExpressionSyntax value;
-            if (!IsInitializerRefKindValid(equalsClauseSyntax, declarator, localSymbol.RefKind, diagnostics, out valueKind, out value))
+            if (!IsInitializerRefKindValid(equalsClauseSyntax, equalsClauseSyntax, localSymbol.RefKind, diagnostics, out valueKind, out value))
             {
                 hasErrors = true;
             }
@@ -1006,7 +1032,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 aliasOpt = null;
 
-                initializerOpt = BindInferredVariableInitializer(diagnostics, value, valueKind, localSymbol.RefKind, declarator);
+                initializerOpt = BindInferredVariableInitializer(diagnostics, value, valueKind, localSymbol.RefKind, associatedSyntaxNode);
 
                 // If we got a good result then swap the inferred type for the "var"
                 TypeSymbol initializerType = initializerOpt?.Type;
@@ -1016,7 +1042,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     if (declTypeOpt.IsVoidType())
                     {
-                        Error(localDiagnostics, ErrorCode.ERR_ImplicitlyTypedVariableAssignedBadValue, declarator, declTypeOpt.Type);
+                        Error(localDiagnostics, ErrorCode.ERR_ImplicitlyTypedVariableAssignedBadValue, associatedSyntaxNode, declTypeOpt.Type);
                         declTypeOpt = TypeWithAnnotations.Create(CreateErrorType("var"));
                         hasErrors = true;
                     }
@@ -1067,7 +1093,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     if (!hasErrors)
                     {
-                        Error(localDiagnostics, ErrorCode.ERR_ImplicitlyTypedLocalCannotBeFixed, declarator);
+                        Error(localDiagnostics, ErrorCode.ERR_ImplicitlyTypedLocalCannotBeFixed, associatedSyntaxNode);
                         hasErrors = true;
                     }
                 }
@@ -1076,7 +1102,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     if (!hasErrors)
                     {
-                        Error(localDiagnostics, declTypeOpt.Type.IsFunctionPointer() ? ErrorCode.ERR_CannotUseFunctionPointerAsFixedLocal : ErrorCode.ERR_BadFixedInitType, declarator);
+                        Error(localDiagnostics, declTypeOpt.Type.IsFunctionPointer() ? ErrorCode.ERR_CannotUseFunctionPointerAsFixedLocal : ErrorCode.ERR_BadFixedInitType, associatedSyntaxNode);
                         hasErrors = true;
                     }
                 }
@@ -1105,7 +1131,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
-            ImmutableArray<BoundExpression> arguments = BindDeclaratorArguments(declarator, localDiagnostics);
+
+            ImmutableArray<BoundExpression> arguments = default;
+            if (declarator != null)
+            {
+                arguments = BindDeclaratorArguments(declarator, localDiagnostics);
+            }
 
             if (kind == LocalDeclarationKind.FixedVariable || kind == LocalDeclarationKind.UsingVariable)
             {
@@ -1116,7 +1147,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (initializerOpt == null)
                 {
-                    Error(localDiagnostics, ErrorCode.ERR_FixedMustInit, declarator);
+                    Error(localDiagnostics, ErrorCode.ERR_FixedMustInit, associatedSyntaxNode);
                     hasErrors = true;
                 }
             }
@@ -1396,6 +1427,39 @@ namespace Microsoft.CodeAnalysis.CSharp
                 hasErrors);
         }
 
+        private BoundExpression BindAssignmentLocalDeclaration(AssignmentExpressionSyntax node, DeclarationExpressionSyntax decl, SingleVariableDesignationSyntax designation, DiagnosticBag diagnostics)
+        {
+            var typeSyntax = decl.Type.SkipRef(out _);
+
+            bool isVar;
+            bool isConst = false;
+            AliasSymbol alias;
+            TypeWithAnnotations declType = BindVariableTypeWithAnnotations(decl, diagnostics, typeSyntax, ref isConst, isVar: out isVar, alias: out alias, makeVar: true);
+
+            // prepare the local symbol
+            var kind = isConst ? LocalDeclarationKind.Constant : LocalDeclarationKind.RegularVariable;
+            var equalsClause = SyntaxFactory.EqualsValueClause(node.Right);
+            var symbol = LocateDeclaredVariableSymbol(designation.Identifier, typeSyntax, equalsClause, kind);
+
+            var boundDecl = BindVariableDeclaration(
+                symbol,
+                kind,
+                isVar,
+                equalsClause,
+                typeSyntax,
+                declType,
+                null,
+                diagnostics,
+                includeBoundType: true,
+                associatedSyntaxNode: node
+            );
+
+            var local = boundDecl.LocalSymbol;
+
+            var boundLocal = new BoundLocal(decl, local, null, local.Type, decl.Type.HasErrors || local.Type.IsErrorType());
+            return new BoundAssignmentOperator(node, boundLocal, boundDecl.InitializerOpt, false, local.Type, boundDecl.InitializerOpt?.HasErrors ?? false);
+        }
+
         private BoundExpression BindAssignment(AssignmentExpressionSyntax node, DiagnosticBag diagnostics)
         {
             Debug.Assert(node != null);
@@ -1404,9 +1468,20 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             node.Left.CheckDeconstructionCompatibleArgument(diagnostics);
 
-            if (node.Left.Kind() == SyntaxKind.TupleExpression || node.Left.Kind() == SyntaxKind.DeclarationExpression)
+            if (node.Left.Kind() == SyntaxKind.TupleExpression)
             {
                 return BindDeconstruction(node, diagnostics);
+            }
+            else if (node.Left.Kind() == SyntaxKind.DeclarationExpression)
+            {
+                if (node.Left is DeclarationExpressionSyntax declExpr && declExpr.Designation is SingleVariableDesignationSyntax singleDesign)
+                {
+                    return BindAssignmentLocalDeclaration(node, declExpr, singleDesign, diagnostics);
+                }
+                else
+                {
+                    return BindDeconstruction(node, diagnostics);
+                }
             }
 
             BindValueKind lhsKind;
@@ -2332,9 +2407,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        private bool IsBindingIfStatementCondition { get; set; }
+
         private BoundStatement BindIfStatement(IfStatementSyntax node, DiagnosticBag diagnostics)
         {
-            var condition = BindBooleanExpression(node.Condition, diagnostics);
+            BoundExpression condition = null;
+
+            var wasBindingIfStatementCondition = IsBindingIfStatementCondition;
+            IsBindingIfStatementCondition = true;
+            try
+            {
+                condition = BindBooleanExpression(node.Condition, diagnostics, ignoreImplicitCastError: WillRewriteConditionExpression(node.Condition));
+            }
+            finally
+            {
+                IsBindingIfStatementCondition = wasBindingIfStatementCondition;
+            }
+
             var consequence = BindPossibleEmbeddedStatement(node.Statement, diagnostics);
             BoundStatement alternative = (node.Else == null) ? null : BindPossibleEmbeddedStatement(node.Else.Statement, diagnostics);
 
@@ -2342,7 +2431,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             return result;
         }
 
-        internal BoundExpression BindBooleanExpression(ExpressionSyntax node, DiagnosticBag diagnostics)
+        private bool WillRewriteConditionExpression(ExpressionSyntax expr)
+        {
+            if (expr is AssignmentExpressionSyntax) return true;
+            if (expr is NameSyntax) return true;
+            if (expr is InvocationExpressionSyntax) return true;
+            if (expr is ConditionalAccessExpressionSyntax) return true;
+            if (expr is MemberAccessExpressionSyntax) return true;
+            if (expr is ElementAccessExpressionSyntax) return true;
+            return false;
+        }
+
+        internal BoundExpression BindBooleanExpression(ExpressionSyntax node, DiagnosticBag diagnostics, bool ignoreImplicitCastError = false)
         {
             // SPEC:
             // A boolean-expression is an expression that yields a result of type bool;
@@ -2450,6 +2550,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // No. Give a "not convertible to bool" error.
                 Debug.Assert(resultKind == LookupResultKind.Empty, "How could overload resolution fail if a user-defined true operator was found?");
                 Debug.Assert(originalUserDefinedOperators.IsEmpty, "How could overload resolution fail if a user-defined true operator was found?");
+
+                // we have a special case where we want to rewrite "condition expressions" in "if statements" later in the pipeline - thus we should return a bad convertions for those... but no need to report the error
+                if (ignoreImplicitCastError && !expr.Type.IsNonNullableValueType())
+                {
+                    return BoundConversion.Synthesized(node.WithExpectedRewrite(), expr, Conversion.NoConversion, false, explicitCastInCode: false, conversionGroupOpt: null, ConstantValue.NotAvailable, boolean, allowInvalidConversion: true);
+                }
+
                 GenerateImplicitConversionError(diagnostics, node, conversion, expr, boolean);
                 return BoundConversion.Synthesized(node, expr, Conversion.NoConversion, false, explicitCastInCode: false, conversionGroupOpt: null, ConstantValue.NotAvailable, boolean, hasErrors: true);
             }

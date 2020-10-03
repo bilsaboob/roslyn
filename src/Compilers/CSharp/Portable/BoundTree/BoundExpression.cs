@@ -336,6 +336,23 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
+    public static class BoundConversionSyntaxNodeExtensions
+    {
+        private static readonly SyntaxAnnotation FakeConversionAnnotation = new SyntaxAnnotation("FakeConversion");
+
+        public static TNode WithExpectedRewrite<TNode>(this TNode node)
+            where TNode : SyntaxNode
+        {
+            return node.WithAdditionalAnnotations(FakeConversionAnnotation);
+        }
+
+        public static bool IsExpectedRewrite<TNode>(this TNode node)
+            where TNode : SyntaxNode
+        {
+            return node.HasAnnotation(FakeConversionAnnotation);
+        }
+    }
+
     internal partial class BoundConversion
     {
         public override ConstantValue? ConstantValue

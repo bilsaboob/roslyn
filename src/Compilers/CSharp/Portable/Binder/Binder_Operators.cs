@@ -756,12 +756,30 @@ namespace Microsoft.CodeAnalysis.CSharp
                 binary = childAsBinary;
             }
 
-            BoundExpression left = BindRValueWithoutTargetType(child, diagnostics);
+            BoundExpression left = null;
+            if (IsBindingIfStatementCondition && WillRewriteConditionExpression(child))
+            {
+                left = BindBooleanExpression(child, diagnostics, ignoreImplicitCastError: true);
+            }
+            else
+            {
+                left = BindRValueWithoutTargetType(child, diagnostics);
+            }
 
             do
             {
                 binary = (BinaryExpressionSyntax)child.Parent;
-                BoundExpression right = BindRValueWithoutTargetType(binary.Right, diagnostics);
+
+                BoundExpression right = null;
+                if (IsBindingIfStatementCondition && WillRewriteConditionExpression(binary.Right))
+                {
+                    right = BindBooleanExpression(binary.Right, diagnostics, ignoreImplicitCastError: true);
+                }
+                else
+                {
+                    right = BindRValueWithoutTargetType(binary.Right, diagnostics);
+                }
+
                 left = BindConditionalLogicalOperator(binary, left, right, diagnostics);
                 child = binary;
             }

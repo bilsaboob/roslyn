@@ -591,9 +591,49 @@ namespace Microsoft.CodeAnalysis.CSharp
             return GetBinaryExpression(token) != SyntaxKind.None;
         }
 
+        public static bool IsBinaryBooleanConditionOperator(SyntaxKind token)
+        {
+            return GetBinaryBooleanConditionExpression(token) != SyntaxKind.None;
+        }
+
         public static bool IsBinaryExpressionOperatorToken(SyntaxKind token)
         {
             return GetBinaryExpression(token) != SyntaxKind.None;
+        }
+
+        public static SyntaxKind GetBinaryBooleanConditionExpression(SyntaxKind token)
+        {
+            switch (token)
+            {
+                case SyntaxKind.BarToken:
+                    return SyntaxKind.BitwiseOrExpression;
+                case SyntaxKind.CaretToken:
+                    return SyntaxKind.ExclusiveOrExpression;
+                case SyntaxKind.AmpersandToken:
+                    return SyntaxKind.BitwiseAndExpression;
+                case SyntaxKind.EqualsEqualsToken:
+                    return SyntaxKind.EqualsExpression;
+                case SyntaxKind.ExclamationEqualsToken:
+                    return SyntaxKind.NotEqualsExpression;
+                case SyntaxKind.LessThanToken:
+                    return SyntaxKind.LessThanExpression;
+                case SyntaxKind.LessThanEqualsToken:
+                    return SyntaxKind.LessThanOrEqualExpression;
+                case SyntaxKind.GreaterThanToken:
+                    return SyntaxKind.GreaterThanExpression;
+                case SyntaxKind.GreaterThanEqualsToken:
+                    return SyntaxKind.GreaterThanOrEqualExpression;
+                case SyntaxKind.LessThanLessThanToken:
+                    return SyntaxKind.LeftShiftExpression;
+                case SyntaxKind.GreaterThanGreaterThanToken:
+                    return SyntaxKind.RightShiftExpression;
+                case SyntaxKind.AmpersandAmpersandToken:
+                    return SyntaxKind.LogicalAndExpression;
+                case SyntaxKind.BarBarToken:
+                    return SyntaxKind.LogicalOrExpression;
+                default:
+                    return SyntaxKind.None;
+            }
         }
 
         public static SyntaxKind GetBinaryExpression(SyntaxKind token)

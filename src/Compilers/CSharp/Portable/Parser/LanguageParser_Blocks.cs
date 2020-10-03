@@ -17,6 +17,55 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
     internal partial class LanguageParser
     {
+        #region Blocks - statements
+        private BlockSyntax ParseArrowStatementBlock(SyntaxList<AttributeListSyntax> attributes = default, bool semicolonRequired = false, bool isSimpleExpr = true)
+        {
+            var arrowToken = EatToken(SyntaxKind.EqualsGreaterThanToken);
+
+            var stat = ParseStatementCore(
+                attributes,
+                semicolonRequired: semicolonRequired,
+                isSimpleExpr: isSimpleExpr
+            );
+
+            // skip the arrow, it's not part of the syntax
+            stat = AddLeadingSkippedSyntax(stat, arrowToken);
+
+            var block = SyntaxFactory.FakeBlock(
+                _syntaxFactory,
+                statements: SyntaxFactory.List<StatementSyntax>(stat)
+            );
+
+            return block;
+        }
+
+        private BlockSyntax ParseStatementBlock(SyntaxList<AttributeListSyntax> attributes = default, bool semicolonRequired = false, bool isSimpleExpr = true)
+        {
+            var stat = ParseStatementCore(
+                attributes,
+                semicolonRequired: semicolonRequired,
+                isSimpleExpr: isSimpleExpr,
+                allowLambdaExpr: !isSimpleExpr
+            );
+
+            return SyntaxFactory.FakeBlock(
+                _syntaxFactory,
+                statements: SyntaxFactory.List<StatementSyntax>(stat)
+            );
+        }
+
+        private StatementSyntax ParseSimpleStatement(SyntaxList<AttributeListSyntax> attributes = default, bool semicolonRequired = false, bool isSimpleExpr = true)
+        {
+            return ParseStatementCore(
+                attributes,
+                semicolonRequired: semicolonRequired,
+                isSimpleExpr: isSimpleExpr,
+                allowLambdaExpr: !isSimpleExpr
+            );
+        }
+        #endregion
+
+        #region Blocks - expression statements
         private BlockSyntax ParseArrowExprStatementBlock(SyntaxList<AttributeListSyntax> attributes = default, bool semicolonRequired = false, bool simpleExpr = true)
         {
             var wasSimpleExpression = IsSimpleExpression;
@@ -64,5 +113,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 AllowLambdaExpression = didAllowLambdaExpression;
             }
         }
+        #endregion
     }
 }

@@ -315,7 +315,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 base.InstrumentIfStatement(original, rewritten),
                 TextSpan.FromBounds(
                     syntax.IfKeyword.SpanStart,
-                    syntax.CloseParenToken.Span.End),
+                    syntax.GetLastHeaderToken().Span.End),
                 original.HasErrors);
         }
 

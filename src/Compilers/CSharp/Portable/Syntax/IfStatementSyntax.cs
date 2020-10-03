@@ -10,6 +10,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 {
     public partial class IfStatementSyntax
     {
+        public SyntaxToken GetLastHeaderToken()
+        {
+            var lastToken = CloseParenToken;
+            if (lastToken.IsMissing || lastToken.Width == 0) lastToken = Condition.GetLastToken();
+            if (lastToken.IsMissing || lastToken.Width == 0) lastToken = OpenParenToken;
+            if (lastToken.IsMissing || lastToken.Width == 0) lastToken = IfKeyword;
+            return lastToken;
+        }
+
         public IfStatementSyntax Update(SyntaxToken ifKeyword, SyntaxToken openParenToken, ExpressionSyntax condition, SyntaxToken closeParenToken, StatementSyntax statement, ElseClauseSyntax @else)
             => Update(attributeLists: default, ifKeyword, openParenToken, condition, closeParenToken, statement, @else);
     }

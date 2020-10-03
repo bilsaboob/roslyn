@@ -1,3 +1,4 @@
+Microsoft.CodeAnalysis.CSharp.BoundConversionSyntaxNodeExtensions
 Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.FindToken(int position, bool findInsideTrivia = false, bool findInsideSkippedTrivia = false) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.CSharp.Conversion.IsConditionalExpression.get -> bool
 Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax.AddModifiers(params Microsoft.CodeAnalysis.SyntaxToken[] items) -> Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax
@@ -104,6 +105,8 @@ static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.UsingDirective(Microsoft.Code
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.VariableDeclaration() -> Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclarationSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.VariableDeclaration(Microsoft.CodeAnalysis.SeparatedSyntaxList<Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclaratorSyntax> variables) -> Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclarationSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.VariableDeclarator(Microsoft.CodeAnalysis.SyntaxToken identifier, Microsoft.CodeAnalysis.CSharp.Syntax.TypeSyntax type, Microsoft.CodeAnalysis.CSharp.Syntax.BracketedArgumentListSyntax argumentList, Microsoft.CodeAnalysis.CSharp.Syntax.EqualsValueClauseSyntax initializer) -> Microsoft.CodeAnalysis.CSharp.Syntax.VariableDeclaratorSyntax
+static Microsoft.CodeAnalysis.CSharp.SyntaxFacts.GetBinaryBooleanConditionExpression(Microsoft.CodeAnalysis.CSharp.SyntaxKind token) -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
+static Microsoft.CodeAnalysis.CSharp.SyntaxFacts.IsBinaryBooleanConditionOperator(Microsoft.CodeAnalysis.CSharp.SyntaxKind token) -> bool
 static Microsoft.CodeAnalysis.CSharp.SyntaxFacts.IsMemberModifier(Microsoft.CodeAnalysis.CSharp.SyntaxKind kind) -> bool
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor.VisitDefaultConstraint(Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax node) -> void
 virtual Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor<TResult>.VisitDefaultConstraint(Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax node) -> TResult

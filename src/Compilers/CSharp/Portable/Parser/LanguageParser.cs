@@ -17,6 +17,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 {
     using System.Linq.Expressions;
     using System.Text;
+    using Microsoft.CodeAnalysis.Operations;
     using Microsoft.CodeAnalysis.Syntax.InternalSyntax;
 
     internal partial class LanguageParser : SyntaxParser
@@ -7836,6 +7837,49 @@ done:;
         private StatementSyntax ParsePossiblyAttributedStatement()
             => ParseStatementCore(ParseAttributeDeclarations(), isGlobal: false);
 
+        private StatementSyntax ParseStatementCore(
+            SyntaxList<AttributeListSyntax> attributes = default,
+            bool isGlobal = false,
+            bool semicolonRequired = false,
+            bool? isSimpleExpr = null,
+            bool? allowLambdaExpr = null
+            )
+        {
+            var wasSimpleExpression = IsSimpleExpression;
+            var didAllowLambdaExpr = AllowLambdaExpression;
+
+            if (isSimpleExpr.HasValue) IsSimpleExpression = isSimpleExpr.Value;
+            if (allowLambdaExpr.HasValue) AllowLambdaExpression = allowLambdaExpr.Value;
+
+            try
+            {
+                var stat = ParseStatementCore(attributes, isGlobal);
+
+                // always return some statement
+                if (stat == null) return null;
+
+                // check if we should treat missing semicolon as error or not
+                if (!semicolonRequired)
+                {
+                    if (stat is ExpressionStatementSyntax exprStat)
+                    {
+                        if (exprStat.SemicolonToken.IsMissing)
+                        {
+                            // replace the semicolon with a fake token
+                            stat = exprStat.Update(exprStat.AttributeLists, exprStat.Expression, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken));
+                        }
+                    }
+                }
+
+                return stat;
+            }
+            finally
+            {
+                IsSimpleExpression = wasSimpleExpression;
+                AllowLambdaExpression = didAllowLambdaExpr;
+            }
+        }
+
         /// <param name="isGlobal">If we're being called while parsing a C# top-level statements (Script or Simple Program).
         /// At the top level in Script, we allow most statements *except* for local-decls/local-funcs.
         /// Those will instead be parsed out as script-fields/methods.</param>
@@ -10525,8 +10569,20 @@ tryAgain:
             if (openParen != null) openParen = AddTrailingSkippedSyntax(openParen, badTokens);
             else if (ifKeyword != null) ifKeyword = AddTrailingSkippedSyntax(ifKeyword, badTokens);
 
-            // check for the expression - lookahea for the "," and ":=" if following an identifier
-            expression = ParseExpressionCoreWithOptions(simpleExpr: true, allowTrailingLambda: false);
+            // check for the expression - lookahead for the "," and ":=" if following an identifier
+            var isProbablyDeclaration = false;
+            if (CurrentKind == SyntaxKind.CommaToken || CurrentKind == SyntaxKind.EqualsEqualsToken || CurrentKind == SyntaxKind.ColonEqualsToken)
+                isProbablyDeclaration = true;
+
+            var nextToken = PeekToken(1);
+            if (nextToken.Kind == SyntaxKind.CommaToken || nextToken.Kind == SyntaxKind.EqualsEqualsToken || nextToken.Kind == SyntaxKind.ColonEqualsToken)
+                isProbablyDeclaration = true;
+
+            expression = ParseExpressionCoreWithOptions(
+                isSimpleExpr: true,
+                isSimpleAssignment: isProbablyDeclaration,
+                allowTrailingLambda: false
+            );
 
             // check for any bad tokens
             badTokens = SkipBadTokensUntil(() =>
@@ -10589,7 +10645,7 @@ tryAgain:
                 IsInIfStatement = true;
                 try
                 {
-                    ifStatement = ParseArrowExprStatementBlock(simpleExpr: true);
+                    ifStatement = ParseArrowStatementBlock(isSimpleExpr: false);
                 }
                 finally
                 {
@@ -10612,7 +10668,7 @@ tryAgain:
                     if (IsCurrentLineIndentedRelativeTo(ifKeyword))
                     {
                         // OK - the newline is indented relative to the "if()" part
-                        ifStatement = ParseExpressionStatement(semicolonRequired: false);
+                        ifStatement = ParseSimpleStatement(isSimpleExpr: false);
                     }
                     else
                     {
@@ -10628,7 +10684,7 @@ tryAgain:
                     try
                     {
                         // since we aren't on newline, only "simple statement" is allowed
-                        ifStatement = ParseExpressionStatement(semicolonRequired: false, simpleExpr: true);
+                        ifStatement = ParseSimpleStatement(isSimpleExpr: false);
                     }
                     finally
                     {
@@ -10696,7 +10752,7 @@ tryAgain:
             if (CurrentKind == SyntaxKind.EqualsGreaterThanToken)
             {
                 // try parsing an arrow expression
-                statement = ParseArrowExprStatementBlock(simpleExpr: true);
+                statement = ParseArrowStatementBlock(isSimpleExpr: false);
             }
             else if (CurrentKind == SyntaxKind.OpenBraceToken)
             {
@@ -10720,7 +10776,7 @@ tryAgain:
                     if (IsCurrentLineIndentedRelativeTo(elseToken))
                     {
                         // OK - the newline is indented relative to the "else" part
-                        statement = ParseExpressionStatement(semicolonRequired: false);
+                        statement = ParseSimpleStatement(isSimpleExpr: false);
                     }
                     else
                     {
@@ -10731,7 +10787,7 @@ tryAgain:
                 else
                 {
                     // since we aren't on newline, only "simple statement" is allowed
-                    statement = ParseExpressionStatement(semicolonRequired: false, simpleExpr: true);
+                    statement = ParseSimpleStatement(isSimpleExpr: false);
                 }
             }
 
@@ -11613,22 +11669,38 @@ tryAgain:
             return ParseWithStackGuard(ParseExpressionCore, CreateMissingIdentifierName);
         }
 
-        private ExpressionSyntax ParseExpressionCoreWithOptions(bool? simpleExpr = null, bool? allowTrailingLambda = null)
+        private ExpressionSyntax ParseExpressionCoreWithOptions(
+            bool? isSimpleExpr = null,
+            bool? isSimpleAssignment = null,
+            bool? allowTrailingLambda = null,
+            bool? allowBinaryRelationExpr = null,
+            bool? allowIsExpr = null,
+            Precedence? precedence = null
+        )
         {
             var wasSimpleExpression = IsSimpleExpression;
+            var wasSimpleAssignment = IsSimpleAssignment;
             var wasTrailingLambdaAllowed = IsTrailingLambdaAllowed;
+            var wasBinaryRelationExprAllowed = IsBinaryRelationExpressionAllowed;
+            var wasIsExprAllowed = IsIsExpressionAllowed;
 
-            if (simpleExpr != null) IsSimpleExpression = simpleExpr.Value;
+            if (isSimpleExpr != null) IsSimpleExpression = isSimpleExpr.Value;
+            if (isSimpleAssignment != null) IsSimpleAssignment = isSimpleAssignment.Value;
             if (allowTrailingLambda != null) IsTrailingLambdaAllowed = allowTrailingLambda.Value;
+            if (allowBinaryRelationExpr != null) IsBinaryRelationExpressionAllowed = allowBinaryRelationExpr.Value;
+            if (allowIsExpr != null) IsIsExpressionAllowed = allowIsExpr.Value;
 
             try
             {
-                return this.ParseSubExpression(Precedence.Expression);
+                return this.ParseSubExpression(precedence ?? Precedence.Expression);
             }
             finally
             {
                 IsSimpleExpression = wasSimpleExpression;
                 IsTrailingLambdaAllowed = wasTrailingLambdaAllowed;
+                IsIsExpressionAllowed = wasIsExprAllowed;
+                IsBinaryRelationExpressionAllowed = wasBinaryRelationExprAllowed;
+                IsSimpleAssignment = wasSimpleAssignment;
             }
         }
 
@@ -11929,6 +12001,11 @@ tryAgain:
             return SyntaxFacts.IsBinaryExpression(kind);
         }
 
+        private static bool IsBinaryBooleanConditionOperator(SyntaxKind kind)
+        {
+            return SyntaxFacts.IsBinaryBooleanConditionOperator(kind);
+        }
+
         private static bool IsExpectedAssignmentOperator(SyntaxKind kind)
         {
             return SyntaxFacts.IsAssignmentExpressionOperatorToken(kind);
@@ -12088,7 +12165,10 @@ tryAgain:
             return ParseExpressionContinued(leftOperand, precedence);
         }
 
+        private bool IsSimpleAssignment { get; set; } = false;
         private bool IsDeclAssignmentAllowed { get; set; } = true;
+        private bool IsBinaryRelationExpressionAllowed { get; set; } = true;
+        private bool IsIsExpressionAllowed { get; set; } = true;
 
         private ExpressionSyntax ParseExpressionContinued(ExpressionSyntax leftOperand, Precedence precedence)
         {
@@ -12172,6 +12252,16 @@ tryAgain:
                     break;
                 }
 
+                if (!IsBinaryRelationExpressionAllowed && IsBinaryBooleanConditionOperator(tk))
+                {
+                    break;
+                }
+
+                if (!IsIsExpressionAllowed && opKind == SyntaxKind.IsExpression)
+                {
+                    break;
+                }
+
                 // We'll "take" this operator, as precedence is tentatively OK.
                 var opToken = this.EatContextualToken(tk);
 
@@ -12189,8 +12279,18 @@ tryAgain:
                     // with an anonymous method expression or a lambda expression with a block body.  No
                     // further parsing will find a way to fix things up, so we accept the operator but issue
                     // a diagnostic.
-                    ErrorCode errorCode = leftOperand.Kind == SyntaxKind.IsPatternExpression ? ErrorCode.ERR_UnexpectedToken : ErrorCode.WRN_PrecedenceInversion;
-                    opToken = this.AddError(opToken, errorCode, opToken.Text);
+
+                    // check for special case where the LHS is an assignment - then followed by a relational operator or i operator
+                    var lhsAssignmentComparison = IsSimpleAssignment && leftOperand is AssignmentExpressionSyntax && (
+                        IsBinaryBooleanConditionOperator(tk) || tk == SyntaxKind.IsExpression
+                    );
+
+                    if (!lhsAssignmentComparison)
+                    {
+                        // any other case is an actual error
+                        ErrorCode errorCode = leftOperand.Kind == SyntaxKind.IsPatternExpression ? ErrorCode.ERR_UnexpectedToken : ErrorCode.WRN_PrecedenceInversion;
+                        opToken = this.AddError(opToken, errorCode, opToken.Text);
+                    }
                 }
 
                 if (doubleOp)
@@ -12212,9 +12312,20 @@ tryAgain:
                 }
                 else if (isAssignmentOperator)
                 {
-                    ExpressionSyntax rhs = opKind == SyntaxKind.SimpleAssignmentExpression && CurrentToken.Kind == SyntaxKind.RefKeyword
-                        ? rhs = CheckFeatureAvailability(ParsePossibleRefExpression(), MessageID.IDS_FeatureRefReassignment)
-                        : rhs = this.ParseSubExpression(newPrecedence);
+                    ExpressionSyntax rhs = null;
+
+                    if (opKind == SyntaxKind.SimpleAssignmentExpression && CurrentToken.Kind == SyntaxKind.RefKeyword)
+                    {
+                        rhs = CheckFeatureAvailability(ParsePossibleRefExpression(), MessageID.IDS_FeatureRefReassignment);
+                    }
+                    else
+                    {
+                        rhs = ParseExpressionCoreWithOptions(
+                            precedence: newPrecedence,
+                            allowBinaryRelationExpr: !IsSimpleAssignment,
+                            allowIsExpr: !IsSimpleAssignment
+                        );
+                    }
 
                     if (opKind == SyntaxKind.CoalesceAssignmentExpression)
                     {
@@ -12225,17 +12336,36 @@ tryAgain:
                 }
                 else if (isDeclarationOperator)
                 {
-                    ExpressionSyntax rhs = opKind == SyntaxKind.SimpleAssignmentExpression && CurrentToken.Kind == SyntaxKind.RefKeyword
-                        ? rhs = CheckFeatureAvailability(ParsePossibleRefExpression(), MessageID.IDS_FeatureRefReassignment)
-                        : rhs = this.ParseSubExpression(newPrecedence);
+                    ExpressionSyntax rhs = null;
+
+                    if (opKind == SyntaxKind.SimpleAssignmentExpression && CurrentToken.Kind == SyntaxKind.RefKeyword)
+                    {
+                        rhs = CheckFeatureAvailability(ParsePossibleRefExpression(), MessageID.IDS_FeatureRefReassignment);
+                    }
+                    else
+                    {
+                        rhs = ParseExpressionCoreWithOptions(
+                            precedence: newPrecedence,
+                            allowBinaryRelationExpr: !IsSimpleAssignment,
+                            allowIsExpr: !IsSimpleAssignment
+                        );
+                    }
 
                     if (opKind == SyntaxKind.CoalesceAssignmentExpression)
                     {
                         opToken = CheckFeatureAvailability(opToken, MessageID.IDS_FeatureCoalesceAssignmentExpression);
                     }
 
+                    // convert simple expression into a variable declaration argument
+                    if (leftOperand is IdentifierNameSyntax identName)
+                    {
+                        var designation = _syntaxFactory.SingleVariableDesignation(identName.Identifier);
+                        var declType = SyntaxFactory.FakeTypeIdentifier(_syntaxFactory, isVar: true);
+                        var decl = _syntaxFactory.DeclarationExpression(designation, declType);
+                        leftOperand = _syntaxFactory.AssignmentExpression(opKind, decl, opToken, rhs);
+                    }
                     // convert the tuple expression into a tuple expression with declarations if possible - only for "identifier" expressions
-                    if (leftOperand is TupleExpressionSyntax tupleExpr)
+                    else if (leftOperand is TupleExpressionSyntax tupleExpr)
                     {
                         var invalidDeclaration = false;
                         var arguments = SeparatedSyntaxListBuilder<ArgumentSyntax>.Create();
@@ -12326,6 +12456,7 @@ tryAgain:
                 else
                 {
                     Debug.Assert(IsExpectedBinaryOperator(tk));
+
                     leftOperand = _syntaxFactory.BinaryExpression(opKind, leftOperand, opToken, this.ParseSubExpression(newPrecedence));
                 }
             }
@@ -12995,13 +13126,15 @@ tryAgain:
                         list = _pool.AllocateSeparated<ArgumentSyntax>();
                     }
 
-                    if (this.IsPossibleArgumentExpression() || this.CurrentToken.Kind == SyntaxKind.CommaToken)
+                    if (CurrentKind == SyntaxKind.CommaToken || IsPossibleArgumentExpression(allowBinaryExpressions: false, allowAssignmentExpressions: false))
                     {
+                        var lastTokenPosition = -1;
+                        IsMakingProgress(ref lastTokenPosition);
+
                         // first argument
                         list.Add(this.ParseArgumentExpression(isIndexer));
 
                         // additional arguments
-                        var lastTokenPosition = -1;
                         while (IsMakingProgress(ref lastTokenPosition))
                         {
                             if (this.CurrentToken.Kind == SyntaxKind.CloseParenToken ||
@@ -13022,7 +13155,7 @@ tryAgain:
                             }
                         }
                     }
-                    else if (this.SkipBadArgumentListTokens(ref openToken, list, SyntaxKind.IdentifierToken, closeKind) == PostSkipAction.Continue)
+                    else if (this.SkipBadArgumentListTokens(ref openToken, list, SyntaxKind.IdentifierToken, closeKind, allowBinaryExpressions: false, allowAssignmentExpressions: false) == PostSkipAction.Continue)
                     {
                         goto tryAgain;
                     }
@@ -13068,10 +13201,10 @@ tryAgain:
             }
         }
 
-        private PostSkipAction SkipBadArgumentListTokens(ref SyntaxToken open, SeparatedSyntaxListBuilder<ArgumentSyntax> list, SyntaxKind expected, SyntaxKind closeKind)
+        private PostSkipAction SkipBadArgumentListTokens(ref SyntaxToken open, SeparatedSyntaxListBuilder<ArgumentSyntax> list, SyntaxKind expected, SyntaxKind closeKind, bool allowBinaryExpressions = true, bool allowAssignmentExpressions = true)
         {
             return this.SkipBadSeparatedListTokensWithExpectedKind(ref open, list,
-                p => p.CurrentToken.Kind != SyntaxKind.CommaToken && !p.IsPossibleArgumentExpression(),
+                p => p.CurrentToken.Kind != SyntaxKind.CommaToken && !p.IsPossibleArgumentExpression(allowBinaryExpressions: allowBinaryExpressions, allowAssignmentExpressions: allowAssignmentExpressions),
                 p => p.CurrentToken.Kind == closeKind || p.CurrentToken.Kind == SyntaxKind.SemicolonToken || p.IsTerminator(),
                 expected);
         }
@@ -13082,9 +13215,9 @@ tryAgain:
                 || this.CurrentToken.Kind == SyntaxKind.CloseBracketToken;
         }
 
-        private bool IsPossibleArgumentExpression()
+        private bool IsPossibleArgumentExpression(bool allowBinaryExpressions = true, bool allowAssignmentExpressions = true)
         {
-            return IsValidArgumentRefKindKeyword(this.CurrentToken.Kind) || this.IsPossibleExpression(allowBinaryExpressions: true, allowAssignmentExpressions: true, allowBraceLambdaExpression: true, allowArrowLambdaExpression: true);
+            return IsValidArgumentRefKindKeyword(this.CurrentToken.Kind) || this.IsPossibleExpression(allowBinaryExpressions: allowBinaryExpressions, allowAssignmentExpressions: allowAssignmentExpressions, allowBraceLambdaExpression: true, allowArrowLambdaExpression: true);
         }
 
         private static bool IsValidArgumentRefKindKeyword(SyntaxKind kind)
