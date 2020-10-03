@@ -303,8 +303,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             ConversionGroup? conversionGroupOpt,
             ConstantValue? constantValueOpt,
             TypeSymbol type,
-            bool hasErrors = false)
+            bool hasErrors = false,
+            bool allowInvalidConversion = false)
         {
+            hasErrors = allowInvalidConversion ? false : hasErrors || !conversion.IsValid;
             return new BoundConversion(
                 syntax,
                 operand,
@@ -314,7 +316,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 conversionGroupOpt,
                 constantValueOpt,
                 type,
-                hasErrors || !conversion.IsValid)
+                hasErrors,
+                allowInvalidConversion)
             {
                 WasCompilerGenerated = true
             };
@@ -329,7 +332,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             ConversionGroup? conversionGroupOpt,
             ConstantValue? constantValueOpt,
             TypeSymbol type,
-            bool hasErrors = false)
+            bool hasErrors = false,
+            bool allowInvalidConversion = false)
             : this(
                 syntax,
                 operand,
@@ -341,7 +345,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 conversionGroupOpt,
                 conversion.OriginalUserDefinedConversions,
                 type: type,
-                hasErrors: hasErrors || !conversion.IsValid)
+                hasErrors: allowInvalidConversion ? false : hasErrors || !conversion.IsValid)
         { }
 
         public BoundConversion(

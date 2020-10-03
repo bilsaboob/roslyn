@@ -2407,9 +2407,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        private bool IsBindingIfStatementCondition { get; set; }
+
         private BoundStatement BindIfStatement(IfStatementSyntax node, DiagnosticBag diagnostics)
         {
-            var condition = BindBooleanExpression(node.Condition, diagnostics);
+            BoundExpression condition = null;
+
+            var wasBindingIfStatementCondition = IsBindingIfStatementCondition;
+            IsBindingIfStatementCondition = true;
+            try
+            {
+                condition = BindBooleanExpression(node.Condition, diagnostics, ignoreImplicitCastError: WillRewriteConditionExpression(node.Condition));
+            }
+            finally
+            {
+                IsBindingIfStatementCondition = wasBindingIfStatementCondition;
+            }
+
             var consequence = BindPossibleEmbeddedStatement(node.Statement, diagnostics);
             BoundStatement alternative = (node.Else == null) ? null : BindPossibleEmbeddedStatement(node.Else.Statement, diagnostics);
 
@@ -2417,7 +2431,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             return result;
         }
 
-        internal BoundExpression BindBooleanExpression(ExpressionSyntax node, DiagnosticBag diagnostics)
+        private bool WillRewriteConditionExpression(ExpressionSyntax expr)
+        {
+            if (expr is AssignmentExpressionSyntax) return true;
+            if (expr is NameSyntax) return true;
+            if (expr is InvocationExpressionSyntax) return true;
+            if (expr is ConditionalAccessExpressionSyntax) return true;
+            if (expr is MemberAccessExpressionSyntax) return true;
+            if (expr is ElementAccessExpressionSyntax) return true;
+            return false;
+        }
+
+        internal BoundExpression BindBooleanExpression(ExpressionSyntax node, DiagnosticBag diagnostics, bool ignoreImplicitCastError = false)
         {
             // SPEC:
             // A boolean-expression is an expression that yields a result of type bool;
@@ -2525,6 +2550,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // No. Give a "not convertible to bool" error.
                 Debug.Assert(resultKind == LookupResultKind.Empty, "How could overload resolution fail if a user-defined true operator was found?");
                 Debug.Assert(originalUserDefinedOperators.IsEmpty, "How could overload resolution fail if a user-defined true operator was found?");
+
+                // we have a special case where we want to rewrite "condition expressions" in "if statements" later in the pipeline - thus we should return a bad convertions for those... but no need to report the error
+                if (ignoreImplicitCastError && !expr.Type.IsNonNullableValueType())
+                {
+                    return BoundConversion.Synthesized(node.WithExpectedRewrite(), expr, Conversion.NoConversion, false, explicitCastInCode: false, conversionGroupOpt: null, ConstantValue.NotAvailable, boolean, allowInvalidConversion: true);
+                }
+
                 GenerateImplicitConversionError(diagnostics, node, conversion, expr, boolean);
                 return BoundConversion.Synthesized(node, expr, Conversion.NoConversion, false, explicitCastInCode: false, conversionGroupOpt: null, ConstantValue.NotAvailable, boolean, hasErrors: true);
             }
