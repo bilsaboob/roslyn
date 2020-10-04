@@ -77,7 +77,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriters
             if (node.Syntax?.IsExpectedRewrite() == false) return null;
 
             // we need to rewrite the operand expression into a "expr != null" if it's a nullable
-            if (node.Operand.Type.IsNonNullableValueType()) return null;
+            if (node.Operand.Type is null || node.Operand.Type.IsNonNullableValueType()) return null;
 
             // OK, it's a nullable, we can do the condition check
             var newCondition = _F.Binary(BinaryOperatorKind.NotEqual, node.Type, node.Operand, _F.Null(node.Operand.Type));

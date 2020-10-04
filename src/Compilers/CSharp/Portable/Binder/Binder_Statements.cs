@@ -2552,7 +2552,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Debug.Assert(originalUserDefinedOperators.IsEmpty, "How could overload resolution fail if a user-defined true operator was found?");
 
                 // we have a special case where we want to rewrite "condition expressions" in "if statements" later in the pipeline - thus we should return a bad convertions for those... but no need to report the error
-                if (ignoreImplicitCastError && !expr.Type.IsNonNullableValueType())
+                if (ignoreImplicitCastError && !(expr.Type is null) && !expr.Type.IsNonNullableValueType())
                 {
                     return BoundConversion.Synthesized(node.WithExpectedRewrite(), expr, Conversion.NoConversion, false, explicitCastInCode: false, conversionGroupOpt: null, ConstantValue.NotAvailable, boolean, allowInvalidConversion: true);
                 }
