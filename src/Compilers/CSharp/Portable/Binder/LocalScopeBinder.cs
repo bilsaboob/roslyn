@@ -13,8 +13,10 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
-    internal partial class LocalScopeBinder : Binder
+    internal partial class LocalScopeBinder : Binder, IChildAwareBinder
     {
+        private List<Binder> _childBinders;
+
         protected ImmutableArray<LocalSymbol> _locals;
         protected ImmutableArray<LocalFunctionSymbol> _localFunctions;
         protected ImmutableArray<LabelSymbol> _labels;
@@ -59,6 +61,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        public bool AcceptChildBinders { get; set; }
+
+        public void AddChildBinder(Binder binder, bool force = false)
+        {
+            if (!AcceptChildBinders && !force) return;
+
+            _childBinders ??= new List<Binder>();
+            _childBinders?.Add(binder);
+
+            // reset the locals, we have new child binder that should contribute to the locals
+            ImmutableInterlocked.InterlockedExchange(ref _locals, default);
+        }
+
         internal sealed override ImmutableArray<LocalSymbol> Locals
         {
             get
@@ -72,9 +87,57 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        internal override void ClearLocals()
+        {
+            // clear the locals by setting an empty array - this is needed if a parent binder consumes our locals - effectivly moving the locals to an outer scope...
+            // - if we don't do this, we get the locals twice... once on the outer scope, and once on the inner child scope ...
+            ImmutableInterlocked.InterlockedExchange(ref _locals, ImmutableArray<LocalSymbol>.Empty);
+        }
+
         protected virtual ImmutableArray<LocalSymbol> BuildLocals()
         {
-            return ImmutableArray<LocalSymbol>.Empty;
+            return BuildLocalsFromChildBinders();
+        }
+
+        protected ImmutableArray<LocalSymbol> BuildLocalsFromChildBinders()
+        {
+            if (_childBinders == null || _childBinders.Count == 0) return ImmutableArray<LocalSymbol>.Empty;
+
+            var allLocals = ArrayBuilder<LocalSymbol>.GetInstance();
+
+            foreach (var childBinder in _childBinders)
+            {
+                allLocals.AddRange(childBinder.Locals);
+                childBinder.ClearLocals();
+            }
+
+            return allLocals.ToImmutableAndFree();
+        }
+
+        protected ImmutableArray<LocalSymbol> MergeLocals(params ImmutableArray<LocalSymbol>[] allLocals)
+        {
+            if (allLocals == null) return ImmutableArray<LocalSymbol>.Empty;
+            if (allLocals.Length == 1) return allLocals[0];
+            if (allLocals.Length == 2)
+            {
+                if (allLocals[0].Length == 0) return allLocals[1];
+                if (allLocals[1].Length == 0) return allLocals[0];
+            }
+
+            var mergedLocals = PooledHashSet<LocalSymbol>.GetInstance();
+
+            foreach (var locals in allLocals)
+            {
+                foreach (var l in locals)
+                {
+                    mergedLocals.Add(l);
+                }
+            }
+
+            var finalLocals = mergedLocals.ToImmutableArray();
+            mergedLocals.Free();
+
+            return finalLocals;
         }
 
         internal sealed override ImmutableArray<LocalFunctionSymbol> LocalFunctions

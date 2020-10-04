@@ -16,7 +16,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 {
     internal interface IChildAwareBinder
     {
-        void AddChildBinder(Binder binder);
+        void AddChildBinder(Binder binder, bool force = false);
     }
 
     /// <summary>
