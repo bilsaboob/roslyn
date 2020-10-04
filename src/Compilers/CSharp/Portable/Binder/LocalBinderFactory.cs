@@ -354,17 +354,30 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         #endregion
 
+        private BlockBinder CurrentBlockBinder { get; set; }
+
         // Top-level block has an enclosing that is not a BinderContext. All others must (so that variables can be declared).
         public override void VisitBlock(BlockSyntax node)
         {
+            var currentBlockBinder = CurrentBlockBinder;
+
             Debug.Assert((object)_containingMemberOrLambda == _enclosing.ContainingMemberOrLambda);
             var blockBinder = new BlockBinder(_enclosing, node);
             AddToMap(node, blockBinder);
 
-            // Visit all the statements inside this block
-            foreach (StatementSyntax statement in node.Statements)
+            CurrentBlockBinder = blockBinder;
+
+            try
             {
-                Visit(statement, blockBinder);
+                // Visit all the statements inside this block
+                foreach (StatementSyntax statement in node.Statements)
+                {
+                    Visit(statement, blockBinder);
+                }
+            }
+            finally
+            {
+                CurrentBlockBinder = currentBlockBinder;
             }
         }
 
@@ -624,54 +637,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             Visit(node.Statement, _enclosing);
         }
 
-        class TryCatchBlockBinder : LocalScopeBinder, IChildAwareBinder
-        {
-            private List<Binder> _childBinders;
-
-            public TryCatchBlockBinder(Binder enclosing)
-                : this(enclosing, enclosing.Flags)
-            {
-            }
-
-            public TryCatchBlockBinder(Binder enclosing, BinderFlags additionalFlags)
-                : base(enclosing, enclosing.Flags | additionalFlags)
-            {
-            }
-
-            protected override ImmutableArray<LocalSymbol> BuildLocals()
-            {
-                var allLocals = ArrayBuilder<LocalSymbol>.GetInstance();
-
-                if (_childBinders != null)
-                {
-                    foreach (var childBinder in _childBinders)
-                    {
-                        allLocals.AddRange(childBinder.Locals);
-                    }
-                }
-
-                return allLocals.ToImmutableAndFree();
-            }
-
-            public bool AcceptChildBinders { get; set; }
-
-            public void AddChildBinder(Binder binder)
-            {
-                if (!AcceptChildBinders) return;
-
-                _childBinders ??= new List<Binder>();
-                _childBinders?.Add(binder);
-
-                // reset the locals, we have new child binder that should contribute to the locals
-                ImmutableInterlocked.InterlockedExchange(ref _locals, default);
-            }
-        }
-
         public override void VisitTryStatement(TryStatementSyntax node)
         {
             // wrap with an additional scope that will make the declarations from the "try block" available to the Catch / Finally blocks
-            var tryCatchBinder = new TryCatchBlockBinder(_enclosing);
+            var tryCatchBinder = new LocalScopeBinder(_enclosing);
             tryCatchBinder.AcceptChildBinders = true;
+
+            // share the locals from the try block with the outer block too!
+            CurrentBlockBinder?.AddChildBinder(tryCatchBinder, force: true);
 
             if (node.Catches.Any())
             {

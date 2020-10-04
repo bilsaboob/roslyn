@@ -30,7 +30,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         protected override ImmutableArray<LocalSymbol> BuildLocals()
         {
-            return BuildLocals(_block.Statements, this);
+            var ownLocals = BuildLocals(_block.Statements, this);
+            var childLocals = BuildLocalsFromChildBinders();
+            return MergeLocals(ownLocals, childLocals);
         }
 
         protected override ImmutableArray<LocalFunctionSymbol> BuildLocalFunctions()

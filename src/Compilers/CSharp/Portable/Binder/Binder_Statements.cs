@@ -3597,6 +3597,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                                                                                    blockBody == null ? diagnostics : new DiagnosticBag()));
         }
 
+        internal virtual void ClearLocals()
+        {
+        }
+
         internal virtual ImmutableArray<LocalSymbol> Locals
         {
             get
