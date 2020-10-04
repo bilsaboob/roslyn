@@ -13,19 +13,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriters
             bool hasTrailingExpression,
             bool originalBodyNested)
         {
-            // rewrite try/catch statements to promote variable declarations to the outer scope
+            // rewrite try/catch "inline method" statements to promote variable declarations to the outer scope
             block = MethodInlineTryCatchBlockRewriter.Rewrite(
+                block,
                 method,
                 method.ContainingType,
-                block,
                 compilationState,
                 diagnostics
             );
 
-            block = ImplicitIfConditionRewriter.Rewrite(
+            // rewrite try/catch "local/normal" statements to promote variable declarations to the outer scope
+            block = TryCatchLocalsScopeRewriter.Rewrite(
+                block,
                 method,
                 method.ContainingType,
+                compilationState,
+                diagnostics
+            );
+
+            // rewrite if statement conditions to be converted to "boolean checked conditions" when possible 
+            block = ImplicitIfConditionRewriter.Rewrite(
                 block,
+                method,
+                method.ContainingType,
                 compilationState,
                 diagnostics
             );
