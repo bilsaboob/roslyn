@@ -6,40 +6,11 @@ using Microsoft.CodeAnalysis.CSharp.Symbols;
 
 namespace Microsoft.CodeAnalysis.CSharp.Rewriters
 {
-    internal sealed class ImplicitIfConditionRewriter : BoundTreeRewriterWithStackGuard
+    internal sealed class ImplicitIfConditionRewriter : BoundTreeMethodRewriter<ImplicitIfConditionRewriter>
     {
-        private readonly SyntheticBoundNodeFactory _F;
-        private readonly DiagnosticBag _diagnostics;
-
-        private ImplicitIfConditionRewriter(
-            MethodSymbol containingMethod,
-            NamedTypeSymbol containingType,
-            SyntheticBoundNodeFactory factory,
-            DiagnosticBag diagnostics)
+        public ImplicitIfConditionRewriter()
         {
-            _F = factory;
-            _F.CurrentType = containingType;
-            _F.CurrentFunction = containingMethod;
-            _diagnostics = diagnostics;
-        }
-
-        public static BoundBlock Rewrite(
-            MethodSymbol containingSymbol,
-            NamedTypeSymbol containingType,
-            BoundBlock block,
-            TypeCompilationState compilationState,
-            DiagnosticBag diagnostics)
-        {
-            Debug.Assert(containingSymbol != null);
-            Debug.Assert((object)containingType != null);
-            Debug.Assert(block != null);
-            Debug.Assert(compilationState != null);
-            Debug.Assert(diagnostics != null);
-
-            var factory = new SyntheticBoundNodeFactory(containingSymbol, block.Syntax, compilationState, diagnostics);
-            var rewriter = new ImplicitIfConditionRewriter(containingSymbol, containingType, factory, diagnostics);
-            var newBlock = rewriter.Visit(block) as BoundBlock;
-            return newBlock;
+            VisitBinaryRecursive = true;
         }
 
         protected bool IsInIfStatementCondition { get; set; }
