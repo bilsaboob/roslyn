@@ -3403,7 +3403,7 @@ parse_member_name:;
             {
                 type = ParseReturnType();
             }
-            catch(Exception)
+            catch (Exception)
             {
             }
 
@@ -3723,14 +3723,14 @@ parse_member_name:;
                         if (tmpAccessorList.Accessors.Count == 1)
                         {
                             var accessor = tmpAccessorList.Accessors[0];
-                            if(accessor.Kind == SyntaxKind.UnknownAccessorDeclaration && accessor.Modifiers.Count == 0 && accessor.AttributeLists.Count == 0)
+                            if (accessor.Kind == SyntaxKind.UnknownAccessorDeclaration && accessor.Modifiers.Count == 0 && accessor.AttributeLists.Count == 0)
                             {
                                 // no attributes and no modifiers... so most likely it's an implicit "getter block"
                                 parsedAccessorList = false;
                             }
                         }
 
-                        if(parsedAccessorList)
+                        if (parsedAccessorList)
                         {
                             // we parsed the accessor list
                             accessorList = tmpAccessorList;
@@ -4541,7 +4541,7 @@ tryAgain:
                                     return false;
                                 case SyntaxKind.IdentifierToken:
                                     {
-                                        switch(this.CurrentToken.ContextualKind)
+                                        switch (this.CurrentToken.ContextualKind)
                                         {
                                             case SyntaxKind.AsyncKeyword:
                                             case SyntaxKind.AwaitKeyword:
@@ -4597,6 +4597,8 @@ tryAgain:
                 case SyntaxKind.ArgListKeyword:
                     return true;
                 case SyntaxKind.DelegateKeyword when IsFunctionPointerStart(): // Function pointer type
+                    return true;
+                case SyntaxKind.DotDotDotToken:
                     return true;
                 case SyntaxKind.IdentifierToken:
                     {
@@ -4675,8 +4677,9 @@ tryAgain:
             {
                 this.ParseParameterModifiers(modifiers);
 
-                TypeSyntax type;
-                SyntaxToken name;
+                TypeSyntax type = null;
+                SyntaxToken spread = null;
+                SyntaxToken name = null;
                 if (this.CurrentToken.Kind != SyntaxKind.ArgListKeyword)
                 {
                     var onlyParseType = false;
@@ -4703,7 +4706,7 @@ tryAgain:
                                     }
                             }
                         }
-                        else if(IsPredefinedType(this.CurrentToken.Kind))
+                        else if (IsPredefinedType(this.CurrentToken.Kind))
                         {
                             onlyParseType = true;
                         }
@@ -4718,14 +4721,15 @@ tryAgain:
                         name = this.ParseIdentifierToken();
                     }
 
-                    type = this.ParseType(mode: ParseTypeMode.Parameter);
+                    spread = TryEatToken(SyntaxKind.DotDotDotToken);
+                    type = ParseType(mode: ParseTypeMode.Parameter);
 
                     // When the user type "int goo[]", give them a useful error
-                    if (this.CurrentToken.Kind == SyntaxKind.OpenBracketToken && this.PeekToken(1).Kind == SyntaxKind.CloseBracketToken)
+                    if (CurrentKind == SyntaxKind.OpenBracketToken && PeekKind == SyntaxKind.CloseBracketToken)
                     {
-                        var open = this.EatToken();
-                        var close = this.EatToken();
-                        open = this.AddError(open, ErrorCode.ERR_BadArraySyntax);
+                        var open = EatToken();
+                        var close = EatToken();
+                        open = AddError(open, ErrorCode.ERR_BadArraySyntax);
                         name = AddTrailingSkippedSyntax(name, SyntaxList.List(open, close));
                     }
                 }
@@ -4734,7 +4738,7 @@ tryAgain:
                     // We store an __arglist parameter as a parameter with null type and whose 
                     // .Identifier has the kind ArgListKeyword.
                     type = null;
-                    name = this.EatToken(SyntaxKind.ArgListKeyword);
+                    name = EatToken(SyntaxKind.ArgListKeyword);
                 }
 
                 EqualsValueClauseSyntax def = null;
@@ -4746,7 +4750,7 @@ tryAgain:
                     def = CheckFeatureAvailability(def, MessageID.IDS_FeatureOptionalParameter);
                 }
 
-                return _syntaxFactory.Parameter(attributes, modifiers.ToList(), name, type, def);
+                return _syntaxFactory.Parameter(attributes, modifiers.ToList(), name, spread, type, def);
             }
             finally
             {
@@ -7625,7 +7629,7 @@ done:;
                 var openParenTokenError = WithAdditionalDiagnostics(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), GetExpectedTokenError(SyntaxKind.OpenParenToken, SyntaxKind.None));
                 var missingParameters = _pool.AllocateSeparated<ParameterSyntax>();
                 var missingTypeName = CreateMissingIdentifierName();
-                var missingType = SyntaxFactory.Parameter(attributeLists: default, modifiers: default, CreateMissingIdentifierToken(), missingTypeName, @default: null);
+                var missingType = SyntaxFactory.Parameter(attributeLists: default, modifiers: default, CreateMissingIdentifierToken(), null, missingTypeName, @default: null);
                 missingParameters.Add(missingType);
                 var closeParenTokenError = SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken);
                 var lambdaFnType = SyntaxFactory.LambdaFunctionType(@async, @fn, openParenTokenError, missingParameters, closeParenTokenError, null);
@@ -7666,7 +7670,7 @@ done:;
                 var lessThanTokenError = WithAdditionalDiagnostics(SyntaxFactory.MissingToken(SyntaxKind.LessThanToken), GetExpectedTokenError(SyntaxKind.LessThanToken, SyntaxKind.None));
                 var missingTypes = _pool.AllocateSeparated<ParameterSyntax>();
                 var missingTypeName = CreateMissingIdentifierName();
-                var missingType = SyntaxFactory.Parameter(attributeLists: default, modifiers: default, CreateMissingIdentifierToken(), missingTypeName, @default: null);
+                var missingType = SyntaxFactory.Parameter(attributeLists: default, modifiers: default, CreateMissingIdentifierToken(), null, missingTypeName, @default: null);
                 missingTypes.Add(missingType);
                 // Handle the simple case of delegate*>. We don't try to deal with any variation of delegate*invalid>, as
                 // we don't know for sure that the expression isn't a relational with something else.
@@ -7692,7 +7696,7 @@ done:;
                         ParseParameterModifiers(modifiers, isFunctionPointerParameter: true);
 
                         var parameterType = ParseTypeOrVoid();
-                        types.Add(SyntaxFactory.Parameter(attributeLists: default, modifiers, CreateMissingIdentifierToken(), parameterType, @default: null));
+                        types.Add(SyntaxFactory.Parameter(attributeLists: default, modifiers, CreateMissingIdentifierToken(), null, parameterType, @default: null));
 
                         if (skipBadFunctionPointerParameterListTokens() == PostSkipAction.Abort)
                         {
@@ -7969,7 +7973,7 @@ done:;
                 return this.IsIncrementalAndFactoryContextMatches &&
                        this.CurrentNode is Syntax.StatementSyntax &&
                        !isGlobal && // Top-level statements are reused by ParseMemberDeclarationOrStatementCore when possible.
-                       attributes.Count == 0 && 
+                       attributes.Count == 0 &&
                        !this.CurrentNode.HasErrors;
             }
         }
@@ -7982,7 +7986,7 @@ done:;
             {
                 var exprStatement = this.ParseExpressionStatement(attributes);
                 var isLikelyMethodDeclaration = LooksLikeMethodDeclaration(exprStatement, false);
-                if(isLikelyMethodDeclaration)
+                if (isLikelyMethodDeclaration)
                 {
                     // looks like a method declaration... then we will attempt that instead!
                     this.Reset(ref resetPointBeforeStatement);
@@ -8367,7 +8371,7 @@ done:;
                         }
 
                         // check if followed by newline or looks like start of a new statement
-                        if (IsProbablyStatementEnd()) 
+                        if (IsProbablyStatementEnd())
                             return true;
                     }
                 }
@@ -11039,7 +11043,7 @@ tryAgain:
             {
                 if (expression != null)
                     expression = AddError(expression, ErrorCode.ERR_CloseParenExpected);
-                else if(declaration != null)
+                else if (declaration != null)
                     declaration = AddError(declaration, ErrorCode.ERR_CloseParenExpected);
             }
 
@@ -11249,7 +11253,7 @@ tryAgain:
             }
             else
             {
-                if(firstDesignation != null)
+                if (firstDesignation != null)
                 {
                     listOfDesignations.Add(firstDesignation);
                     listOfDesignations.AddSeparator(EatToken(SyntaxKind.CommaToken));
@@ -12597,7 +12601,7 @@ tryAgain:
                         {
                             var peekIndex = 1;
 
-                            if(this.PeekToken(peekIndex).Kind == SyntaxKind.StaticKeyword)
+                            if (this.PeekToken(peekIndex).Kind == SyntaxKind.StaticKeyword)
                                 peekIndex = 2;
 
                             if (
@@ -13941,6 +13945,8 @@ tryAgain:
                 case SyntaxKind.SwitchKeyword:
                 case SyntaxKind.EqualsGreaterThanToken:
                 case SyntaxKind.DotDotToken:
+                case SyntaxKind.DotDotDotToken:
+                case SyntaxKind.ColonEqualsToken:
                     return false;
                 default:
                     return true;
@@ -14800,7 +14806,7 @@ tryAgain:
                     arrow = CheckFeatureAvailability(arrow, MessageID.IDS_FeatureLambda);
 
                     var parameter = _syntaxFactory.Parameter(
-                        attributeLists: default, modifiers: default,
+                        attributeLists: default, modifiers: default, spread: null,
                         type: null, identifier: name, @default: null);
                     var (block, expression) = ParseLambdaBody();
 
@@ -14928,7 +14934,7 @@ tryAgain:
                 paramType = ParseType(ParseTypeMode.Parameter);
             }
 
-            var parameter = _syntaxFactory.Parameter(default(SyntaxList<AttributeListSyntax>), modifiers.ToList(), paramName, paramType, null);
+            var parameter = _syntaxFactory.Parameter(default(SyntaxList<AttributeListSyntax>), modifiers.ToList(), paramName, null, paramType, null);
             _pool.Free(modifiers);
             return parameter;
         }
