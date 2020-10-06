@@ -11784,16 +11784,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         /// <summary>Gets the identifier.</summary>
         public SyntaxToken Identifier => new SyntaxToken(this, ((Syntax.InternalSyntax.ParameterSyntax)this.Green).identifier, GetChildPosition(2), GetChildIndex(2));
 
-        public TypeSyntax? Type => GetRed(ref this.type, 3);
+        public SyntaxToken Spread
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.ParameterSyntax)this.Green).spread;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(3), GetChildIndex(3)) : default;
+            }
+        }
 
-        public EqualsValueClauseSyntax? Default => GetRed(ref this.@default, 4);
+        public TypeSyntax? Type => GetRed(ref this.type, 4);
+
+        public EqualsValueClauseSyntax? Default => GetRed(ref this.@default, 5);
 
         internal override SyntaxNode? GetNodeSlot(int index)
             => index switch
             {
                 0 => GetRedAtZero(ref this.attributeLists)!,
-                3 => GetRed(ref this.type, 3),
-                4 => GetRed(ref this.@default, 4),
+                4 => GetRed(ref this.type, 4),
+                5 => GetRed(ref this.@default, 5),
                 _ => null,
             };
 
@@ -11801,8 +11810,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             => index switch
             {
                 0 => this.attributeLists,
-                3 => this.type,
-                4 => this.@default,
+                4 => this.type,
+                5 => this.@default,
                 _ => null,
             };
 
@@ -11810,11 +11819,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitParameter(this);
 
-        public ParameterSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken identifier, TypeSyntax? type, EqualsValueClauseSyntax? @default)
+        public ParameterSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken identifier, SyntaxToken spread, TypeSyntax? type, EqualsValueClauseSyntax? @default)
         {
-            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || identifier != this.Identifier || type != this.Type || @default != this.Default)
+            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || identifier != this.Identifier || spread != this.Spread || type != this.Type || @default != this.Default)
             {
-                var newNode = SyntaxFactory.Parameter(attributeLists, modifiers, identifier, type, @default);
+                var newNode = SyntaxFactory.Parameter(attributeLists, modifiers, identifier, spread, type, @default);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -11822,11 +11831,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             return this;
         }
 
-        public ParameterSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.Identifier, this.Type, this.Default);
-        public ParameterSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.Identifier, this.Type, this.Default);
-        public ParameterSyntax WithIdentifier(SyntaxToken identifier) => Update(this.AttributeLists, this.Modifiers, identifier, this.Type, this.Default);
-        public ParameterSyntax WithType(TypeSyntax? type) => Update(this.AttributeLists, this.Modifiers, this.Identifier, type, this.Default);
-        public ParameterSyntax WithDefault(EqualsValueClauseSyntax? @default) => Update(this.AttributeLists, this.Modifiers, this.Identifier, this.Type, @default);
+        public ParameterSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.Identifier, this.Spread, this.Type, this.Default);
+        public ParameterSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.Identifier, this.Spread, this.Type, this.Default);
+        public ParameterSyntax WithIdentifier(SyntaxToken identifier) => Update(this.AttributeLists, this.Modifiers, identifier, this.Spread, this.Type, this.Default);
+        public ParameterSyntax WithSpread(SyntaxToken spread) => Update(this.AttributeLists, this.Modifiers, this.Identifier, spread, this.Type, this.Default);
+        public ParameterSyntax WithType(TypeSyntax? type) => Update(this.AttributeLists, this.Modifiers, this.Identifier, this.Spread, type, this.Default);
+        public ParameterSyntax WithDefault(EqualsValueClauseSyntax? @default) => Update(this.AttributeLists, this.Modifiers, this.Identifier, this.Spread, this.Type, @default);
 
         public ParameterSyntax AddAttributeLists(params AttributeListSyntax[] items) => WithAttributeLists(this.AttributeLists.AddRange(items));
         public ParameterSyntax AddModifiers(params SyntaxToken[] items) => WithModifiers(this.Modifiers.AddRange(items));

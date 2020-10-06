@@ -159,7 +159,7 @@ parameter_list
   ;
 
 parameter
-  : attribute_list* modifier* (identifier_token | '__arglist') type? equals_value_clause?
+  : attribute_list* modifier* (identifier_token | '__arglist') '...'? type? equals_value_clause?
   ;
 
 constructor_initializer
