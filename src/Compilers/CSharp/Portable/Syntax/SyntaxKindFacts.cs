@@ -1445,6 +1445,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return "??=";
                 case SyntaxKind.DotDotToken:
                     return "..";
+                case SyntaxKind.DotDotDotToken:
+                    return "...";
 
                 // Keywords
                 case SyntaxKind.BoolKeyword:
