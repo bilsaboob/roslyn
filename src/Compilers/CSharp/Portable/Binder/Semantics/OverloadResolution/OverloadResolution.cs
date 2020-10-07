@@ -3342,7 +3342,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // new instance of the parameter type with an object initializer
             var initializer = nodeFactory.ObjectInitializer(implicitReceiver, spreadParam.Type, initExpressions.ToImmutableAndFree(), arguments.Argument(0).Syntax.Parent);
-            return nodeFactory.New((NamedTypeSymbol)spreadParam.Type).UpdateInitializer(initializer);
+            return nodeFactory.TryNew((NamedTypeSymbol)spreadParam.Type)?.UpdateInitializer(initializer) ?? nodeFactory.Null(spreadParam.Type);
         }
 
         private MemberResolutionResult<TMember> IsMemberApplicableInExpandedForm<TMember>(
