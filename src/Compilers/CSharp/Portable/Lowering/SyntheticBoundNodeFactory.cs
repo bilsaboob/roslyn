@@ -148,7 +148,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="compilationState">The state of compilation of the enclosing type</param>
         /// <param name="diagnostics">A bag where any diagnostics should be output</param>
         public SyntheticBoundNodeFactory(MethodSymbol topLevelMethod, SyntaxNode node, TypeCompilationState compilationState, DiagnosticBag diagnostics)
-            : this(topLevelMethod, topLevelMethod.ContainingType, node, compilationState, diagnostics)
+            : this(topLevelMethod, topLevelMethod?.ContainingType, node, compilationState, diagnostics)
         {
         }
 
@@ -159,10 +159,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="diagnostics">A bag where any diagnostics should be output</param>
         public SyntheticBoundNodeFactory(MethodSymbol? topLevelMethodOpt, NamedTypeSymbol? currentClassOpt, SyntaxNode node, TypeCompilationState compilationState, DiagnosticBag diagnostics)
         {
-            Debug.Assert(node != null);
-            Debug.Assert(compilationState != null);
-            Debug.Assert(diagnostics != null);
-
             this.CompilationState = compilationState;
             this.CurrentType = currentClassOpt;
             this.TopLevelMethod = topLevelMethodOpt;
@@ -627,16 +623,30 @@ namespace Microsoft.CodeAnalysis.CSharp
             return New(ctor, args);
         }
 
+        public BoundObjectCreationExpression New(NamedTypeSymbol type, SyntaxNode syntax, params BoundExpression[] args)
+        {
+            var ctor = type.InstanceConstructors.Single(c => c.ParameterCount == args.Length);
+            return New(ctor, syntax, args);
+        }
+
         public BoundObjectCreationExpression New(MethodSymbol ctor, params BoundExpression[] args)
             => New(ctor, args.ToImmutableArray());
 
-        public BoundObjectCreationExpression New(MethodSymbol ctor, ImmutableArray<BoundExpression> args)
-            => new BoundObjectCreationExpression(Syntax, ctor, binderOpt: null, args) { WasCompilerGenerated = true };
+        public BoundObjectCreationExpression New(MethodSymbol ctor, SyntaxNode syntax, params BoundExpression[] args)
+            => New(ctor, args.ToImmutableArray(), syntax);
+
+        public BoundObjectCreationExpression New(MethodSymbol ctor, ImmutableArray<BoundExpression> args, SyntaxNode syntax = null)
+            => new BoundObjectCreationExpression(syntax ?? Syntax, ctor, binderOpt: null, args) { WasCompilerGenerated = true };
 
         public BoundObjectCreationExpression New(WellKnownMember wm, ImmutableArray<BoundExpression> args)
         {
             var ctor = WellKnownMethod(wm);
             return new BoundObjectCreationExpression(Syntax, ctor, binderOpt: null, args) { WasCompilerGenerated = true };
+        }
+
+        public BoundObjectInitializerExpression ObjectInitializer(BoundObjectOrCollectionValuePlaceholder placeholder, TypeSymbol type, ImmutableArray<BoundExpression> initializers = default, SyntaxNode syntax = null)
+        {
+            return new BoundObjectInitializerExpression(syntax ?? Syntax, placeholder, initializers, type);
         }
 
         public BoundExpression MakeIsNotANumberTest(BoundExpression input)

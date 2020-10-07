@@ -40,7 +40,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                                         SyntaxToken paramsKeyword, SyntaxToken thisKeyword, bool addRefReadOnlyModifier,
                                         DiagnosticBag declarationDiagnostics) =>
                 {
-                    return SourceParameterSymbol.Create(
+                    var p = SourceParameterSymbol.Create(
                         context,
                         owner,
                         parameterType,
@@ -52,6 +52,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         isExtensionMethodThis: ordinal == 0 && thisKeyword.Kind() != SyntaxKind.None,
                         addRefReadOnlyModifier,
                         declarationDiagnostics);
+
+                    p.IsSpread = syntax.Spread.Node != null;
+
+                    return p;
                 }
 );
         }
