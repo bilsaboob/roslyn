@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
@@ -40,6 +41,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                                         SyntaxToken paramsKeyword, SyntaxToken thisKeyword, bool addRefReadOnlyModifier,
                                         DiagnosticBag declarationDiagnostics) =>
                 {
+                    var isSpread = syntax.Spread.Node != null;
+
+                    if (isSpread)
+                    {
+                        // validate the argumnet type
+                        var defaultConstructor = (parameterType.Type as NamedTypeSymbol)?.InstanceConstructors.FirstOrDefault(ctor => ctor.ParameterCount == 0);
+                        if (defaultConstructor == null)
+                        {
+                            // the parameter is invalid - spread arg types must have default public constructor
+                            diagnostics.Add(ErrorCode.ERR_DefaultConstructorRequiredForSpreadParam, syntax.Location, parameterType.Type.Name);
+                        }
+                    }
+
                     var p = SourceParameterSymbol.Create(
                         context,
                         owner,
@@ -53,11 +67,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         addRefReadOnlyModifier,
                         declarationDiagnostics);
 
-                    p.IsSpread = syntax.Spread.Node != null;
+                    p.IsSpread = isSpread;
 
                     return p;
                 }
-);
+            );
         }
 
         public static ImmutableArray<FunctionPointerParameterSymbol> MakeFunctionPointerParameters(

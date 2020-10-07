@@ -623,6 +623,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             return New(ctor, args);
         }
 
+        public BoundObjectCreationExpression TryNew(NamedTypeSymbol type, params BoundExpression[] args)
+        {
+            var ctor = type.InstanceConstructors.FirstOrDefault(c => c.ParameterCount == args.Length);
+            if (ctor == null) return null;
+            return New(ctor, args);
+        }
+
         public BoundObjectCreationExpression New(NamedTypeSymbol type, SyntaxNode syntax, params BoundExpression[] args)
         {
             var ctor = type.InstanceConstructors.Single(c => c.ParameterCount == args.Length);

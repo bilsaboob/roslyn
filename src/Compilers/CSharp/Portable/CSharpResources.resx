@@ -6436,4 +6436,7 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="IDS_FeatureExtensionGetEnumerator" xml:space="preserve">
     <value>extension GetEnumerator</value>
   </data>
+  <data name="ERR_DefaultConstructorRequiredForSpreadParam" xml:space="preserve">
+    <value>Type '{0}' must have public parameterless default constructor to be used as spread input parameter</value>
+  </data>
 </root>
