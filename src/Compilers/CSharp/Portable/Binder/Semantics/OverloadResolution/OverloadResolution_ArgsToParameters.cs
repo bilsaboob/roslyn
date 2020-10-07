@@ -5,6 +5,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
@@ -75,6 +76,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             int? unmatchedArgumentIndex = null;
             bool? unmatchedArgumentIsNamed = null;
             var parameterPosition = 0;
+            var hasAnyMatchedSpreadArgs = false;
 
             void mapParameter(int argPos, int paramPos)
             {
@@ -130,7 +132,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             for (int argumentPosition = 0; argumentPosition < argumentCount; ++argumentPosition)
             {
                 // check for explicit named parameter
-                var namedParameterPosition = TryGetNamedParameterPosition(parameters, arguments, argumentPosition, out var isNamed);
+                var namedParameterPosition = TryGetNamedParameterPosition(parameters, arguments, argumentPosition, out var isNamed, out var isSpread);
                 if (namedParameterPosition != null || isNamed)
                 {
                     // no additional checks required... we expect the user to know what they are doing when explicitly naming arguments
@@ -142,6 +144,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         unmatchedArgumentIndex = argumentPosition;
                         unmatchedArgumentIsNamed = true;
+                    }
+                    else
+                    {
+                        if (isSpread) hasAnyMatchedSpreadArgs = true;
                     }
 
                     // move to the next valid parameter to be evaluated next - it must be the one after the named one...
@@ -266,9 +272,13 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // We're good; this one might be applicable in the given form.
 
-            return expanded ?
+            var result = expanded ?
                 ArgumentAnalysisResult.ExpandedForm(argsToParameters.ToImmutableArray()) :
                 ArgumentAnalysisResult.NormalForm(argsToParameters.ToImmutableArray());
+
+            result.HasSpreadParameters = hasAnyMatchedSpreadArgs;
+
+            return result;
         }
 
         private Conversion CheckArgumentForApplicability(
@@ -336,7 +346,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     break;
                 }
             }
-            
+
             if (foundPosition != -1)
             {
                 // Verify that all the following arguments are named
@@ -356,17 +366,35 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<ParameterSymbol> memberParameters,
             AnalyzedArguments arguments,
             int argumentPosition,
-            out bool isNamed
+            out bool isNamed,
+            out bool isSpread
             )
         {
+            isSpread = false;
             isNamed = arguments.Names.Count > argumentPosition && arguments.Names[argumentPosition] != null;
             if (!isNamed) return null;
 
-            var name = arguments.Names[argumentPosition];
+            // find the matching named parameter
+            var name = arguments.Names[argumentPosition].Identifier.ValueText;
             for (int p = 0; p < memberParameters.Length; ++p)
             {
-                if (memberParameters[p].Name == name.Identifier.ValueText)
+                if (memberParameters[p].Name == name)
                 {
+                    return p;
+                }
+            }
+
+            // if now matching named parameter, we can try with the spread parameters
+            for (int p = 0; p < memberParameters.Length; ++p)
+            {
+                var param = memberParameters[p];
+                if (!param.IsSpread) continue;
+
+                // match the parameter to the spread
+                var spreadMember = param.Type?.GetMembers().FirstOrDefault(m => m.Name == name);
+                if (spreadMember != null)
+                {
+                    isSpread = true;
                     return p;
                 }
             }

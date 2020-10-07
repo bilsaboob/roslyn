@@ -51,6 +51,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             return syntax == null ? null : syntax.Identifier.ValueText;
         }
 
+        public IdentifierNameSyntax NameSyntax(int i)
+        {
+            if (Names.Count == 0)
+            {
+                return null;
+            }
+
+            return Names[i];
+        }
+
         public ImmutableArray<string> GetNames()
         {
             int count = this.Names.Count;
@@ -120,6 +130,21 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 return false;
             }
+        }
+
+        public void UpdateFrom(AnalyzedArguments other)
+        {
+            Arguments.Clear();
+            Arguments.AddRange(other.Arguments);
+
+            Names.Clear();
+            Names.AddRange(other.Names);
+
+            RefKinds.Clear();
+            RefKinds.AddRange(other.RefKinds);
+
+            IsExtensionMethodInvocation = other.IsExtensionMethodInvocation;
+            _lazyHasDynamicArgument = other._lazyHasDynamicArgument;
         }
 
         #region "Poolable"
