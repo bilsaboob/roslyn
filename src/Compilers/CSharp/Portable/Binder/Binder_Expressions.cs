@@ -4609,7 +4609,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         // returns BadBoundExpression or BoundObjectInitializerMember
-        private BoundExpression BindObjectInitializerMember(
+        internal BoundExpression BindObjectInitializerMember(
             AssignmentExpressionSyntax namedAssignment,
             BoundObjectOrCollectionValuePlaceholder implicitReceiver,
             DiagnosticBag diagnostics)
@@ -4761,6 +4761,156 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             return new BoundObjectInitializerMember(
                 namedAssignment.Left,
+                boundMember.ExpressionSymbol,
+                arguments,
+                argumentNamesOpt,
+                argumentRefKindsOpt,
+                expanded,
+                argsToParamsOpt,
+                resultKind,
+                implicitReceiver.Type,
+                binderOpt: this,
+                type: boundMember.Type,
+                hasErrors: hasErrors);
+        }
+
+        // returns BadBoundExpression or BoundObjectInitializerMember
+        internal BoundExpression BindSimpleObjectInitializerMember(
+            BoundObjectOrCollectionValuePlaceholder implicitReceiver,
+            IdentifierNameSyntax memberName,
+            BoundExpression value,
+            DiagnosticBag diagnostics)
+        {
+            BoundExpression boundMember;
+            LookupResultKind resultKind;
+            bool hasErrors;
+
+            // SPEC:    Each member initializer must name an accessible field or property of the object being initialized, followed by an equals sign and
+            // SPEC:    an expression or an object initializer or collection initializer.
+            // SPEC:    A member initializer that specifies an expression after the equals sign is processed in the same way as an assignment (7.17.1) to the field or property.
+
+            // SPEC VIOLATION:  Native compiler also allows initialization of field-like events in object initializers, so we allow it as well.
+
+            boundMember = BindInstanceMemberAccess(
+                node: memberName,
+                right: memberName,
+                boundLeft: implicitReceiver,
+                rightName: memberName.Identifier.ValueText,
+                rightArity: 0,
+                typeArgumentsSyntax: default(SeparatedSyntaxList<TypeSyntax>),
+                typeArgumentsWithAnnotations: default(ImmutableArray<TypeWithAnnotations>),
+                invoked: false,
+                indexed: false,
+                diagnostics: diagnostics);
+
+            resultKind = boundMember.ResultKind;
+            hasErrors = boundMember.HasAnyErrors || implicitReceiver.HasAnyErrors;
+
+            if (boundMember.Kind == BoundKind.PropertyGroup)
+            {
+                boundMember = BindIndexedPropertyAccess((BoundPropertyGroup)boundMember, mustHaveAllOptionalParameters: true, diagnostics: diagnostics);
+                if (boundMember.HasAnyErrors)
+                {
+                    hasErrors = true;
+                }
+            }
+
+            // SPEC:    A member initializer that specifies an object initializer after the equals sign is a nested object initializer,
+            // SPEC:    i.e. an initialization of an embedded object. Instead of assigning a new value to the field or property,
+            // SPEC:    the assignments in the nested object initializer are treated as assignments to members of the field or property.
+            // SPEC:    Nested object initializers cannot be applied to properties with a value type, or to read-only fields with a value type.
+
+            // NOTE:    The dev11 behavior does not match the spec that was current at the time (quoted above).  However, in the roslyn
+            // NOTE:    timeframe, the spec will be updated to apply the same restriction to nested collection initializers.  Therefore,
+            // NOTE:    roslyn will implement the dev11 behavior and it will be spec-compliant.
+
+            // NOTE:    In the roslyn timeframe, an additional restriction will (likely) be added to the spec - it is not sufficient for the
+            // NOTE:    type of the member to not be a value type - it must actually be a reference type (i.e. unconstrained type parameters
+            // NOTE:    should be prohibited).  To avoid breaking existing code, roslyn will not implement this new spec clause.
+            // TODO:    If/when we have a way to version warnings, we should add a warning for this.
+
+            BoundKind boundMemberKind = boundMember.Kind;
+            SyntaxKind rhsKind = value.Syntax.Kind();
+            bool isRhsNestedInitializer = rhsKind == SyntaxKind.ObjectInitializerExpression || rhsKind == SyntaxKind.CollectionInitializerExpression;
+            BindValueKind valueKind = isRhsNestedInitializer ? BindValueKind.RValue : BindValueKind.Assignable;
+
+            ImmutableArray<BoundExpression> arguments = ImmutableArray<BoundExpression>.Empty;
+            ImmutableArray<string> argumentNamesOpt = default(ImmutableArray<string>);
+            ImmutableArray<int> argsToParamsOpt = default(ImmutableArray<int>);
+            ImmutableArray<RefKind> argumentRefKindsOpt = default(ImmutableArray<RefKind>);
+            bool expanded = false;
+
+            switch (boundMemberKind)
+            {
+                case BoundKind.FieldAccess:
+                    {
+                        var fieldSymbol = ((BoundFieldAccess)boundMember).FieldSymbol;
+                        if (isRhsNestedInitializer && fieldSymbol.IsReadOnly && fieldSymbol.Type.IsValueType)
+                        {
+                            if (!hasErrors)
+                            {
+                                // TODO: distinct error code for collection initializers?  (Dev11 doesn't have one.)
+                                Error(diagnostics, ErrorCode.ERR_ReadonlyValueTypeInObjectInitializer, memberName, fieldSymbol, fieldSymbol.Type);
+                                hasErrors = true;
+                            }
+
+                            resultKind = LookupResultKind.NotAValue;
+                        }
+                        break;
+                    }
+
+                case BoundKind.EventAccess:
+                    break;
+
+                case BoundKind.PropertyAccess:
+                    hasErrors |= isRhsNestedInitializer && !CheckNestedObjectInitializerPropertySymbol(((BoundPropertyAccess)boundMember).PropertySymbol, memberName, diagnostics, hasErrors, ref resultKind);
+                    break;
+
+                case BoundKind.IndexerAccess:
+                    {
+                        var indexer = (BoundIndexerAccess)boundMember;
+                        hasErrors |= isRhsNestedInitializer && !CheckNestedObjectInitializerPropertySymbol(indexer.Indexer, memberName, diagnostics, hasErrors, ref resultKind);
+                        arguments = indexer.Arguments;
+                        argumentNamesOpt = indexer.ArgumentNamesOpt;
+                        argsToParamsOpt = indexer.ArgsToParamsOpt;
+                        argumentRefKindsOpt = indexer.ArgumentRefKindsOpt;
+                        expanded = indexer.Expanded;
+
+                        break;
+                    }
+
+                case BoundKind.DynamicIndexerAccess:
+                    {
+                        var indexer = (BoundDynamicIndexerAccess)boundMember;
+                        arguments = indexer.Arguments;
+                        argumentNamesOpt = indexer.ArgumentNamesOpt;
+                        argumentRefKindsOpt = indexer.ArgumentRefKindsOpt;
+                    }
+
+                    break;
+
+                case BoundKind.ArrayAccess:
+                case BoundKind.PointerElementAccess:
+                    return boundMember;
+
+                default:
+                    return BadObjectInitializerMemberAccess(boundMember, implicitReceiver, memberName, diagnostics, valueKind, hasErrors);
+            }
+
+            if (!hasErrors)
+            {
+                // CheckValueKind to generate possible diagnostics for invalid initializers non-viable member lookup result:
+                //      1) CS0154 (ERR_PropertyLacksGet)
+                //      2) CS0200 (ERR_AssgReadonlyProp)
+                if (!CheckValueKind(boundMember.Syntax, boundMember, valueKind, checkingReceiver: false, diagnostics: diagnostics))
+                {
+                    hasErrors = true;
+                    resultKind = isRhsNestedInitializer ? LookupResultKind.NotAValue : LookupResultKind.NotAVariable;
+                }
+            }
+
+            return new BoundObjectInitializerMember(
+                memberName,
                 boundMember.ExpressionSymbol,
                 arguments,
                 argumentNamesOpt,

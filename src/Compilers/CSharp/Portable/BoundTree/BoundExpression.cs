@@ -454,6 +454,21 @@ namespace Microsoft.CodeAnalysis.CSharp
                 binderOpt: BinderOpt,
                 type: changeTypeOpt ?? Type);
         }
+
+        internal BoundObjectCreationExpression UpdateInitializer(BoundObjectInitializerExpressionBase? newInitializerExpression)
+        {
+            return Update(
+                constructor: Constructor,
+                arguments: Arguments,
+                argumentNamesOpt: ArgumentNamesOpt,
+                argumentRefKindsOpt: ArgumentRefKindsOpt,
+                expanded: Expanded,
+                argsToParamsOpt: ArgsToParamsOpt,
+                constantValueOpt: ConstantValueOpt,
+                initializerExpressionOpt: newInitializerExpression,
+                binderOpt: BinderOpt,
+                type: Type);
+        }
     }
 
     internal partial class BoundAnonymousObjectCreationExpression
