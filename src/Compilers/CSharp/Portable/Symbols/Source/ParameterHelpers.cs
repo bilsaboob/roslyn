@@ -13,7 +13,7 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
-    internal static class ParameterHelpers
+    internal static partial class ParameterHelpers
     {
         public static ImmutableArray<ParameterSymbol> MakeParameters(
             Binder binder,
@@ -42,16 +42,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                                         DiagnosticBag declarationDiagnostics) =>
                 {
                     var isSpread = syntax.Spread.Node != null;
-
-                    if (isSpread)
+                    if (isSpread && !SpreadParamHelpers.IsValidSpreadArgType(parameterType.Type))
                     {
-                        // validate the argumnet type
-                        var defaultConstructor = (parameterType.Type as NamedTypeSymbol)?.InstanceConstructors.FirstOrDefault(ctor => ctor.ParameterCount == 0);
-                        if (defaultConstructor == null)
-                        {
-                            // the parameter is invalid - spread arg types must have default public constructor
-                            diagnostics.Add(ErrorCode.ERR_DefaultConstructorRequiredForSpreadParam, syntax.Location, parameterType.Type.Name);
-                        }
+                        // the parameter is invalid - spread arg types must have default public constructor
+                        diagnostics.Add(ErrorCode.ERR_DefaultConstructorRequiredForSpreadParam, syntax.Location, parameterType.Type.Name);
                     }
 
                     var p = SourceParameterSymbol.Create(
