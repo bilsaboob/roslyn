@@ -44,6 +44,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         SlashToken = 8221,
         DotDotToken = 8222,
         ColonEqualsToken = 8223,
+        DotDotDotToken = 8224,
 
         // additional xml tokens
         SlashGreaterThanToken = 8232, // xml empty element end

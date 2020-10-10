@@ -6,13 +6,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
-    internal static class ParameterHelpers
+    internal static partial class ParameterHelpers
     {
         public static ImmutableArray<ParameterSymbol> MakeParameters(
             Binder binder,
@@ -40,7 +41,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                                         SyntaxToken paramsKeyword, SyntaxToken thisKeyword, bool addRefReadOnlyModifier,
                                         DiagnosticBag declarationDiagnostics) =>
                 {
-                    return SourceParameterSymbol.Create(
+                    var isSpread = syntax.Spread.Node != null;
+                    if (isSpread && !SpreadParamHelpers.IsValidSpreadArgType(parameterType.Type))
+                    {
+                        // the parameter is invalid - spread arg types must have default public constructor
+                        diagnostics.Add(ErrorCode.ERR_DefaultConstructorRequiredForSpreadParam, syntax.Location, parameterType.Type.Name);
+                    }
+
+                    var p = SourceParameterSymbol.Create(
                         context,
                         owner,
                         parameterType,
@@ -52,8 +60,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         isExtensionMethodThis: ordinal == 0 && thisKeyword.Kind() != SyntaxKind.None,
                         addRefReadOnlyModifier,
                         declarationDiagnostics);
+
+                    p.IsSpread = isSpread;
+
+                    return p;
                 }
-);
+            );
         }
 
         public static ImmutableArray<FunctionPointerParameterSymbol> MakeFunctionPointerParameters(

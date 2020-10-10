@@ -27,6 +27,11 @@ namespace Microsoft.CodeAnalysis
         public ISymbol? Symbol { get; }
 
         /// <summary>
+        /// If the symbol is refering to a parameter and it's a spread parameter type
+        /// </summary>
+        public bool IsSpreadParam { get; }
+
+        /// <summary>
         /// If the expression did not successfully resolve to a symbol, but there were one or more
         /// symbols that may have been considered but discarded, this property returns those
         /// symbols. The reason that the symbols did not successfully resolve to a symbol are
@@ -60,22 +65,22 @@ namespace Microsoft.CodeAnalysis
         /// </summary>
         public CandidateReason CandidateReason { get; }
 
-        internal SymbolInfo(ISymbol symbol)
-            : this(symbol, ImmutableArray<ISymbol>.Empty, CandidateReason.None)
+        internal SymbolInfo(ISymbol symbol, bool isSpreadParam = false)
+            : this(symbol, ImmutableArray<ISymbol>.Empty, CandidateReason.None, isSpreadParam)
         {
         }
 
-        internal SymbolInfo(ISymbol symbol, CandidateReason reason)
-            : this(symbol, ImmutableArray<ISymbol>.Empty, reason)
+        internal SymbolInfo(ISymbol symbol, CandidateReason reason, bool isSpreadParam = false)
+            : this(symbol, ImmutableArray<ISymbol>.Empty, reason, isSpreadParam)
         {
         }
 
-        internal SymbolInfo(ImmutableArray<ISymbol> candidateSymbols, CandidateReason candidateReason)
-            : this(null, candidateSymbols, candidateReason)
+        internal SymbolInfo(ImmutableArray<ISymbol> candidateSymbols, CandidateReason candidateReason, bool isSpreadParam = false)
+            : this(null, candidateSymbols, candidateReason, isSpreadParam)
         {
         }
 
-        internal SymbolInfo(ISymbol? symbol, ImmutableArray<ISymbol> candidateSymbols, CandidateReason candidateReason)
+        internal SymbolInfo(ISymbol? symbol, ImmutableArray<ISymbol> candidateSymbols, CandidateReason candidateReason, bool isSpreadParam = false)
             : this()
         {
             this.Symbol = symbol;
@@ -91,6 +96,7 @@ namespace Microsoft.CodeAnalysis
 #endif
 
             this.CandidateReason = candidateReason;
+            this.IsSpreadParam = isSpreadParam;
         }
 
         public override bool Equals(object? obj)

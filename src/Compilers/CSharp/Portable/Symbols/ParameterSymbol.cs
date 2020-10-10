@@ -126,6 +126,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public abstract bool IsParams { get; }
 
         /// <summary>
+        /// Returns true if the parameter is declared as a spread parameter type.
+        /// </summary>
+        public virtual bool IsSpread { get; protected internal set; }
+
+        /// <summary>
         /// Returns true if the parameter is semantically optional.
         /// </summary>
         /// <remarks>

@@ -464,13 +464,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                             TextWindow.AdvanceChar();
                             if (TextWindow.PeekChar() == '.')
                             {
-                                // Triple-dot: explicitly reject this, to allow triple-dot
-                                // to be added to the language without a breaking change.
-                                // (without this, 0...2 would parse as (0)..(.2), i.e. a range from 0 to 0.2)
-                                this.AddError(ErrorCode.ERR_TripleDotNotAllowed);
+                                TextWindow.AdvanceChar();
+                                info.Kind = SyntaxKind.DotDotDotToken;
                             }
-
-                            info.Kind = SyntaxKind.DotDotToken;
+                            else
+                            {
+                                info.Kind = SyntaxKind.DotDotToken;
+                            }
                         }
                         else
                         {
@@ -3970,11 +3970,13 @@ top:
                     {
                         if (TextWindow.PeekChar() == '.')
                         {
-                            // See documentation in ScanSyntaxToken
-                            this.AddCrefError(ErrorCode.ERR_UnexpectedCharacter, ".");
+                            TextWindow.AdvanceChar();
+                            info.Kind = SyntaxKind.DotDotDotToken;
                         }
-
-                        info.Kind = SyntaxKind.DotDotToken;
+                        else
+                        {
+                            info.Kind = SyntaxKind.DotDotToken;
+                        }
                     }
                     else
                     {

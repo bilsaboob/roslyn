@@ -1887,5 +1887,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         #endregion diagnostics introduced for C# 9.0
         // Note: you will need to re-generate compiler code after adding warnings (eng\generate-compiler-code.cmd)
+
+        #region diagnostics for rapid sharp
+        ERR_DefaultConstructorRequiredForSpreadParam = 9000,
+        #endregion
     }
 }

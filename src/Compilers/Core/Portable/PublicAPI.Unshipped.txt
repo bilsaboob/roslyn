@@ -9,6 +9,14 @@ Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalysisResultAsy
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalysisResultAsync(Microsoft.CodeAnalysis.AdditionalText file, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.CodeAnalysis.Diagnostics.AnalysisResult>
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.get -> int
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.set -> void
+Microsoft.CodeAnalysis.IParameterSymbol.IsSpread.get -> bool
+Microsoft.CodeAnalysis.SymbolInfo.IsSpreadParam.get -> bool
+Microsoft.CodeAnalysis.SymbolInfo.IsSpreadParam.set -> void
+Microsoft.CodeAnalysis.SymbolKind.Wrapped = 21 -> Microsoft.CodeAnalysis.SymbolKind
+Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol
+Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol.AsFieldSymbol.get -> Microsoft.CodeAnalysis.IFieldSymbol
+Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol.ParamSymbol.get -> Microsoft.CodeAnalysis.ISymbol
+Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol.SpreadParamSymbol(Microsoft.CodeAnalysis.ISymbol memberSymbol, Microsoft.CodeAnalysis.ISymbol paramSymbol) -> void
 Microsoft.CodeAnalysis.SyntaxNode.FindToken(int position, bool findInsideTrivia = false, bool findInsideSkippedTrivia = false) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.SyntaxNode.GetLastToken(bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false, System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> predicate = null) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.SyntaxNode.HasErrors.get -> bool
@@ -21,6 +29,43 @@ Microsoft.CodeAnalysis.SyntaxNodeOrToken.WithLeadingTrivia(System.Collections.Ge
 Microsoft.CodeAnalysis.SyntaxToken.WithLeadingTrivia(System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.SyntaxTrivia> trivia, int position = 0, int index = 0) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider
 Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider.SyntaxTreeOptionsProvider() -> void
+Microsoft.CodeAnalysis.WrappedSymbol
+Microsoft.CodeAnalysis.WrappedSymbol.Accept(Microsoft.CodeAnalysis.SymbolVisitor visitor) -> void
+Microsoft.CodeAnalysis.WrappedSymbol.Accept<TResult>(Microsoft.CodeAnalysis.SymbolVisitor<TResult> visitor) -> TResult
+Microsoft.CodeAnalysis.WrappedSymbol.CanBeReferencedByName.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.ContainingAssembly.get -> Microsoft.CodeAnalysis.IAssemblySymbol
+Microsoft.CodeAnalysis.WrappedSymbol.ContainingModule.get -> Microsoft.CodeAnalysis.IModuleSymbol
+Microsoft.CodeAnalysis.WrappedSymbol.ContainingNamespace.get -> Microsoft.CodeAnalysis.INamespaceSymbol
+Microsoft.CodeAnalysis.WrappedSymbol.ContainingSymbol.get -> Microsoft.CodeAnalysis.ISymbol
+Microsoft.CodeAnalysis.WrappedSymbol.ContainingType.get -> Microsoft.CodeAnalysis.INamedTypeSymbol
+Microsoft.CodeAnalysis.WrappedSymbol.DeclaredAccessibility.get -> Microsoft.CodeAnalysis.Accessibility
+Microsoft.CodeAnalysis.WrappedSymbol.DeclaringSyntaxReferences.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.SyntaxReference>
+Microsoft.CodeAnalysis.WrappedSymbol.Equals(Microsoft.CodeAnalysis.ISymbol other) -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.Equals(Microsoft.CodeAnalysis.ISymbol other, Microsoft.CodeAnalysis.SymbolEqualityComparer equalityComparer) -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.GetAttributes() -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.AttributeData>
+Microsoft.CodeAnalysis.WrappedSymbol.GetDocumentationCommentId() -> string
+Microsoft.CodeAnalysis.WrappedSymbol.GetDocumentationCommentXml(System.Globalization.CultureInfo preferredCulture = null, bool expandIncludes = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> string
+Microsoft.CodeAnalysis.WrappedSymbol.HasUnsupportedMetadata.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.IsAbstract.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.IsDefinition.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.IsExtern.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.IsImplicitlyDeclared.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.IsOverride.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.IsSealed.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.IsStatic.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.IsVirtual.get -> bool
+Microsoft.CodeAnalysis.WrappedSymbol.Language.get -> string
+Microsoft.CodeAnalysis.WrappedSymbol.Locations.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Location>
+Microsoft.CodeAnalysis.WrappedSymbol.MetadataName.get -> string
+Microsoft.CodeAnalysis.WrappedSymbol.Name.get -> string
+Microsoft.CodeAnalysis.WrappedSymbol.OriginalDefinition.get -> Microsoft.CodeAnalysis.ISymbol
+Microsoft.CodeAnalysis.WrappedSymbol.Symbol.get -> Microsoft.CodeAnalysis.ISymbol
+Microsoft.CodeAnalysis.WrappedSymbol.Symbol.set -> void
+Microsoft.CodeAnalysis.WrappedSymbol.ToDisplayParts(Microsoft.CodeAnalysis.SymbolDisplayFormat format = null) -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.SymbolDisplayPart>
+Microsoft.CodeAnalysis.WrappedSymbol.ToDisplayString(Microsoft.CodeAnalysis.SymbolDisplayFormat format = null) -> string
+Microsoft.CodeAnalysis.WrappedSymbol.ToMinimalDisplayParts(Microsoft.CodeAnalysis.SemanticModel semanticModel, int position, Microsoft.CodeAnalysis.SymbolDisplayFormat format = null) -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.SymbolDisplayPart>
+Microsoft.CodeAnalysis.WrappedSymbol.ToMinimalDisplayString(Microsoft.CodeAnalysis.SemanticModel semanticModel, int position, Microsoft.CodeAnalysis.SymbolDisplayFormat format = null) -> string
+Microsoft.CodeAnalysis.WrappedSymbol.WrappedSymbol(Microsoft.CodeAnalysis.ISymbol symbol) -> void
 abstract Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider.IsGenerated(Microsoft.CodeAnalysis.SyntaxTree tree) -> bool?
 abstract Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider.TryGetDiagnosticValue(Microsoft.CodeAnalysis.SyntaxTree tree, string diagnosticId, out Microsoft.CodeAnalysis.ReportDiagnostic severity) -> bool
 const Microsoft.CodeAnalysis.WellKnownMemberNames.TopLevelStatementsEntryPointMethodName = "<Main>$" -> string
@@ -28,5 +73,7 @@ const Microsoft.CodeAnalysis.WellKnownMemberNames.TopLevelStatementsEntryPointTy
 Microsoft.CodeAnalysis.CompilationOptions.SyntaxTreeOptionsProvider.get -> Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider
 Microsoft.CodeAnalysis.CompilationOptions.WithSyntaxTreeOptionsProvider(Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider provider) -> Microsoft.CodeAnalysis.CompilationOptions
 Microsoft.CodeAnalysis.Operations.IPatternOperation.NarrowedType.get -> Microsoft.CodeAnalysis.ITypeSymbol
+override Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol.Kind.get -> Microsoft.CodeAnalysis.SymbolKind
 virtual Microsoft.CodeAnalysis.Diagnostics.AnalysisContext.RegisterAdditionalFileAction(System.Action<Microsoft.CodeAnalysis.Diagnostics.AdditionalFileAnalysisContext> action) -> void
 virtual Microsoft.CodeAnalysis.Diagnostics.CompilationStartAnalysisContext.RegisterAdditionalFileAction(System.Action<Microsoft.CodeAnalysis.Diagnostics.AdditionalFileAnalysisContext> action) -> void
+virtual Microsoft.CodeAnalysis.WrappedSymbol.Kind.get -> Microsoft.CodeAnalysis.SymbolKind

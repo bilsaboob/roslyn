@@ -21,6 +21,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.PublicModel
 
         internal override CSharp.Symbol UnderlyingSymbol => _underlying;
 
+        public bool IsSpread => _underlying.IsSpread;
+
         ITypeSymbol IParameterSymbol.Type
         {
             get

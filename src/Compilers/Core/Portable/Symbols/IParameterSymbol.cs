@@ -30,6 +30,11 @@ namespace Microsoft.CodeAnalysis
         bool IsParams { get; }
 
         /// <summary>
+        /// Returns true if the parameter was declared as a spread input parameter.
+        /// </summary>
+        bool IsSpread { get; }
+
+        /// <summary>
         /// Returns true if the parameter is optional.
         /// </summary>
         bool IsOptional { get; }

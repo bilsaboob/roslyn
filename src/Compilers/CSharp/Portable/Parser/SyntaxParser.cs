@@ -294,6 +294,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         protected SyntaxKind CurrentKind => CurrentToken.Kind;
         protected SyntaxKind CurrentContextualKind => CurrentToken.ContextualKind;
 
+        protected SyntaxKind PeekKind => PeekToken(1).Kind;
+        protected SyntaxKind PeekContextualKind => PeekToken(1).ContextualKind;
+
         protected bool IsCurrentTokenEndOfFile
         {
             get => CurrentToken.Kind == SyntaxKind.EndOfFileToken;

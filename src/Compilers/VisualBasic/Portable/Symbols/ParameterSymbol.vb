@@ -38,6 +38,12 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.Symbols
             End Get
         End Property
 
+        Public ReadOnly Property IsSpread As Boolean Implements IParameterSymbol.IsSpread
+            Get
+                Return false
+            End Get
+        End Property
+
         ''' <summary>
         ''' Is this ByRef parameter.
         ''' </summary>

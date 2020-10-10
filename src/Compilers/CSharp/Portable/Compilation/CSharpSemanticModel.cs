@@ -4427,8 +4427,18 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if ((object)containingInvocationInfo.Symbol != null)
             {
-                ParameterSymbol param = FindNamedParameter(containingInvocationInfo.Symbol.GetSymbol().GetParameters(), argumentName);
-                return (object)param == null ? SymbolInfo.None : new SymbolInfo(param.GetPublicSymbol(), ImmutableArray<ISymbol>.Empty, CandidateReason.None);
+                var parameters = containingInvocationInfo.Symbol.GetSymbol().GetParameters();
+                var param = FindNamedParameter(parameters, argumentName);
+                if (param == null)
+                {
+                    var invocationBinder = GetEnclosingBinder(GetAdjustedNodePosition(containingInvocation));
+                    Symbol spreadParamMemberSymbol = null;
+                    ParameterSymbol spreadParam = null;
+                    if (invocationBinder != null)
+                        spreadParamMemberSymbol = invocationBinder.LookupSpreadParameterMemberSymbol(argumentName, parameters, out spreadParam);
+                    return spreadParamMemberSymbol == null ? SymbolInfo.None : new SymbolInfo(new CodeAnalysis.Symbols.SpreadParamSymbol(spreadParamMemberSymbol.GetPublicSymbol(), spreadParam.GetPublicSymbol()), ImmutableArray<ISymbol>.Empty, CandidateReason.None);
+                }
+                return (object)param == null ? SymbolInfo.None : new SymbolInfo(param.GetPublicSymbol(), ImmutableArray<ISymbol>.Empty, CandidateReason.None, true);
             }
             else
             {
@@ -4444,10 +4454,21 @@ namespace Microsoft.CodeAnalysis.CSharp
                         default:
                             continue; // Definitely doesn't have parameters.
                     }
-                    ParameterSymbol param = FindNamedParameter(invocationSym.GetSymbol().GetParameters(), argumentName);
+                    var parameters = invocationSym.GetSymbol().GetParameters();
+                    var param = FindNamedParameter(parameters, argumentName);
                     if ((object)param != null)
                     {
                         symbols.Add(param.GetPublicSymbol());
+                    }
+                    else
+                    {
+                        var invocationBinder = GetEnclosingBinder(GetAdjustedNodePosition(containingInvocation));
+                        if (invocationBinder != null)
+                        {
+                            var spreadParamMemberSymbol = invocationBinder.LookupSpreadParameterMemberSymbol(argumentName, parameters, out var spreadParam);
+                            if (spreadParamMemberSymbol != null)
+                                symbols.Add(new CodeAnalysis.Symbols.SpreadParamSymbol(spreadParamMemberSymbol.GetPublicSymbol(), spreadParam.GetPublicSymbol()));
+                        }
                     }
                 }
 

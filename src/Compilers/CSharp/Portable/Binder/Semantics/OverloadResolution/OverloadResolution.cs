@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.Cci;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
 
@@ -3077,6 +3078,29 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new EffectiveParameters(types.ToImmutableAndFree(), refKinds);
         }
 
+        class SpreadArgumentAnalysis
+        {
+            public SpreadArgumentAnalysis(int paramIndex)
+            {
+                ParameterIndex = paramIndex;
+            }
+
+            public int ParameterIndex { get; set; }
+            public ArrayBuilder<int> Arguments { get; set; }
+
+            public void AddArgument(int arg)
+            {
+                Arguments ??= ArrayBuilder<int>.GetInstance();
+                Arguments.Add(arg);
+            }
+
+            public void Free()
+            {
+                Arguments.Free();
+                Arguments = null;
+            }
+        }
+
         private MemberResolutionResult<TMember> IsMemberApplicableInNormalForm<TMember>(
             TMember member,                // method or property
             TMember leastOverriddenMember, // method or property
@@ -3092,6 +3116,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             // AnalyzeArguments matches arguments to parameter names and positions. 
             // For that purpose we use the most derived member.
             var argumentAnalysis = AnalyzeArguments(member, arguments, isMethodGroupConversion, expanded: false);
+
+            // handle spread parameters
+            if (argumentAnalysis.HasSpreadParameters)
+                argumentAnalysis = AnalyzeSpreadArguments(member, arguments, argumentAnalysis, isMethodGroupConversion, ref useSiteDiagnostics);
+
             if (!argumentAnalysis.IsValid)
             {
                 switch (argumentAnalysis.Kind)
@@ -3159,6 +3188,162 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             return applicableResult;
+        }
+
+        private ArgumentAnalysisResult AnalyzeSpreadArguments(Symbol member, AnalyzedArguments arguments, ArgumentAnalysisResult argumentAnalysis, bool isMethodGroupConversion, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        {
+            var parameters = member.GetParameters();
+            var spreadArguments = ArrayBuilder<SpreadArgumentAnalysis>.GetInstance();
+
+            // we need to collect the parameter from the ones expected to be collected as spread parameters
+            for (var i = 0; i < arguments.Arguments.Count; i++)
+            {
+                var arg = arguments.Arguments[i];
+
+                // check if the argument should be "consumed" into the "spread arg"
+                var paramIndex = argumentAnalysis.ParameterFromArgument(i);
+                var param = parameters[paramIndex];
+                if (param.IsSpread && param.Type.Name != arg.Type.Name)
+                {
+                    // the argument is mapped to a spread parameter but is not the same type... so it should be part of the spread parameter instance
+                    // add a new spread argument holder
+                    SpreadArgumentAnalysis spreadArg = null;
+                    var spreadArgIndex = spreadArguments.FindIndex(a => a.ParameterIndex == paramIndex);
+                    if (spreadArgIndex != -1) spreadArg = spreadArguments[spreadArgIndex];
+
+                    if (spreadArg == null)
+                    {
+                        spreadArg = new SpreadArgumentAnalysis(paramIndex);
+                        spreadArguments.Add(spreadArg);
+                    }
+
+                    // we need the matching member in the spread type
+                    var argName = arguments.Name(i);
+                    var spreadArgMember = param.Type?.GetMembers().FirstOrDefault(m => m.Name == argName);
+
+                    // add the argument to the spread arg analysis ... it has a matching member, so we can initialize that member with the value of the argument
+                    if (spreadArgMember != null)
+                    {
+                        spreadArg.AddArgument(i);
+                    }
+                }
+            }
+
+            // now finalize the new collected arguments - consuming the parameters part of the spread - and injecting the parameters representing the spread
+
+            var newArguments = ArrayBuilder<BoundExpression>.GetInstance();
+            var newArgumentNames = ArrayBuilder<IdentifierNameSyntax>.GetInstance();
+            var newArgumentRefKinds = ArrayBuilder<RefKind>.GetInstance();
+            SyntheticBoundNodeFactory nodeFactory = null;
+
+            // now build tne new arguments in the order of 
+            for (var i = 0; i < parameters.Length; ++i)
+            {
+                // find matching argumnet
+                var param = parameters[i];
+
+                var argIndex = argumentAnalysis.ArgumentFromParameter(i);
+                if (argIndex == -1)
+                {
+                    // no matching argument for the parameter
+                    continue;
+                }
+
+                if (param.IsSpread)
+                {
+                    // check if it is any of the spread args
+                    var spreadArgIndex = spreadArguments.FindIndex(a => a.ParameterIndex == i);
+                    if (spreadArgIndex == -1) continue;
+
+                    nodeFactory ??= new SyntheticBoundNodeFactory(null, arguments.Arguments[0].Syntax.Parent, null, null);
+
+                    // we have a matching spread arg
+                    var spreadArgAnalysis = spreadArguments[spreadArgIndex];
+                    var spreadArg = BuildSpreadArg(member, spreadArgAnalysis, arguments, nodeFactory, ref useSiteDiagnostics);
+                    newArguments.Add(spreadArg);
+                    newArgumentNames.Add(SyntaxFactory.IdentifierName(parameters[i].Name));
+                    newArgumentRefKinds.Add(RefKind.None);
+                }
+                else
+                {
+                    // get the argument - so just add the new argument
+                    var arg = arguments.Argument(argIndex);
+                    newArguments.Add(arg);
+                    newArgumentNames.Add(arguments.NameSyntax(argIndex));
+                    newArgumentRefKinds.Add(arguments.RefKind(argIndex));
+                }
+            }
+
+            var newAnalyzedArguments = AnalyzedArguments.GetInstance(
+                newArguments.ToImmutableAndFree(),
+                newArgumentRefKinds.ToImmutableAndFree(),
+                newArgumentNames.ToImmutableAndFree()
+            );
+
+            // finally free the spread args
+            for (var i = 0; i < spreadArguments.Count; ++i)
+                spreadArguments[i].Free();
+            spreadArguments.Free();
+
+            // we now have the new arguments available - replace the argumnet analysis
+            var newArgumentAnalysis = AnalyzeArguments(member, newAnalyzedArguments, isMethodGroupConversion, expanded: false);
+            if (newArgumentAnalysis.IsValid)
+            {
+                // we have successfully bound the old arguments to new spread args - upating the initial analysis will overwrite it's internals...
+                argumentAnalysis = newArgumentAnalysis;
+                arguments.UpdateFrom(newAnalyzedArguments);
+            }
+
+            // free the new analyzed arguments
+            newAnalyzedArguments.Free();
+
+            return argumentAnalysis;
+        }
+
+        private BoundExpression BuildSpreadArg(Symbol symbol, SpreadArgumentAnalysis spreadArgAnalysis, AnalyzedArguments arguments, SyntheticBoundNodeFactory nodeFactory, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        {
+            var parameters = symbol.GetParameters();
+            var spreadParam = parameters[spreadArgAnalysis.ParameterIndex];
+            var spreadTypeMembers = spreadParam.Type.GetMembersUnordered();
+
+            var initExpressions = ArrayBuilder<BoundExpression>.GetInstance();
+
+            // we need the implicit reciever
+            var implicitReceiver = new BoundObjectOrCollectionValuePlaceholder(SyntaxFactory.IdentifierName(spreadParam.Type.Name), spreadParam.Type) { WasCompilerGenerated = true };
+
+            // build the member initializer expressions
+            for (var i = 0; i < spreadArgAnalysis.Arguments.Count; ++i)
+            {
+                var argIndex = spreadArgAnalysis.Arguments[i];
+                var arg = arguments.Argument(argIndex);
+                var argName = arguments.Name(argIndex);
+
+                // add a member initializer expression for the arg ... to the matching member
+
+                var argMember = SpreadParamHelpers.GetFirstPossibleSpreadParamMember(spreadTypeMembers, argName);
+                if (argMember == null)
+                {
+                    // error ... must match a member to be part of the spread ...
+                    continue;
+                }
+
+                var diagnostics = DiagnosticBag.GetInstance();
+                var boundMemberAccess = _binder.BindSimpleObjectInitializerMember(implicitReceiver, SyntaxFactory.IdentifierName(argName), arg, diagnostics);
+                var boundMemberInitializerExpr = _binder.BindAssignment(arg.Syntax, boundMemberAccess, arg, isRef: false, diagnostics);
+                if (diagnostics.Count > 0)
+                {
+                    if (useSiteDiagnostics == null)
+                        useSiteDiagnostics = new HashSet<DiagnosticInfo>();
+                    useSiteDiagnostics.AddAll(diagnostics.AsEnumerable().Cast<DiagnosticWithInfo>().Select(d => d.Info));
+                }
+                diagnostics.Free();
+
+                initExpressions.Add(boundMemberInitializerExpr);
+            }
+
+            // new instance of the parameter type with an object initializer
+            var initializer = nodeFactory.ObjectInitializer(implicitReceiver, spreadParam.Type, initExpressions.ToImmutableAndFree(), arguments.Argument(0).Syntax.Parent);
+            return nodeFactory.TryNew((NamedTypeSymbol)spreadParam.Type)?.UpdateInitializer(initializer) ?? nodeFactory.Null(spreadParam.Type);
         }
 
         private MemberResolutionResult<TMember> IsMemberApplicableInExpandedForm<TMember>(

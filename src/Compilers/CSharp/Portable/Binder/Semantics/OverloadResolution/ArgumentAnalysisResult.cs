@@ -14,6 +14,17 @@ namespace Microsoft.CodeAnalysis.CSharp
         public readonly int ParameterPosition;
         public readonly ArgumentAnalysisResultKind Kind;
 
+        public int ArgumentFromParameter(int param)
+        {
+            Debug.Assert(param >= 0);
+            if (ArgsToParamsOpt.IsDefault) return param;
+            for (var i = 0; i < ArgsToParamsOpt.Length; ++i)
+            {
+                if (ArgsToParamsOpt[i] == param) return i;
+            }
+            return -1;
+        }
+
         public int ParameterFromArgument(int arg)
         {
             Debug.Assert(arg >= 0);
@@ -34,7 +45,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.ArgumentPosition = argumentPosition;
             this.ParameterPosition = parameterPosition;
             this.ArgsToParamsOpt = argsToParamsOpt;
+            this.HasSpreadParameters = false;
         }
+
+        public bool HasSpreadParameters { get; set; }
 
         public bool IsValid
         {

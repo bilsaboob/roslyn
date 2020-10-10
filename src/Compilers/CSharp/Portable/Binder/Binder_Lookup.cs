@@ -49,6 +49,30 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        internal Symbol LookupSpreadParameterMemberSymbol(string paramName, ImmutableArray<ParameterSymbol> parameters)
+        {
+            return LookupSpreadParameterMemberSymbol(paramName, parameters, out _);
+        }
+
+        internal Symbol LookupSpreadParameterMemberSymbol(string paramName, ImmutableArray<ParameterSymbol> parameters, out ParameterSymbol spreadParam)
+        {
+            // check if the param could possibly be part of a "spread arg"
+            spreadParam = parameters.FirstOrDefault(p => p.IsSpread && ((NamedTypeSymbol)p.Type).MemberNames.Contains(paramName) == true);
+            if (spreadParam is null) return null;
+
+            var lookupResult = LookupResult.GetInstance();
+            try
+            {
+                HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+                LookupMembersWithFallback(lookupResult, spreadParam.Type, paramName, arity: 0, ref useSiteDiagnostics, basesBeingResolved: null, options: LookupOptions.MustBeInstance);
+                return lookupResult.Symbols.FirstOrDefault();
+            }
+            finally
+            {
+                lookupResult.Free();
+            }
+        }
+
         /// <summary>
         /// Look for any symbols in scope with the given name and arity.
         /// </summary>
@@ -142,7 +166,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Look for symbols that are members of the specified namespace or type.
         /// </summary>
-        private void LookupMembersWithFallback(LookupResult result, NamespaceOrTypeSymbol nsOrType, string name, int arity, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<TypeSymbol> basesBeingResolved = null, LookupOptions options = LookupOptions.Default)
+        internal void LookupMembersWithFallback(LookupResult result, NamespaceOrTypeSymbol nsOrType, string name, int arity, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<TypeSymbol> basesBeingResolved = null, LookupOptions options = LookupOptions.Default)
         {
             Debug.Assert(options.AreValid());
 

@@ -98,6 +98,8 @@ namespace Microsoft.CodeAnalysis.Completion
 
         internal CompletionItemFlags Flags { get; set; }
 
+        internal ISymbol Symbol { get; set; }
+
         private CompletionItem(
             string displayText,
             string filterText,
