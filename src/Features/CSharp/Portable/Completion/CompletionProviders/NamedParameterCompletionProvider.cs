@@ -22,6 +22,7 @@ using System;
 using Microsoft.CodeAnalysis.ErrorReporting;
 using System.Composition;
 using Microsoft.CodeAnalysis.Host.Mef;
+using Microsoft.CodeAnalysis.Symbols;
 
 namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
 {
@@ -50,6 +51,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
 
         public override async Task ProvideCompletionsAsync(CompletionContext context)
         {
+            // cache all spread parameters available in the parameter lists
+            TypeCache spreadParamTypes = null;
+
             try
             {
                 var document = context.Document;
@@ -83,17 +87,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
                     return;
                 }
 
+                // keep the spread parameter information in cache
+                spreadParamTypes = new TypeCache();
+
                 var existingNamedParameters = GetExistingNamedParameters(argumentList, position);
-                parameterLists = parameterLists.Where(pl => IsValid(pl, existingNamedParameters));
 
-                var unspecifiedParameters = parameterLists.SelectMany(pl => pl)
-                                                          .Where(p => !existingNamedParameters.Contains(p.Name))
-                                                          .Distinct(this);
+                var unspecifiedParameters = parameterLists
+                    .Where(pl => IsValid(pl, existingNamedParameters, spreadParamTypes))
+                    .SelectMany(pl => pl)
+                    .Where(p => !existingNamedParameters.Contains(p.Name))
+                    .Distinct(this)
+                    .ToList();
 
-                if (!unspecifiedParameters.Any())
-                {
+                if (unspecifiedParameters.Count == 0)
                     return;
-                }
 
                 // Consider refining this logic to mandate completion with an argument name, if preceded by an out-of-position name
                 // See https://github.com/dotnet/roslyn/issues/20657
@@ -122,21 +129,94 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
                         contextPosition: token.SpanStart,
                         filterText: escapedName));
                 }
+
+                var allParameterNames = parameterLists.SelectMany(pl => pl).Select(p => p.Name).ToDictionary(n => n);
+
+                // add spread parameter symbols
+                foreach (var parameter in unspecifiedParameters)
+                {
+                    if (!parameter.IsSpread) continue;
+
+                    var spreadType = parameter.Type;
+
+                    var members = SpreadParamHelpers.GetPossibleSpreadParamMembers(spreadType);
+                    foreach (var member in members)
+                    {
+                        var escapedName = member.Name.ToIdentifierToken().ToString();
+                        if (existingNamedParameters.Contains(escapedName) || allParameterNames.ContainsKey(escapedName)) continue;
+
+                        var item = SymbolCompletionItem.CreateWithSymbolId(
+                            displayText: escapedName,
+                            displayTextSuffix: ColonString,
+                            symbols: ImmutableArray.Create(new SpreadParamSymbol(member, parameter) as ISymbol, parameter),
+                            rules: s_rules.WithMatchPriority(SymbolMatchPriority.PreferNamedArgument),
+                            contextPosition: token.SpanStart,
+                            filterText: escapedName
+                        );
+
+                        context.AddItem(item);
+                    }
+                }
             }
             catch (Exception e) when (FatalError.ReportWithoutCrashUnlessCanceled(e))
             {
                 // nop
+            }
+            finally
+            {
+                spreadParamTypes?.Free();
             }
         }
 
         protected override Task<CompletionDescription> GetDescriptionWorkerAsync(Document document, CompletionItem item, CancellationToken cancellationToken)
             => SymbolCompletionItem.GetDescriptionAsync(item, document, cancellationToken);
 
-        private static bool IsValid(ImmutableArray<IParameterSymbol> parameterList, ISet<string> existingNamedParameters)
+        private static bool IsValid(ImmutableArray<IParameterSymbol> parameterList, ISet<string> existingNamedParameters, TypeCache typeCache)
         {
-            // A parameter list is valid if it has parameters that match in name all the existing
-            // named parameters that have been provided.
-            return existingNamedParameters.Except(parameterList.Select(p => p.Name)).IsEmpty();
+            // A parameter list is valid if it has parameters that match in name all the existing named parameters that have been provided.
+            var matches = new HashSet<string>();
+
+            // remove the params from the remaining
+            foreach (var p in parameterList)
+            {
+                var name = p.Name;
+                if (existingNamedParameters.Contains(name))
+                    matches.Add(name);
+            }
+
+            // all existing parameters must have been found in the parameter list for it to be valid ... so the match count should equal
+            var isMatch = matches.Count == existingNamedParameters.Count;
+            if (isMatch)
+            {
+                matches.Clear();
+                return true;
+            }
+
+            // now check for spread params
+            foreach (var p in parameterList)
+            {
+                if (!p.IsSpread) continue;
+
+                foreach(var name in existingNamedParameters)
+                {
+                    var spreadParamMember = SpreadParamHelpers.GetFirstPossibleSpreadParamMember(name, p.Type, typeCache);
+                    if (spreadParamMember != null)
+                    {
+                        matches.Add(name);
+
+                        if (matches.Count == existingNamedParameters.Count)
+                        {
+                            matches.Clear();
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            isMatch = matches.Count == existingNamedParameters.Count;
+            matches.Clear();
+
+            return isMatch;
         }
 
         private static ISet<string> GetExistingNamedParameters(BaseArgumentListSyntax argumentList, int position)

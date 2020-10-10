@@ -55,7 +55,12 @@ namespace Microsoft.CodeAnalysis.Completion.Providers
                 tags: tags);
 
             item = WithSupportedPlatforms(item, supportedPlatforms);
-            return symbolEncoder(symbols, item);
+
+            item = symbolEncoder(symbols, item);
+
+            item.Symbol = firstSymbol;
+
+            return item;
         }
 
         public static CompletionItem AddSymbolEncoding(IReadOnlyList<ISymbol> symbols, CompletionItem item)
@@ -166,14 +171,49 @@ namespace Microsoft.CodeAnalysis.Completion.Providers
 
             var semanticModel = await contextDocument.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
             var symbols = await GetSymbolsAsync(item, document, cancellationToken).ConfigureAwait(false);
+
+            CompletionDescription descr = null;
+
             if (symbols.Length > 0)
             {
-                return await CommonCompletionUtilities.CreateDescriptionAsync(workspace, semanticModel, position, symbols, supportedPlatforms, cancellationToken).ConfigureAwait(false);
+                descr = await CommonCompletionUtilities.CreateDescriptionAsync(workspace, semanticModel, position, symbols, supportedPlatforms, cancellationToken).ConfigureAwait(false);
             }
-            else
+
+            if (item.Symbol != null)
             {
-                return CompletionDescription.Empty;
+                var paramSymbol = symbols.LastOrDefault();
+                if (paramSymbol != null && item.Symbol is Symbols.SpreadParamSymbol spreadParamSymbol && paramSymbol.Name == spreadParamSymbol.ParamSymbol?.Name)
+                {
+                    var symbolDisplayService = workspace.Services.GetLanguageServices(semanticModel.Language).GetService<LanguageServices.ISymbolDisplayService>();
+
+                    var paramGroups = await symbolDisplayService.ToDescriptionGroupsAsync(workspace, semanticModel, item.Span.Start, ImmutableArray.Create(paramSymbol), cancellationToken).ConfigureAwait(false);
+                    bool TryGetParamGroupText(LanguageServices.SymbolDescriptionGroups group, out ImmutableArray<TaggedText> taggedParts)
+                        => paramGroups.TryGetValue(group, out taggedParts) && !taggedParts.IsDefaultOrEmpty;
+
+                    ImmutableArray<TaggedText> mainDescrParts = default;
+
+                    if (TryGetParamGroupText(CodeAnalysis.LanguageServices.SymbolDescriptionGroups.MainDescription, out var parmSymbolMainParts))
+                    {
+                        var paramNamePart = parmSymbolMainParts.FirstOrDefault(p => p.Tag == TextTags.Parameter);
+                        if (paramNamePart.Tag == TextTags.Parameter)
+                        {
+                            mainDescrParts = ImmutableArray.Create(
+                                new TaggedText(TextTags.Punctuation, "("),
+                                new TaggedText(TextTags.Text, "spread"),
+                                new TaggedText(TextTags.Space, " "),
+                                new TaggedText(TextTags.Text, "parameter"),
+                                new TaggedText(TextTags.Space, " "),
+                                paramNamePart,
+                                new TaggedText(TextTags.Punctuation, ")")
+                            ).AddRange(descr.TaggedParts.Skip(3));
+                        }
+                    }
+
+                    descr = descr?.WithTaggedParts(mainDescrParts);
+                }
             }
+
+            return descr ?? CompletionDescription.Empty;
         }
 
         private static Document FindAppropriateDocumentForDescriptionContext(Document document, SupportedPlatformData supportedPlatforms)
