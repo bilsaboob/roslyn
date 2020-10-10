@@ -14,6 +14,7 @@ using Microsoft.CodeAnalysis.DocumentationComments;
 using Microsoft.CodeAnalysis.LanguageServices;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using Microsoft.CodeAnalysis.Shared.Utilities;
+using Microsoft.CodeAnalysis.Symbols;
 using Microsoft.CodeAnalysis.Tags;
 using Roslyn.Utilities;
 
@@ -172,6 +173,9 @@ namespace Microsoft.CodeAnalysis.QuickInfo
             void AddSection(string kind, ImmutableArray<TaggedText> taggedParts)
                 => sections.Add(QuickInfoSection.Create(kind, taggedParts));
 
+            bool ContainsSection(string kind)
+                => sections.Any(s => s.Kind == kind);
+
             if (tokenInformation.ShowAwaitReturn)
             {
                 // We show a special message if the Task being awaited has no return
@@ -203,6 +207,49 @@ namespace Microsoft.CodeAnalysis.QuickInfo
             {
                 if (TryGetGroupText(SymbolDescriptionGroups.MainDescription, out var mainDescriptionTaggedParts))
                 {
+                    var sym = tokenInformation.Symbols.FirstOrDefault();
+                    if (sym is SpreadParamSymbol spreadParamSymbol)
+                    {
+                        var paramSymbol = spreadParamSymbol.ParamSymbol;
+                        var paramGroups = await descriptionService.ToDescriptionGroupsAsync(workspace, semanticModel, token.SpanStart, ImmutableArray.Create(paramSymbol), cancellationToken).ConfigureAwait(false);
+                        bool TryGetParamGroupText(SymbolDescriptionGroups group, out ImmutableArray<TaggedText> taggedParts)
+                            => paramGroups.TryGetValue(group, out taggedParts) && !taggedParts.IsDefaultOrEmpty;
+
+                        ImmutableArray<TaggedText> mainDescrParts = default;
+
+                        if (TryGetParamGroupText(SymbolDescriptionGroups.MainDescription, out var parmSymbolMainParts))
+                        {
+                            var paramNamePart = parmSymbolMainParts.FirstOrDefault(p => p.Tag == TextTags.Parameter);
+                            if (paramNamePart.Tag == TextTags.Parameter)
+                            {
+                                mainDescrParts = ImmutableArray.Create(
+                                    new TaggedText(TextTags.Punctuation, "("),
+                                    new TaggedText(TextTags.Text, "spread"),
+                                    new TaggedText(TextTags.Space, " "),
+                                    new TaggedText(TextTags.Text, "parameter"),
+                                    new TaggedText(TextTags.Space, " "),
+                                    paramNamePart,
+                                    new TaggedText(TextTags.Punctuation, ")")
+                                ).AddRange(mainDescriptionTaggedParts.Skip(3));
+                            }
+                        }
+
+                        if (mainDescrParts.IsDefault)
+                        {
+                            mainDescrParts = ImmutableArray.Create(
+                                new TaggedText(TextTags.Punctuation, "("),
+                                new TaggedText(TextTags.Text, "spread"),
+                                new TaggedText(TextTags.Space, " "),
+                                new TaggedText(TextTags.Text, "parameter"),
+                                new TaggedText(TextTags.Space, " "),
+                                new TaggedText(TextTags.Text, "???"),
+                                new TaggedText(TextTags.Punctuation, ")")
+                            ).AddRange(mainDescriptionTaggedParts.Skip(3));
+                        }
+
+                        mainDescriptionTaggedParts = mainDescrParts;
+                    }
+
                     AddSection(QuickInfoSectionKinds.Description, mainDescriptionTaggedParts);
                 }
             }
