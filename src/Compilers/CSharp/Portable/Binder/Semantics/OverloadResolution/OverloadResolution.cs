@@ -3319,7 +3319,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var argName = arguments.Name(argIndex);
 
                 // add a member initializer expression for the arg ... to the matching member
-                var argMember = spreadTypeMembers.FirstOrDefault(m => m.Name == argName);
+
+                var argMember = SpreadParamHelpers.GetFirstPossibleSpreadParamMember(spreadTypeMembers, argName);
                 if (argMember == null)
                 {
                     // error ... must match a member to be part of the spread ...

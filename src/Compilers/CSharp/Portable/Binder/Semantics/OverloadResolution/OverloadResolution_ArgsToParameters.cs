@@ -384,22 +384,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
-            // if now matching named parameter, we can try with the spread parameters
-            for (int p = 0; p < memberParameters.Length; ++p)
-            {
-                var param = memberParameters[p];
-                if (!param.IsSpread) continue;
-
-                // match the parameter to the spread
-                var spreadMember = param.Type?.GetMembers().FirstOrDefault(m => m.Name == name);
-                if (spreadMember != null)
-                {
-                    isSpread = true;
-                    return p;
-                }
-            }
-
-            return null;
+            var (_, pi) = SpreadParamHelpers.GetFirstMatchingSpreadParam(memberParameters, name);
+            isSpread = pi != null;
+            return pi;
         }
 
         private static int? CorrespondsToAnyParameter(
