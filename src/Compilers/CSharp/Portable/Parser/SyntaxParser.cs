@@ -546,6 +546,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         protected SyntaxToken PeekToken(int n)
         {
+            if (n == 0) return CurrentToken;
+
             Debug.Assert(n >= 0);
             while (_tokenOffset + n >= _tokenCount)
             {
@@ -564,6 +566,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         protected SyntaxToken PeekPrevToken(int n)
         {
+            if (n == 0) return CurrentToken;
+
             Debug.Assert(n >= 0);
             if (_tokenOffset - n < 0)
                 return null;

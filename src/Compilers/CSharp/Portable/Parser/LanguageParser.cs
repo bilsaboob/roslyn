@@ -4316,6 +4316,7 @@ parse_member_name:;
             }
 
             var parameters = _pool.AllocateSeparated<ParameterSyntax>();
+            var resetPoint = GetResetPoint();
 
             try
             {
@@ -4324,12 +4325,24 @@ parse_member_name:;
 
                 SyntaxToken open;
                 SyntaxToken close;
+                
                 if (!TryParseParameterList(out open, parameters, out close, openKind, closeKind, canFail: true))
+                {
+                    Reset(ref resetPoint);
                     return null;
+                }
+
+                if (parameters.Count == 0 && (open.IsMissing || close.IsMissing || open.IsFake || close.IsFake))
+                {
+                    Reset(ref resetPoint);
+                    return null;
+                }
+
                 return _syntaxFactory.ParameterList(open, parameters, close);
             }
             finally
             {
+                Release(ref resetPoint);
                 _pool.Free(parameters);
             }
         }
@@ -4588,9 +4601,17 @@ tryAgain:
 
         private bool IsPossibleParameter(bool allowStartingTypeName = false)
         {
-            switch (this.CurrentToken.Kind)
+            return IsPossibleParameter(0, allowStartingTypeName);
+        }
+
+        private bool IsPossibleParameter(int tokenIndex, bool allowStartingTypeName = false, bool isFirstToken = true)
+        {
+            var token = PeekToken(tokenIndex);
+            switch (token.Kind)
             {
                 case SyntaxKind.OpenParenToken:
+                    return false;
+                case SyntaxKind.EqualsGreaterThanToken:
                     return false;
                 case SyntaxKind.OpenBracketToken: // attribute
                     return true;
@@ -4602,28 +4623,38 @@ tryAgain:
                     return true;
                 case SyntaxKind.IdentifierToken:
                     {
-                        switch (this.CurrentToken.ContextualKind)
+                        switch (token.ContextualKind)
                         {
-                            case SyntaxKind.AsyncKeyword:
+                            case SyntaxKind.AsyncKeyword: {
+                                if (allowStartingTypeName && IsLambdaFunctionTypeStart(tokenIndex)) return true;
+                                return false;
+                            }
                             case SyntaxKind.AwaitKeyword:
                             case SyntaxKind.TypeOfKeyword:
                             case SyntaxKind.IsKeyword:
                                 return false;
                         }
 
-                        if (IsLambdaFunctionTypeStart())
+                        if (IsLambdaFunctionTypeStart(tokenIndex))
                         {
                             if (!allowStartingTypeName) return false;
                             return true;
                         }
 
+                        // the following token must be a valid token too!
+                        if (isFirstToken)
+                        {
+                            if (!IsPossibleParameter(tokenIndex + 1, allowStartingTypeName: true, isFirstToken: false))
+                                return false;
+                        }
+
                         return this.IsTrueIdentifier();
                     }
                 default:
-                    if (IsParameterModifier(this.CurrentToken.Kind)) return true;
+                    if (IsParameterModifier(token.Kind)) return true;
                     if (allowStartingTypeName)
                     {
-                        if (IsPredefinedType(this.CurrentToken.Kind) || IsLambdaFunctionTypeStart()) return true;
+                        if (IsPredefinedType(token.Kind) || IsLambdaFunctionTypeStart(tokenIndex)) return true;
                     }
                     return false;
             }
@@ -7749,11 +7780,16 @@ done:;
 
         private bool IsLambdaFunctionTypeStart()
         {
-            var token = CurrentToken;
+            return IsLambdaFunctionTypeStart(0);
+        }
+
+        private bool IsLambdaFunctionTypeStart(int tokenIndex)
+        {
+            var token = PeekToken(tokenIndex);
             if (token.IsContextKind(SyntaxKind.AsyncKeyword))
             {
                 // skip to the next token
-                token = PeekToken(1);
+                token = PeekToken(tokenIndex + 1);
             }
 
             return token.IsContextKind(SyntaxKind.FnKeyword);
