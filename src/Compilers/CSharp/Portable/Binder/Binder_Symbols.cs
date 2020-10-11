@@ -635,7 +635,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                         }
                     }
 
-                    var wellKnownType = typeArguments.Count > 1 ? (WellKnownType)Enum.Parse(typeof(WellKnownType), $"System_Action_T{typeArguments.Count}") : WellKnownType.System_Func_T;
+                    var wellKnownType = typeArguments.Count == 0 ? WellKnownType.System_Action :
+                         typeArguments.Count > 1 ? (WellKnownType)Enum.Parse(typeof(WellKnownType), $"System_Action_T{typeArguments.Count}") :
+                            WellKnownType.System_Action_T;
 
                     var actionTypeT = this.GetWellKnownType(wellKnownType, diagnostics, syntax);
                     var returnTypeT = actionTypeT.Construct(typeArguments.ToImmutable());
