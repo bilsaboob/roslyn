@@ -279,6 +279,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         binderRequired = false;
                     }
+                    else if(current.Parent is ArgumentSyntax)
+                    {
+                        binderRequired = false;
+                    }
 
                     if (LookupPosition.IsInAnonymousFunctionOrQuery(position, current))
                     {
