@@ -4644,11 +4644,62 @@ tryAgain:
                         // the following token must be a valid token too!
                         if (isFirstToken)
                         {
-                            if (!IsPossibleParameter(tokenIndex + 1, allowStartingTypeName: true, isFirstToken: false))
-                                return false;
+                            if (!this.IsTrueIdentifier()) return false;
+
+                            var isValid = false;
+
+                            var nextToken = PeekToken(tokenIndex + 1);
+                            switch (nextToken.Kind)
+                            {
+                                case SyntaxKind.OpenParenToken:
+                                case SyntaxKind.OpenBracketToken: // attribute
+                                case SyntaxKind.ArgListKeyword:
+                                case SyntaxKind.DelegateKeyword when IsFunctionPointerStart(): // Function pointer type
+                                case SyntaxKind.DotDotDotToken:
+                                case SyntaxKind.CloseParenToken:
+                                case SyntaxKind.OpenBraceToken:
+                                case SyntaxKind.CloseBraceToken:
+                                case SyntaxKind.IdentifierToken:
+                                    {
+                                        isValid = true;
+
+                                        if (IsLambdaFunctionTypeStart(tokenIndex + 1)) break;
+
+                                        switch (token.ContextualKind)
+                                        {
+                                            case SyntaxKind.AsyncKeyword:
+                                                {
+                                                    if (IsLambdaFunctionTypeStart(tokenIndex + 1))
+                                                        isValid = true;
+                                                    break;
+                                                }
+                                            case SyntaxKind.AwaitKeyword:
+                                            case SyntaxKind.TypeOfKeyword:
+                                            case SyntaxKind.IsKeyword:
+                                                isValid = false;
+                                                break;
+                                        }
+
+                                        break;
+                                    }
+                            }
+
+                            if(!isValid)
+                            {
+                                if (IsParameterModifier(nextToken.Kind))
+                                {
+                                    isValid = true;
+                                }
+                                else if (IsPredefinedType(nextToken.Kind) || IsLambdaFunctionTypeStart(tokenIndex + 1))
+                                {
+                                    isValid = true;
+                                }
+                            }
+
+                            return isValid;
                         }
 
-                        return this.IsTrueIdentifier();
+                        return true;
                     }
                 default:
                     if (IsParameterModifier(token.Kind)) return true;
