@@ -3203,7 +3203,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // check if the argument should be "consumed" into the "spread arg"
                 var paramIndex = argumentAnalysis.ParameterFromArgument(i);
                 var param = parameters[paramIndex];
-                if (param.IsSpread && param.Type.Name != arg.Type.Name)
+                if (param.IsSpread && param.Type.Name != arg.Type?.Name)
                 {
                     // the argument is mapped to a spread parameter but is not the same type... so it should be part of the spread parameter instance
                     // add a new spread argument holder
@@ -3219,7 +3219,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     // we need the matching member in the spread type
                     var argName = arguments.Name(i);
-                    var spreadArgMember = param.Type?.GetMembers().FirstOrDefault(m => m.Name == argName);
+                    var spreadArgMember = SpreadParamHelpers.GetFirstPossibleSpreadParamMember(param.Type, argName);
 
                     // add the argument to the spread arg analysis ... it has a matching member, so we can initialize that member with the value of the argument
                     if (spreadArgMember != null)

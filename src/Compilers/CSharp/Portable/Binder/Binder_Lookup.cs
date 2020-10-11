@@ -57,15 +57,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal Symbol LookupSpreadParameterMemberSymbol(string paramName, ImmutableArray<ParameterSymbol> parameters, out ParameterSymbol spreadParam)
         {
             // check if the param could possibly be part of a "spread arg"
-            spreadParam = parameters.FirstOrDefault(p => p.IsSpread && ((NamedTypeSymbol)p.Type).MemberNames.Contains(paramName) == true);
+            var (spreadParamSymbol, memberSymbol) = SpreadParamHelpers.GetFirstMatchingSpreadParamAndMember(parameters, paramName);
+            spreadParam = spreadParamSymbol as ParameterSymbol;
             if (spreadParam is null) return null;
 
             var lookupResult = LookupResult.GetInstance();
             try
             {
+                // try making a lookup on the the member - taking into account overloads and casting etc...
                 HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-                LookupMembersWithFallback(lookupResult, spreadParam.Type, paramName, arity: 0, ref useSiteDiagnostics, basesBeingResolved: null, options: LookupOptions.MustBeInstance);
-                return lookupResult.Symbols.FirstOrDefault();
+                LookupMembersWithFallback(lookupResult, spreadParam.Type, paramName, arity: 0, ref useSiteDiagnostics, basesBeingResolved: null);
+
+                // use the result from the lookup - or fallback to the member we previouly found
+                return lookupResult.Symbols.FirstOrDefault(SpreadParamHelpers.IsPossibleSpreadMember) ?? memberSymbol;
             }
             finally
             {
