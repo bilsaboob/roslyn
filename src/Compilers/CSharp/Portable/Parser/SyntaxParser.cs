@@ -29,7 +29,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         private ArrayElement<SyntaxToken>[] _lexedTokens;
         private GreenNode _prevTokenTrailingTrivia;
         private int _firstToken; // The position of _lexedTokens[0] (or _blendedTokens[0]).
-        private int _tokenOffset; // The index of the current token within _lexedTokens or _blendedTokens.
+        protected int _tokenOffset; // The index of the current token within _lexedTokens or _blendedTokens.
         private int _tokenCount;
         private int _resetCount;
         private int _resetStart;
