@@ -10,6 +10,8 @@ Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalysisResultAsy
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.get -> int
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.set -> void
 Microsoft.CodeAnalysis.IParameterSymbol.IsSpread.get -> bool
+Microsoft.CodeAnalysis.ISymbolWithOriginLocation
+Microsoft.CodeAnalysis.ISymbolWithOriginLocation.OriginalLocations.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Location>
 Microsoft.CodeAnalysis.SymbolInfo.IsSpreadParam.get -> bool
 Microsoft.CodeAnalysis.SymbolInfo.IsSpreadParam.set -> void
 Microsoft.CodeAnalysis.SymbolKind.Wrapped = 21 -> Microsoft.CodeAnalysis.SymbolKind
