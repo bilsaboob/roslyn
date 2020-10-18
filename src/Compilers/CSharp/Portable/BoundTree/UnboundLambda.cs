@@ -78,6 +78,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             );
         }
 
+        protected override void CopyAttributes(BoundNode original)
+        {
+            base.CopyAttributes(original);
+
+            this.GeneratedSyntax = ((BoundLambda)original)?.GeneratedSyntax;
+        }
+
         public TypeWithAnnotations GetInferredReturnType(ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             // Nullability (and conversions) are ignored.
@@ -352,6 +359,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var data = Data.WithCaching(true);
             var lambda = new UnboundLambda(Syntax, data, nullableState, HasErrors);
+            lambda.GeneratedSyntax = GeneratedSyntax;
             data.SetUnboundLambda(lambda);
             return lambda;
         }
@@ -365,6 +373,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             var lambda = new UnboundLambda(Syntax, data, _nullableState, HasErrors);
+            lambda.GeneratedSyntax = GeneratedSyntax;
             data.SetUnboundLambda(lambda);
             return lambda;
         }
@@ -399,6 +408,14 @@ namespace Microsoft.CodeAnalysis.CSharp
         public Location ParameterLocation(int index) { return Data.ParameterLocation(index); }
         public string ParameterName(int index) { return Data.ParameterName(index); }
         public bool ParameterIsDiscard(int index) { return Data.ParameterIsDiscard(index); }
+
+        internal UnboundLambda WithOriginalLambdaSyntax(SyntaxNode originalSyntax)
+        {
+            // we hackishly replace the syntax back to the old syntax ... but keep the binding and such ...
+            GeneratedSyntax = Syntax;
+            Syntax = originalSyntax;
+            return this;
+        }
     }
 
     internal abstract class UnboundLambdaState
@@ -1201,7 +1218,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override Location ParameterLocation(int index)
         {
             Debug.Assert(HasSignature && 0 <= index && index < ParameterCount);
-            var syntax = UnboundLambda.Syntax;
+            var syntax = UnboundLambda.GeneratedSyntax ?? UnboundLambda.Syntax;
             switch (syntax.Kind())
             {
                 default:

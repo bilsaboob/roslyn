@@ -160,7 +160,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal static bool IsUserDefinedType(TypeSymbol type)
         {
-            if (type is null) return false;
+            if (type is null || type.IsErrorType()) return false;
 
             var name = type.Name.ToLowerInvariant();
 
@@ -171,7 +171,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public static bool IsUserDefinedType(ITypeSymbol type)
         {
-            if (type is null) return false;
+            if (type is null || type.TypeKind == TypeKind.Error) return false;
 
             var name = type.Name.ToLowerInvariant();
 
@@ -208,6 +208,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 default:
                     return false;
             }
+        }
+
+        internal static bool IsLambdaType(TypeSymbol type)
+        {
+            if (type is null || type.IsErrorType()) return false;
+
+            if (type.TypeKind == TypeKind.Delegate) return true;
+
+            return false;
         }
     }
 
