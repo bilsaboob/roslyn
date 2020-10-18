@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols.PublicModel
 {
-    internal sealed class ParameterSymbol : Symbol, IParameterSymbol
+    internal sealed class ParameterSymbol : Symbol, IParameterSymbol, ISymbolWithOriginLocation
     {
         private readonly Symbols.ParameterSymbol _underlying;
         private ITypeSymbol _lazyType;
@@ -22,6 +22,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.PublicModel
         internal override CSharp.Symbol UnderlyingSymbol => _underlying;
 
         public bool IsSpread => _underlying.IsSpread;
+
+        public ImmutableArray<Location> OriginalLocations => _underlying.OriginalLocations;
 
         ITypeSymbol IParameterSymbol.Type
         {

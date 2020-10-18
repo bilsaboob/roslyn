@@ -16,6 +16,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private readonly Symbol _containingSymbol;
         private readonly MessageID _messageID;
         private readonly SyntaxNode _syntax;
+        private readonly SyntaxNode _generatedSyntax;
         private readonly ImmutableArray<ParameterSymbol> _parameters;
         private RefKind _refKind;
         private TypeWithAnnotations _returnType;
@@ -49,6 +50,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _containingSymbol = containingSymbol;
             _messageID = unboundLambda.Data.MessageID;
             _syntax = unboundLambda.Syntax;
+            _generatedSyntax = unboundLambda.GeneratedSyntax;
             _refKind = refKind;
             _returnType = !returnType.HasType ? TypeWithAnnotations.Create(ReturnTypeIsBeingInferred) : returnType;
             _isSynthesized = unboundLambda.WasCompilerGenerated;
@@ -367,8 +369,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var name = unboundLambda.ParameterName(p);
                 var location = unboundLambda.ParameterLocation(p);
                 var locations = location == null ? ImmutableArray<Location>.Empty : ImmutableArray.Create<Location>(location);
-
                 var parameter = new SourceSimpleParameterSymbol(owner: this, type, ordinal: p, refKind, name, unboundLambda.ParameterIsDiscard(p), locations);
+
+                var originalLocation = GetOriginalParameterLocation(p);
+                if (originalLocation != null)
+                    parameter.OriginalLocations = ImmutableArray.Create<Location>(originalLocation);
 
                 builder.Add(parameter);
             }
@@ -376,6 +381,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var result = builder.ToImmutableAndFree();
 
             return result;
+        }
+
+        private Location GetOriginalParameterLocation(int paramIndex)
+        {
+            if (_generatedSyntax is ParenthesizedLambdaExpressionSyntax lambdaSyntax && paramIndex < lambdaSyntax.ParameterList.ParameterCount)
+            {
+                var param = lambdaSyntax.ParameterList.Parameters[paramIndex];
+                var originalParamIndex = param.GetOriginalSyntaxParamIndex();
+                if (originalParamIndex != null)
+                {
+                    if (_syntax is ParenthesizedLambdaExpressionSyntax originalParenLambdaSyntax)
+                    {
+                        return originalParenLambdaSyntax.ParameterList.Parameters[originalParamIndex.Value].Location;
+                    }
+                    else if (_syntax is SimpleLambdaExpressionSyntax originalSimpleLambdaSyntax && originalParamIndex == 0)
+                    {
+                        return originalSimpleLambdaSyntax.Parameter.Location;
+                    }
+                }
+            }
+
+            return null;
         }
 
         public sealed override bool Equals(Symbol symbol, TypeCompareKind compareKind)

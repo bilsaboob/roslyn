@@ -11,7 +11,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
     /// A source parameter that has no default value, no attributes,
     /// and is not params.
     /// </summary>
-    internal sealed class SourceSimpleParameterSymbol : SourceParameterSymbol
+    internal sealed class SourceSimpleParameterSymbol : SourceParameterSymbol, ISymbolWithOriginLocation
     {
         public SourceSimpleParameterSymbol(
            Symbol owner,
