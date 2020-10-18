@@ -73,32 +73,40 @@ namespace Microsoft.CodeAnalysis.CSharp
             var parameterCount = parameters.Length;
 
             int[] parametersPositions = null;
+            int[] unmatchedParameterPositions = null;
             int? unmatchedArgumentIndex = null;
             bool? unmatchedArgumentIsNamed = null;
             var parameterPosition = 0;
             var hasAnyMatchedSpreadArgs = false;
+            var hasAnyUnmatchedLambdaArgs = false;
 
-            void mapParameter(int argPos, int paramPos)
+            void mapParameter(int argPos, int paramPos, bool isUnmatched = false)
             {
+                var paramPositions = isUnmatched ? unmatchedParameterPositions : parametersPositions;
+
                 // fill the parameter positions
-                var isFirstMapping = parametersPositions == null;
-                parametersPositions ??= new int[argumentCount];
+                var isFirstMapping = paramPositions == null;
+                paramPositions ??= new int[argumentCount];
 
                 if (paramPos != argPos || isFirstMapping)
                 {
                     for (var i = 0; i < argPos; ++i)
                     {
-                        var pos = isFirstMapping ? i : parametersPositions[i];
-                        parametersPositions[i] = pos;
+                        var pos = isFirstMapping ? i : paramPositions[i];
+                        paramPositions[i] = pos;
                     }
 
                     for (var i = argPos; i < argumentCount; ++i)
                     {
-                        parametersPositions[i] = -1;
+                        paramPositions[i] = -1;
                     }
                 }
 
-                parametersPositions[argPos] = paramPos;
+                paramPositions[argPos] = paramPos;
+
+                // update the list
+                if (isUnmatched) unmatchedParameterPositions = paramPositions;
+                else parametersPositions = paramPositions;
             }
 
             void moveToNextParameterPosition()
@@ -131,6 +139,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Try to map every argument position to a formal parameter position
             for (int argumentPosition = 0; argumentPosition < argumentCount; ++argumentPosition)
             {
+                var arg = arguments.Argument(argumentPosition);
+                var argIsLambda = (arg is BoundLambda || arg is UnboundLambda);
+
                 // check for explicit named parameter
                 var namedParameterPosition = TryGetNamedParameterPosition(parameters, arguments, argumentPosition, out var isNamed, out var isSpread);
                 if (namedParameterPosition != null || isNamed)
@@ -142,12 +153,28 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // set this as the first unmatched argument if it's named and no position available - no parameter with the specified name exist!
                     if (namedParameterPosition == null && unmatchedArgumentIndex == null)
                     {
+                        if (argIsLambda)
+                            hasAnyUnmatchedLambdaArgs = true;
+
                         unmatchedArgumentIndex = argumentPosition;
                         unmatchedArgumentIsNamed = true;
+
+                        mapParameter(argumentPosition, namedParamPos, isUnmatched: true);
                     }
                     else
                     {
-                        if (isSpread) hasAnyMatchedSpreadArgs = true;
+                        if (isSpread)
+                        {
+                            hasAnyMatchedSpreadArgs = true;
+
+                            // check the conversion for spread args... we need to fail the matcher to expand the spread args ... unleas it's an explicit call with the actual spread arg!
+                            var conversion = namedParamPos == -1 ? Conversion.NoConversion : CheckArgumentForApplicability(symbol, argumentPosition, namedParamPos, arguments, parameters, ignoreOpenTypes: true);
+                            if (!conversion.Exists)
+                            {
+                                unmatchedArgumentIndex = argumentPosition;
+                                unmatchedArgumentIsNamed = true;
+                            }
+                        }
                     }
 
                     // move to the next valid parameter to be evaluated next - it must be the one after the named one...
@@ -161,6 +188,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // for parameters that are NOT named - we will also do a type check to see whether the parameter is a good match or not
                 var tmpParameterPosition = parameterPosition;
                 var foundMatchAhead = false;
+                var firstPossibleLambdaDiscardMatchParamPosition = -1;
 
                 while (true)
                 {
@@ -170,10 +198,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var conversion = CheckArgumentForApplicability(symbol, argumentPosition, parameterPosition, arguments, parameters, ignoreOpenTypes: true);
                     if (!conversion.Exists)
                     {
-                        // the given argument doesn't match the expected type for the parameter...
+                        var param = parameters[parameterPosition];
+
+                        // the type on arg and param don't match - however, if both are lambas, we may perform a discard on the parameters allowing us to match anyway!
+                        if (argIsLambda && param.Type?.IsDelegateType() == true)
+                        {
+                            // both the param and the arg are delegate types, so check if we can possibly make a discard to match... then we can use this as a match!
+                            firstPossibleLambdaDiscardMatchParamPosition = parameterPosition;
+                            break;
+                        }
 
                         // if the parameter isn't optional... we can't really do anything about it... so stop...
-                        if (!CanBeOptional(parameters[parameterPosition], isMethodGroupConversion)) break;
+                        if (!CanBeOptional(param, isMethodGroupConversion)) break;
 
                         // it's not a match... we can possibly try to "scan ahead" and see if there is any other... just skip this parameter position... and try with the next...
                         parameterPosition += 1;
@@ -191,12 +227,22 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     parameterPosition = tmpParameterPosition;
 
+                    // if the arg is a lambda ... then we have an unmatched lambd arg that may be corrected later on ...
+                    if (argIsLambda)
+                    {
+                        hasAnyUnmatchedLambdaArgs = true;
+                        if (firstPossibleLambdaDiscardMatchParamPosition != -1)
+                            parameterPosition = firstPossibleLambdaDiscardMatchParamPosition;
+                    }
+
                     // set this as the first unmatched argument... since we didn't have any match
                     if (unmatchedArgumentIndex == null)
                     {
                         unmatchedArgumentIndex = argumentPosition;
                         unmatchedArgumentIsNamed = false;
                     }
+
+                    mapParameter(argumentPosition, parameterPosition, isUnmatched: true);
                 }
                 else
                 {
@@ -209,6 +255,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             ParameterMap argsToParameters = new ParameterMap(parametersPositions, argumentCount);
+            ParameterMap unmatchedArgsToParameters = new ParameterMap(unmatchedParameterPositions, argumentCount);
 
             // We have analyzed every argument and tried to make it correspond to a particular parameter. 
             // We must now answer the following questions:
@@ -231,11 +278,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 if (unmatchedArgumentIsNamed.Value)
                 {
-                    return ArgumentAnalysisResult.NoCorrespondingNamedParameter(unmatchedArgumentIndex.Value);
+                    var analysis = ArgumentAnalysisResult.NoCorrespondingNamedParameter(unmatchedArgumentIndex.Value, argsToParameters.ToImmutableArray(), unmatchedArgsToParameters.ToImmutableArray());
+                    analysis.HasUnmatchedLambdaArguments = hasAnyUnmatchedLambdaArgs;
+                    analysis.HasSpreadParameters = hasAnyMatchedSpreadArgs;
+                    return analysis;
                 }
                 else
                 {
-                    return ArgumentAnalysisResult.NoCorrespondingParameter(unmatchedArgumentIndex.Value);
+                    var analysis = ArgumentAnalysisResult.NoCorrespondingParameter(unmatchedArgumentIndex.Value, argsToParameters.ToImmutableArray(), unmatchedArgsToParameters.ToImmutableArray());
+                    analysis.HasUnmatchedLambdaArguments = hasAnyUnmatchedLambdaArgs;
+                    analysis.HasSpreadParameters = hasAnyMatchedSpreadArgs;
+                    return analysis;
                 }
             }
 

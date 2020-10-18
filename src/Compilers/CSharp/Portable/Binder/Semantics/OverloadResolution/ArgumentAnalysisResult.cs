@@ -10,6 +10,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     internal struct ArgumentAnalysisResult
     {
         public readonly ImmutableArray<int> ArgsToParamsOpt;
+        public readonly ImmutableArray<int> UnmatchedArgsToParamsOpt;
         public readonly int ArgumentPosition;
         public readonly int ParameterPosition;
         public readonly ArgumentAnalysisResultKind Kind;
@@ -25,6 +26,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             return -1;
         }
 
+        public int UnmatchedArgumentFromParameter(int param)
+        {
+            Debug.Assert(param >= 0);
+            if (UnmatchedArgsToParamsOpt.IsDefault) return param;
+            for (var i = 0; i < UnmatchedArgsToParamsOpt.Length; ++i)
+            {
+                if (UnmatchedArgsToParamsOpt[i] == param) return i;
+            }
+            return -1;
+        }
+
         public int ParameterFromArgument(int arg)
         {
             Debug.Assert(arg >= 0);
@@ -36,19 +48,35 @@ namespace Microsoft.CodeAnalysis.CSharp
             return ArgsToParamsOpt[arg];
         }
 
+        public int ParameterFromUnmatchedArgument(int arg)
+        {
+            Debug.Assert(arg >= 0);
+            if (UnmatchedArgsToParamsOpt.IsDefault)
+            {
+                return arg;
+            }
+            Debug.Assert(arg < UnmatchedArgsToParamsOpt.Length);
+            return UnmatchedArgsToParamsOpt[arg];
+        }
+
         private ArgumentAnalysisResult(ArgumentAnalysisResultKind kind,
                                     int argumentPosition,
                                     int parameterPosition,
-                                    ImmutableArray<int> argsToParamsOpt)
+                                    ImmutableArray<int> argsToParamsOpt,
+                                    ImmutableArray<int> unmatchedArgsToParamsOpt = default)
         {
             this.Kind = kind;
             this.ArgumentPosition = argumentPosition;
             this.ParameterPosition = parameterPosition;
             this.ArgsToParamsOpt = argsToParamsOpt;
+            this.UnmatchedArgsToParamsOpt = unmatchedArgsToParamsOpt;
             this.HasSpreadParameters = false;
+            this.HasUnmatchedLambdaArguments = false;
         }
 
         public bool HasSpreadParameters { get; set; }
+
+        public bool HasUnmatchedLambdaArguments { get; set; }
 
         public bool IsValid
         {
@@ -63,14 +91,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new ArgumentAnalysisResult(ArgumentAnalysisResultKind.NameUsedForPositional, argumentPosition, 0, default(ImmutableArray<int>));
         }
 
-        public static ArgumentAnalysisResult NoCorrespondingParameter(int argumentPosition)
+        public static ArgumentAnalysisResult NoCorrespondingParameter(int argumentPosition, ImmutableArray<int> argsToParamOpt = default(ImmutableArray<int>), ImmutableArray<int> unmatchedArgsToParamOpt = default(ImmutableArray<int>))
         {
-            return new ArgumentAnalysisResult(ArgumentAnalysisResultKind.NoCorrespondingParameter, argumentPosition, 0, default(ImmutableArray<int>));
+            return new ArgumentAnalysisResult(ArgumentAnalysisResultKind.NoCorrespondingParameter, argumentPosition, 0, argsToParamOpt, unmatchedArgsToParamOpt);
         }
 
-        public static ArgumentAnalysisResult NoCorrespondingNamedParameter(int argumentPosition)
+        public static ArgumentAnalysisResult NoCorrespondingNamedParameter(int argumentPosition, ImmutableArray<int> argsToParamOpt = default(ImmutableArray<int>), ImmutableArray<int> unmatchedArgsToParamOpt = default(ImmutableArray<int>))
         {
-            return new ArgumentAnalysisResult(ArgumentAnalysisResultKind.NoCorrespondingNamedParameter, argumentPosition, 0, default(ImmutableArray<int>));
+            return new ArgumentAnalysisResult(ArgumentAnalysisResultKind.NoCorrespondingNamedParameter, argumentPosition, 0, argsToParamOpt, unmatchedArgsToParamOpt);
         }
 
         public static ArgumentAnalysisResult DuplicateNamedArgument(int argumentPosition)
