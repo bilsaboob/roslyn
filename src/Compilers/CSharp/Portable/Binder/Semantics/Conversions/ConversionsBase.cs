@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -1344,7 +1345,18 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // Ensure the body can be converted to that delegate type
             var bound = anonymousFunction.Bind(delegateType);
-            if (ErrorFacts.PreventsSuccessfulDelegateConversion(bound.Diagnostics))
+            var diagnostics = bound.Diagnostics;
+
+            // diagnostics from within the body shouldn't affect the applicability decision making ... only the parameter declarations ...
+            if (anonymousFunction.Syntax is LambdaExpressionSyntax lambdaSyntax)
+            {
+                var blockBody = lambdaSyntax.Body;
+                var exprBody = lambdaSyntax.ExpressionBody;
+                diagnostics = diagnostics.Where(d => blockBody?.Location?.SourceSpan.Contains(d.Location.SourceSpan) != true && exprBody?.Location?.SourceSpan.Contains(d.Location.SourceSpan) != true)
+                    .ToImmutableArray();
+            }
+
+            if (ErrorFacts.PreventsSuccessfulDelegateConversion(diagnostics))
             {
                 return LambdaConversionResult.BindingFailed;
             }
