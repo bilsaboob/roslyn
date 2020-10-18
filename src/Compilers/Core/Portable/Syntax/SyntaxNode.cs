@@ -1236,6 +1236,11 @@ recurse:
             return this.Green.WithAdditionalAnnotationsGreen(annotations).CreateRed();
         }
 
+        internal SyntaxNode WithAdditionalAnnotationsInternalWithParent(IEnumerable<SyntaxAnnotation> annotations)
+        {
+            return this.Green.WithAdditionalAnnotationsGreen(annotations).CreateRed(Parent, Position);
+        }
+
         internal SyntaxNode GetNodeWithoutAnnotations(IEnumerable<SyntaxAnnotation> annotations)
         {
             return this.Green.WithoutAnnotationsGreen(annotations).CreateRed();

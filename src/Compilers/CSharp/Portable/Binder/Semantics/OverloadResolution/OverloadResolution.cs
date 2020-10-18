@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using Microsoft.Cci;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -2967,7 +2968,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 int parm = argToParamMap.IsDefault ? arg : argToParamMap[arg];
                 // If this is the __arglist parameter, or an extra argument in error situations, just skip it.
-                if (parm >= parameters.Length)
+                if (parm >= parameters.Length || parm == -1)
                 {
                     continue;
                 }
@@ -3058,6 +3059,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             for (int arg = 0; arg < argumentCount; ++arg)
             {
                 var parm = argToParamMap.IsDefault ? arg : argToParamMap[arg];
+                if (parm == -1) continue;
+
                 var parameter = parameters[parm];
                 var type = parameter.TypeWithAnnotations;
 
@@ -3117,9 +3120,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             // For that purpose we use the most derived member.
             var argumentAnalysis = AnalyzeArguments(member, arguments, isMethodGroupConversion, expanded: false);
 
-            // handle spread parameters
-            if (argumentAnalysis.HasSpreadParameters)
+            // handle spread parameters - if the initial analysis failed
+            if (!argumentAnalysis.IsValid && argumentAnalysis.HasSpreadParameters)
+            {
                 argumentAnalysis = AnalyzeSpreadArguments(member, arguments, argumentAnalysis, isMethodGroupConversion, ref useSiteDiagnostics);
+            }
+
+            // handle invalid lambda arguments - if the initial analysis failed
+            if (!argumentAnalysis.IsValid && argumentAnalysis.HasUnmatchedLambdaArguments)
+            {
+                argumentAnalysis = AnalyzeLambdaArguments(member, arguments, argumentAnalysis, isMethodGroupConversion);
+            }
 
             if (!argumentAnalysis.IsValid)
             {
@@ -3190,6 +3201,173 @@ namespace Microsoft.CodeAnalysis.CSharp
             return applicableResult;
         }
 
+        private ArgumentAnalysisResult AnalyzeLambdaArguments(Symbol member, AnalyzedArguments arguments, ArgumentAnalysisResult argumentAnalysis, bool isMethodGroupConversion)
+        {
+            var parameters = member.GetParameters();
+
+            var newArguments = ArrayBuilder<BoundExpression>.GetInstance();
+            var newArgumentNames = ArrayBuilder<IdentifierNameSyntax>.GetInstance();
+            var newArgumentRefKinds = ArrayBuilder<RefKind>.GetInstance();
+
+            // check the "invalid lambda arguments" and try to "correct" them if possible ... by introducing "discards" ...
+            for (var i = 0; i < arguments.Arguments.Count; i++)
+            {
+                var arg = arguments.Arguments[i];
+                var argName = arguments.NameSyntax(i);
+                var argRef = arguments.RefKind(i);
+
+                // only need to do this for the args that failed to match the parameter
+                var paramIndex = argumentAnalysis.ParameterFromUnmatchedArgument(i);
+                if (paramIndex == -1)
+                {
+                    newArguments.Add(arg);
+                    newArgumentNames.Add(argName);
+                    newArgumentRefKinds.Add(argRef);
+                    continue;
+                }
+                if (paramIndex >= parameters.Length) continue;
+
+                var param = parameters[paramIndex];
+                if (param.Type?.IsDelegateType() != true) continue;
+
+                var newArg = TryBuildAdaptedLambdaArg(param.Type, arg, i);
+                if (newArg == null) continue;
+
+                newArguments.Add(newArg);
+
+                newArgumentNames.Add(argName);
+                newArgumentRefKinds.Add(argRef);
+            }
+
+            var newAnalyzedArguments = AnalyzedArguments.GetInstance(
+                newArguments.ToImmutableAndFree(),
+                newArgumentRefKinds.ToImmutableAndFree(),
+                newArgumentNames.ToImmutableAndFree()
+            );
+
+            // we now have the new arguments available - replace the argumnet analysis
+            var newArgumentAnalysis = AnalyzeArguments(member, newAnalyzedArguments, isMethodGroupConversion, expanded: false);
+            if (newArgumentAnalysis.IsValid)
+            {
+                // we have successfully bound the old arguments to new spread args - upating the initial analysis will overwrite it's internals...
+                argumentAnalysis = newArgumentAnalysis;
+                arguments.UpdateFrom(newAnalyzedArguments);
+            }
+
+            // free the new analyzed arguments
+            newAnalyzedArguments.Free();
+
+            return argumentAnalysis;
+        }
+
+        private BoundExpression TryBuildAdaptedLambdaArg(TypeSymbol paramType, BoundExpression arg, int argIndex)
+        {
+            // can only fix parameters that are lambda types
+            if (paramType?.IsDelegateType() != true) return null;
+
+            // try to fix the parameter by adjusting the lambda arguments - only if the arg is a lambda expression
+            if (arg is BoundLambda boundLambda)
+                arg = boundLambda.UnboundLambda;
+
+            if (arg is UnboundLambda lambda && lambda.Syntax is LambdaExpressionSyntax lambdaSyntax)
+            {
+                return BuildAdaptedLambdaArg(lambda, lambdaSyntax, paramType.DelegateParameters(), argIndex);
+            }
+
+            return arg;
+        }
+
+        private BoundExpression BuildAdaptedLambdaArg(UnboundLambda lambda, LambdaExpressionSyntax lambdaSyntax, ImmutableArray<ParameterSymbol> expectedParameters, int argIndex)
+        {
+            // the lambda has parameters - now we need to "fill" in the missing parameters for the lambda to match the expected parameters
+            var parametersListSyntax = new SeparatedSyntaxList<ParameterSyntax>();
+            var allParamsMatch = true;
+
+            // just iterate the expected parameters
+            var lambdaParamIndex = 0;
+            for (var i = 0; i < expectedParameters.Length; ++i)
+            {
+                var expectedParam = expectedParameters[i];
+
+                // check if we can compare the lamda param
+                TypeSymbol lambdaParamType = null;
+                string lambdaParamName = null;
+                if (lambdaParamIndex < lambda.ParameterCount)
+                {
+                    if (lambda.HasExplicitlyTypedParameterList)
+                        lambdaParamType = lambda.ParameterType(lambdaParamIndex);
+                    lambdaParamName = lambda.ParameterName(lambdaParamIndex);
+                }
+
+                // compare the lambda param to the expected param if possible
+                var paramsMatch = false;
+                if (!string.IsNullOrEmpty(lambdaParamName) && !(lambdaParamType is null))
+                {
+                    // check the conversion of the "expected type" to the "lambda param type" - basically we do an implicit "downcast" ... which should be valid
+                    HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+                    var conversion = Conversions.ClassifyConversionFromType(expectedParam.Type, lambdaParamType, ref useSiteDiagnostics);
+                    paramsMatch = conversion.Exists && conversion.IsImplicit && !conversion.IsUserDefined;
+                }
+
+                if (paramsMatch)
+                {
+                    // it's a valid conversion ... so we can use the parameter "as is" ...
+                    var paramSyntax = SyntaxFactory.Parameter(default, default, SyntaxFactory.Identifier(lambdaParamName), SyntaxFactory.IdentifierName(lambdaParamType.Name), null)
+                        .WithOriginalParamIndexAnnotation(lambdaParamIndex);
+                    parametersListSyntax = parametersListSyntax.Add(paramSyntax);
+                    lambdaParamIndex++;
+                }
+                else
+                {
+                    allParamsMatch = false;
+
+                    // no valid conversion ... let's shift the parameters ... and add a "discard parameter" that matches the expected parameter
+                    var name = expectedParam.Name;
+
+                    if (lambdaParamType is null && !string.IsNullOrEmpty(lambdaParamName))
+                        name = lambdaParamName;
+
+                    var paramSyntax = SyntaxFactory.Parameter(default, default, SyntaxFactory.Identifier(name), SyntaxFactory.IdentifierName(expectedParam.Type.Name), null);
+
+                    // if we have a name but not a type, use the lambda param index as the original param index ... we expected to match it...
+                    if (lambdaParamType is null && !string.IsNullOrEmpty(lambdaParamName))
+                        paramSyntax = paramSyntax.WithOriginalParamIndexAnnotation(lambdaParamIndex);
+
+                    // if there was no type to compare with... just move to the next param to be matched... we won't be able to "successfully" match it anyway...
+                    if (lambdaParamType is null)
+                        lambdaParamIndex++;
+
+                    parametersListSyntax = parametersListSyntax.Add(paramSyntax);
+                }
+            }
+
+            // we should be at the end of the lambda parameters if successful
+            if (allParamsMatch || lambdaParamIndex < lambda.ParameterCount) return lambda;
+
+            // create the new lambda syntax and bind it
+            var parametersSyntax = SyntaxFactory.ParameterList(parametersListSyntax);
+            var newLambdaSyntax = SyntaxFactory.ParenthesizedLambdaExpression(
+                lambdaSyntax.Modifiers,
+                parametersSyntax,
+                lambdaSyntax.Body as BlockSyntax,
+                lambdaSyntax.ExpressionBody,
+                parent: lambdaSyntax.Parent,
+                position: lambdaSyntax.Position
+            ).WithAdjustedLambdaDefinitionAnnotation(argIndex);
+
+            // create a new syntax node for the lambda, now including the parameters
+            var diagnostics = DiagnosticBag.GetInstance();
+            try
+            {
+                var newUnboundLambda = _binder.BindExpression(newLambdaSyntax, diagnostics) as UnboundLambda;
+                return newUnboundLambda.WithOriginalLambdaSyntax(lambdaSyntax);
+            }
+            finally
+            {
+                diagnostics.Free();
+            }
+        }
+
         private ArgumentAnalysisResult AnalyzeSpreadArguments(Symbol member, AnalyzedArguments arguments, ArgumentAnalysisResult argumentAnalysis, bool isMethodGroupConversion, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             var parameters = member.GetParameters();
@@ -3202,6 +3380,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 // check if the argument should be "consumed" into the "spread arg"
                 var paramIndex = argumentAnalysis.ParameterFromArgument(i);
+                if (paramIndex == -1) continue;
+
                 var param = parameters[paramIndex];
                 if (param.IsSpread && param.Type.Name != arg.Type?.Name)
                 {
@@ -3243,11 +3423,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var param = parameters[i];
 
                 var argIndex = argumentAnalysis.ArgumentFromParameter(i);
-                if (argIndex == -1)
-                {
-                    // no matching argument for the parameter
-                    continue;
-                }
+                if (argIndex == -1) continue;
 
                 if (param.IsSpread)
                 {
@@ -3325,6 +3501,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     // error ... must match a member to be part of the spread ...
                     continue;
+                }
+
+                var argMemberType = (argMember as FieldSymbol)?.Type ?? (argMember as PropertySymbol)?.Type;
+                if (argMemberType?.IsDelegateType() == true)
+                {
+                    // try adapting the argument
+                    var adaptedArg = TryBuildAdaptedLambdaArg(argMemberType, arg, -1);
+                    if (adaptedArg != null) arg = adaptedArg;
                 }
 
                 var diagnostics = DiagnosticBag.GetInstance();

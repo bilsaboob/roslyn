@@ -3144,6 +3144,25 @@ namespace Microsoft.CodeAnalysis.CSharp
             ParameterSyntax parameter,
             CancellationToken cancellationToken = default(CancellationToken))
         {
+            // make an attempt checking the parameter indexes - this will find the "real parameter" among "generate fake" ones...
+            foreach (var symbol in parameters)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (symbol.OriginalLocations.IsDefault) continue;
+
+                foreach (var location in symbol.OriginalLocations)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (parameter.Span.Contains(location.SourceSpan))
+                    {
+                        return symbol;
+                    }
+                }
+            }
+
+            // check by looking up the locations
             foreach (var symbol in parameters)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -3644,6 +3663,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     break;
             }
 
+            if (boundNodeForSyntacticParent != null)
+            {
+                // Adjust symbols to get the lambda parameters when we have a lambda for an invocation call where the lambda parameters don't match exactly and some parameters have been discarded...
+                AdjustSymbolsForLambdaDiscardParameters(boundNode, boundNodeForSyntacticParent, binderOpt, ref resultKind, ref symbols, ref memberGroup);
+            }
+
             if (boundNodeForSyntacticParent != null && (options & SymbolInfoOptions.PreferConstructorsToType) != 0)
             {
                 // Adjust symbols to get the constructors if we're T in a "new T(...)".
@@ -3882,6 +3907,52 @@ namespace Microsoft.CodeAnalysis.CSharp
                 symbols = ImmutableArray<Symbol>.Empty;
                 resultKind = LookupResultKind.Empty;
             }
+        }
+
+        private void AdjustSymbolsForLambdaDiscardParameters(
+            BoundExpression boundNode,
+            BoundNode boundNodeForSyntacticParent,
+            Binder binderOpt,
+            ref LookupResultKind resultKind,
+            ref ImmutableArray<Symbol> symbols,
+            ref ImmutableArray<Symbol> memberGroup)
+        {
+            ImmutableArray<Symbol> newSymbols = default;
+
+            if (boundNodeForSyntacticParent is BoundCall call && boundNode is BoundLambda lambda)
+            {
+                var lambdaParametersCount = 0;
+
+                if (lambda.Syntax is ParenthesizedLambdaExpressionSyntax lambdaSyntax)
+                    lambdaParametersCount = lambdaSyntax.ParameterList.ParameterCount;
+                else if (lambda.Syntax is SimpleLambdaExpressionSyntax)
+                    lambdaParametersCount = 1;
+
+                // we have a lambda in a call - check if the lambda matches in the parameter count
+                for (var i = 0; i < call.Arguments.Length; ++i)
+                {
+                    var arg = call.Arguments[i];
+                    if (arg is BoundConversion conversion && conversion.Operand is BoundLambda argLambda)
+                    {
+                        if (argLambda.Symbol?.ParameterCount != lambdaParametersCount)
+                        {
+                            var generatedLambdaSyntax = (ParenthesizedLambdaExpressionSyntax)lambda.UnboundLambda.GeneratedSyntax;
+                            if (generatedLambdaSyntax == null) continue;
+
+                            // make sure it's the correct argument... so it's not another lambda argument...
+                            var originalLambdaArgPos = generatedLambdaSyntax.GetOriginalArgIndexForAdjustedLambdaDefinition();
+                            if (originalLambdaArgPos != i) continue;
+
+                            // we don't match on the parameters, return the converted lambda symbol instead
+                            if (newSymbols.IsDefault) newSymbols = ImmutableArray.Create<Symbol>(argLambda.Symbol);
+                            else newSymbols = newSymbols.Add(argLambda.Symbol);
+                        }
+                    }
+                }
+            }
+
+            if (!newSymbols.IsDefaultOrEmpty)
+                symbols = newSymbols;
         }
 
         // In cases where we are binding C in "[C(...)]", the bound nodes return the symbol for the type. However, we've

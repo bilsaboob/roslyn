@@ -3840,7 +3840,7 @@ parse_member_name:;
             return false;
         }
 
-        private bool IsProbablyStatementEnd(bool continueStatementOnIndentedNewline = false)
+        private bool IsProbablyStatementEnd(bool continueStatementOnIndentedNewline = false, bool checkDeclaration = true)
         {
             // semi comma usually means end of the statement
             if (CurrentToken.Kind == SyntaxKind.SemicolonToken) return true;
@@ -3858,7 +3858,7 @@ parse_member_name:;
 
             // if possibly a new local declaration statement
             // identifiers could be start of something...
-            if (CurrentToken.Kind == SyntaxKind.IdentifierToken)
+            if (checkDeclaration && CurrentToken.Kind == SyntaxKind.IdentifierToken)
             {
                 if (IsPossibleLocalDeclarationStatement(false)) return true;
             }
@@ -4657,6 +4657,7 @@ tryAgain:
                                 case SyntaxKind.DelegateKeyword when IsFunctionPointerStart(): // Function pointer type
                                 case SyntaxKind.DotDotDotToken:
                                 case SyntaxKind.CloseParenToken:
+                                case SyntaxKind.CommaToken:
                                 case SyntaxKind.OpenBraceToken:
                                 case SyntaxKind.CloseBraceToken:
                                 case SyntaxKind.IdentifierToken:
@@ -13515,6 +13516,131 @@ tryAgain:
             return false;
         }
 
+        private bool TryScanImplicitOrTypedLambda(Precedence precedence)
+        {
+            var resetPoint = GetResetPoint();
+            var offset = _tokenOffset;
+            try
+            {
+                return ScanImplicitOrTypedLambda(precedence);
+            }
+            finally
+            {
+                if (offset != _tokenOffset) Reset(ref resetPoint);
+                Release(ref resetPoint);
+            }
+        }
+
+        private bool ScanImplicitOrTypedLambda(Precedence precedence)
+        {
+            if (!(precedence <= Precedence.Lambda)) return false;
+
+            // must be at the ( ... or not a lambda declaration
+            var i = 0;
+            if (PeekToken(i).Kind != SyntaxKind.OpenParenToken) return false;
+            i++;
+
+            while (true)
+            {
+scanParameter:
+                var startIndex = i;
+
+                // Eat 'out' or 'ref' for cases [3, 6]. Even though not allowed in a lambda,
+                // we treat `params` similarly for better error recovery.
+                switch (PeekToken(i).Kind)
+                {
+                    case SyntaxKind.RefKeyword:
+                        i++;
+                        if (this.CurrentToken.Kind == SyntaxKind.ReadOnlyKeyword)
+                            i++;
+                        break;
+                    case SyntaxKind.OutKeyword:
+                    case SyntaxKind.InKeyword:
+                    case SyntaxKind.ParamsKeyword:
+                        i++;
+                        break;
+                }
+
+                // check if we have an identifier - should be the name part in that case
+                if (PeekToken(i).Kind == SyntaxKind.IdentifierToken)
+                {
+                    if (!isValidIdentifier(i)) return false;
+                    i++;
+                }
+
+                // check if we have an identifier or ( - should be the type part in that case
+                var possiblyTypeKind = PeekToken(i).Kind;
+                switch (possiblyTypeKind)
+                {
+                    case SyntaxKind.IdentifierToken:
+                        {
+                            if (!isValidIdentifier(i)) return false;
+                            var offset = _tokenOffset;
+                            if (ScanType() != ScanTypeFlags.NotType) return false;
+                            i += (_tokenOffset - offset);
+                            break;
+                        }
+                    case SyntaxKind.OpenParenToken:
+                        {
+                            // could be a type following the "param name"
+                            var offset = _tokenOffset;
+                            if (ScanType() != ScanTypeFlags.NotType) return false;
+                            i += (_tokenOffset - offset);
+                            break;
+                        }
+                    default:
+                        {
+                            if (IsPredefinedType(possiblyTypeKind))
+                                ++i;
+                            break;
+                        }
+                }
+
+                // check if it's a comma... in that case try scanning the next parameter again
+                if (PeekToken(i).Kind == SyntaxKind.CommaToken)
+                {
+                    while (PeekToken(++i).Kind == SyntaxKind.CommaToken) { }
+                    continue;
+                }
+
+                // check if we are at "closing"
+                if (PeekToken(i).Kind == SyntaxKind.CloseParenToken)
+                {
+                    // must be ") =>"
+                    return PeekToken(++i).Kind == SyntaxKind.EqualsGreaterThanToken;
+                }
+
+skipToNextParameter:
+                {
+                    while (true)
+                    {
+                        if (IsProbablyStatementEnd(checkDeclaration: false)) return false;
+                        switch (PeekToken(i++).Kind)
+                        {
+                            // end cases
+                            case SyntaxKind.CloseParenToken:
+                                {
+                                    // must be ") =>"
+                                    return PeekToken(++i).Kind == SyntaxKind.EqualsGreaterThanToken;
+                                }
+                            // failure cases
+                            case SyntaxKind.EqualsGreaterThanToken:
+                            case SyntaxKind.EndOfFileToken: return false;
+                            // start parameter cases
+                            case SyntaxKind.IdentifierToken:
+                            case SyntaxKind.CommaToken:
+                                goto scanParameter;
+                        }
+                    }
+                }
+            }
+
+            bool isValidIdentifier(int i)
+            {
+                return PeekToken(i).Kind == SyntaxKind.IdentifierToken && (!this.IsInQuery || !IsTokenQueryContextualKeyword(this.PeekToken(i)));
+            }
+        }
+
         private bool ScanExplicitlyTypedLambda(Precedence precedence)
         {
             if (!(precedence <= Precedence.Lambda))
@@ -13528,19 +13654,19 @@ tryAgain:
                 bool foundParameterModifier = false;
 
                 // do we have the following:
-                //   case 1: ( T x , ... ) =>
-                //   case 2: ( T x ) =>
-                //   case 3: ( out T x,
-                //   case 4: ( ref T x,
-                //   case 5: ( out T x ) =>
-                //   case 6: ( ref T x ) =>
-                //   case 7: ( in T x ) =>
+                //   case 1: ( x T, ... ) =>
+                //   case 2: ( x T) =>
+                //   case 3: ( out x T,
+                //   case 4: ( ref x T,
+                //   case 5: ( out x T) =>
+                //   case 6: ( ref x T) =>
+                //   case 7: ( in x T) =>
                 //
                 // if so then parse it as a lambda
 
                 // Note: in the first two cases, we cannot distinguish a lambda from a tuple expression
                 // containing declaration expressions, so we scan forwards to the `=>` so we know for sure.
-
+                var hasScannedAnyType = false;
                 while (true)
                 {
                     // Advance past the open paren or comma.
@@ -13558,6 +13684,9 @@ tryAgain:
                                 this.EatToken();
                             }
                             break;
+                        case SyntaxKind.CloseParenToken:
+                            if (!hasScannedAnyType) return false;
+                            return this.PeekToken(1).Kind == SyntaxKind.EqualsGreaterThanToken;
                         case SyntaxKind.OutKeyword:
                         case SyntaxKind.InKeyword:
                         case SyntaxKind.ParamsKeyword:
@@ -13571,17 +13700,17 @@ tryAgain:
                         return foundParameterModifier;
                     }
 
-                    // NOTE: advances CurrentToken
-                    if (this.ScanType() == ScanTypeFlags.NotType)
-                    {
-                        return false;
-                    }
-
                     if (this.IsTrueIdentifier())
                     {
                         // eat the identifier
                         this.EatToken();
                     }
+
+                    // NOTE: advances CurrentToken
+                    if (this.ScanType() == ScanTypeFlags.NotType)
+                        return false;
+
+                    hasScannedAnyType = true;
 
                     switch (this.CurrentToken.Kind)
                     {
@@ -13623,7 +13752,7 @@ tryAgain:
                 IsTupleDeclarationAllowed = false;
                 IsDeclAssignmentAllowed = false;
 
-                if (ScanParenthesizedImplicitlyTypedLambda(precedence))
+                if (this.TryScanImplicitOrTypedLambda(precedence))
                 {
                     return this.ParseLambdaExpression();
                 }
@@ -13644,12 +13773,6 @@ tryAgain:
                         var expr = this.ParseSubExpression(Precedence.Cast);
                         return _syntaxFactory.CastExpression(openParen, type, closeParen, expr);
                     }
-                }
-
-                this.Reset(ref resetPoint);
-                if (this.ScanExplicitlyTypedLambda(precedence))
-                {
-                    return this.ParseLambdaExpression();
                 }
 
                 // Doesn't look like a cast, so parse this as a parenthesized expression or tuple.
@@ -13969,7 +14092,8 @@ tryAgain:
             }
 
             // Check whether looks like implicitly or explicitly typed lambda
-            bool isAsync = ScanParenthesizedImplicitlyTypedLambda(precedence) || ScanExplicitlyTypedLambda(precedence);
+            //bool isAsync = ScanParenthesizedImplicitlyTypedLambda(precedence) || ScanExplicitlyTypedLambda(precedence);
+            bool isAsync = TryScanImplicitOrTypedLambda(precedence);
 
             // Restore current token index
             this.Reset(ref resetPoint);
@@ -15564,8 +15688,17 @@ tryAgain:
             var trailingTrash = b.ToList();
             _pool.Free(b);
 
+            // handle special case of missing identifier expression - nothing to attach a trailing skipped trivia
+            if (node is IdentifierNameSyntax identExpr && node.IsMissing)
+            {
+                node = (TNode)(object)SyntaxFactory.IdentifierName((SyntaxToken)identExpr.Identifier.WithTrailingTrivia(trailingTrash.Node));
+            }
+            else
+            {
+                node = this.AddTrailingSkippedSyntax(node, trailingTrash.Node);
+            }
+
             node = this.AddError(node, ErrorCode.ERR_UnexpectedToken, trailingTrash[0].ToString());
-            node = this.AddTrailingSkippedSyntax(node, trailingTrash.Node);
             return node;
         }
     }

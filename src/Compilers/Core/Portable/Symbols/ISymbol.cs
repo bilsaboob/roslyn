@@ -305,6 +305,11 @@ namespace Microsoft.CodeAnalysis
         bool Equals([NotNullWhen(returnValue: true)] ISymbol? other, SymbolEqualityComparer equalityComparer);
     }
 
+    public interface ISymbolWithOriginLocation
+    {
+        public ImmutableArray<Location> OriginalLocations { get; }
+    }
+
     public class WrappedSymbol : ISymbol
     {
         public WrappedSymbol(ISymbol symbol)

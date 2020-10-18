@@ -308,6 +308,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         public abstract ImmutableArray<Location> Locations { get; }
 
+        public ImmutableArray<Location> OriginalLocations { get; set; }
+
         /// <summary>
         /// <para>
         /// Get the syntax node(s) where this symbol was declared in source. Some symbols (for

@@ -4,6 +4,8 @@
 
 #nullable enable
 
+using System;
+using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -18,6 +20,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             {
                 return this.Type == null && this.Identifier.ContextualKind() == SyntaxKind.ArgListKeyword;
             }
+        }
+
+        public ParameterSyntax WithOriginalParamIndexAnnotation(int paramIndex)
+        {
+            return (ParameterSyntax)WithAdditionalAnnotationsInternalWithParent(new[] { new SyntaxAnnotation("OriginalParamIndexAnnotation", $"{paramIndex}") });
+        }
+
+        public int? GetOriginalSyntaxParamIndex()
+        {
+            var annotation = this.GetAnnotations().FirstOrDefault(a => a.Kind == "OriginalParamIndexAnnotation");
+            if (annotation == null || annotation.Data == null) return null;
+            return int.Parse(annotation.Data);
         }
     }
 }
