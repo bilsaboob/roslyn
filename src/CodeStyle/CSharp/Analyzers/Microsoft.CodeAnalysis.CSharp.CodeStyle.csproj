@@ -13,6 +13,8 @@
     <PackageReference Include="Humanizer.Core" Version="$(HumanizerCoreVersion)" PrivateAssets="compile" />
   </ItemGroup>
   <ItemGroup Label="Project References">
+    <ProjectReference Include="..\..\..\Compilers\Core\Portable\Microsoft.CodeAnalysis.csproj" />
+    <ProjectReference Include="..\..\..\Compilers\CSharp\Portable\Microsoft.CodeAnalysis.CSharp.csproj" />
     <ProjectReference Include="..\..\Core\Analyzers\Microsoft.CodeAnalysis.CodeStyle.csproj" />
   </ItemGroup>
   <ItemGroup>
