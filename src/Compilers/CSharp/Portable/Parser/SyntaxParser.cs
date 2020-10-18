@@ -994,7 +994,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         protected void AddTrailingSkippedSyntax(SyntaxListBuilder list, GreenNode skippedSyntax)
         {
-            list[list.Count - 1] = AddTrailingSkippedSyntax((CSharpSyntaxNode)list[list.Count - 1], skippedSyntax);
+            var replacement = AddTrailingSkippedSyntax((CSharpSyntaxNode)list[list.Count - 1], skippedSyntax);
+            if (replacement != null)
+            {
+                list[list.Count - 1] = replacement;
+                return;
+            }
+
+            // try one previous node in the list ... if that fails too ... we give up ...
+            replacement = AddTrailingSkippedSyntax((CSharpSyntaxNode)list[list.Count - 2], skippedSyntax);
+            list[list.Count - 2] = replacement;
         }
 
         protected void AddTrailingSkippedSyntax<TNode>(SyntaxListBuilder<TNode> list, GreenNode skippedSyntax) where TNode : CSharpSyntaxNode
@@ -1013,6 +1022,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             else
             {
                 var lastToken = node.GetLastNonZeroWidthToken();
+                if (lastToken == null) return null;
                 var newToken = AddSkippedSyntax(lastToken, skippedSyntax, trailing: true);
                 return SyntaxLastTokenReplacer.Replace(node, newToken, lastToken);
             }
