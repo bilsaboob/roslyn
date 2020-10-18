@@ -67,6 +67,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                         return symbol;
                     }
 
+                    if (symbol is ISymbolWithOriginLocation symWithOrigin && !symWithOrigin.OriginalLocations.IsDefault)
+                    {
+                        if (symWithOrigin.OriginalLocations.Any(l => l.SourceSpan.Contains(location.SourceSpan)))
+                            return symbol;
+                    }
+
                     // We found some symbol, but it defined something else. We're not going to have a higher node defining _another_ symbol with this token, so we can stop now.
                     return null;
                 }
