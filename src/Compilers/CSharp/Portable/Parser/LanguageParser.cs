@@ -15688,8 +15688,17 @@ tryAgain:
             var trailingTrash = b.ToList();
             _pool.Free(b);
 
+            // handle special case of missing identifier expression - nothing to attach a trailing skipped trivia
+            if (node is IdentifierNameSyntax identExpr && node.IsMissing)
+            {
+                node = (TNode)(object)SyntaxFactory.IdentifierName((SyntaxToken)identExpr.Identifier.WithTrailingTrivia(trailingTrash.Node));
+            }
+            else
+            {
+                node = this.AddTrailingSkippedSyntax(node, trailingTrash.Node);
+            }
+
             node = this.AddError(node, ErrorCode.ERR_UnexpectedToken, trailingTrash[0].ToString());
-            node = this.AddTrailingSkippedSyntax(node, trailingTrash.Node);
             return node;
         }
     }
