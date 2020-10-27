@@ -305,7 +305,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return false;
         }
 
-        protected override int HighestPriorityUseSiteError
+        protected internal override int HighestPriorityUseSiteError
         {
             get
             {
@@ -324,7 +324,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         #endregion
 
-        protected sealed override ISymbol CreateISymbol()
+        protected internal sealed override ISymbol CreateISymbol()
         {
             return new PublicModel.EventSymbol(this);
         }

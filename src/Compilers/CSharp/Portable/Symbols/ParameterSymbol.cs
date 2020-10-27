@@ -22,6 +22,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
     {
         internal const string ValueParameterName = "value";
 
+        private bool _isThis;
+
         internal ParameterSymbol()
         {
         }
@@ -373,7 +375,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get
             {
-                return false;
+                return _isThis;
+            }
+            set
+            {
+                _isThis = value;
             }
         }
 
@@ -400,7 +406,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal abstract ImmutableHashSet<string> NotNullIfParameterNotNull { get; }
 
-        protected sealed override int HighestPriorityUseSiteError
+        protected internal sealed override int HighestPriorityUseSiteError
         {
             get
             {
@@ -418,7 +424,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.ParameterSymbol(this);
         }

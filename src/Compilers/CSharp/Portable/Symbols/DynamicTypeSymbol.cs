@@ -237,12 +237,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return this;
         }
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.DynamicTypeSymbol(this, DefaultNullableAnnotation);
         }
 
-        protected sealed override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
+        protected internal sealed override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
         {
             Debug.Assert(nullableAnnotation != DefaultNullableAnnotation);
             return new PublicModel.DynamicTypeSymbol(this, nullableAnnotation);

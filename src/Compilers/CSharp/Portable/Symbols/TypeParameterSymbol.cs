@@ -252,7 +252,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return ImmutableArray<NamedTypeSymbol>.Empty;
         }
 
-        protected override ImmutableArray<NamedTypeSymbol> GetAllInterfaces()
+        protected internal override ImmutableArray<NamedTypeSymbol> GetAllInterfaces()
         {
             return ImmutableArray<NamedTypeSymbol>.Empty;
         }
@@ -676,12 +676,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return this;
         }
 
-        protected sealed override ISymbol CreateISymbol()
+        protected internal sealed override ISymbol CreateISymbol()
         {
             return new PublicModel.TypeParameterSymbol(this, DefaultNullableAnnotation);
         }
 
-        protected sealed override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
+        protected internal sealed override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
         {
             Debug.Assert(nullableAnnotation != DefaultNullableAnnotation);
             return new PublicModel.TypeParameterSymbol(this, nullableAnnotation);

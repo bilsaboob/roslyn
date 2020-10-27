@@ -362,7 +362,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// Return error code that has highest priority while calculating use site error for this symbol. 
         /// </summary>
-        protected override int HighestPriorityUseSiteError
+        protected internal override int HighestPriorityUseSiteError
         {
             get
             {
@@ -451,7 +451,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         bool IFieldSymbolInternal.IsVolatile => this.IsVolatile;
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.FieldSymbol(this);
         }

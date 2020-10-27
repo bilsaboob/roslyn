@@ -171,7 +171,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        protected sealed override ISymbol CreateISymbol()
+        protected internal sealed override ISymbol CreateISymbol()
         {
             return new PublicModel.LabelSymbol(this);
         }

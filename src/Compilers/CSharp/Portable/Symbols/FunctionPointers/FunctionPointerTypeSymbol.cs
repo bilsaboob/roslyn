@@ -111,12 +111,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return Hash.Combine(1, Signature.GetHashCode());
         }
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.FunctionPointerTypeSymbol(this, DefaultNullableAnnotation);
         }
 
-        protected override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
+        protected internal override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
         {
             Debug.Assert(nullableAnnotation != DefaultNullableAnnotation);
             return new PublicModel.FunctionPointerTypeSymbol(this, nullableAnnotation);

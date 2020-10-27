@@ -946,7 +946,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// Return error code that has highest priority while calculating use site error for this symbol.
         /// </summary>
-        protected override int HighestPriorityUseSiteError
+        protected internal override int HighestPriorityUseSiteError
         {
             get
             {
@@ -1078,7 +1078,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         #endregion
 
-        protected sealed override ISymbol CreateISymbol()
+        protected internal sealed override ISymbol CreateISymbol()
         {
             return new PublicModel.MethodSymbol(this);
         }

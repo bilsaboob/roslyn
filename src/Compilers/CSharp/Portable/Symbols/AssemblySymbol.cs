@@ -931,7 +931,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         public abstract AssemblyMetadata GetMetadata();
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.NonSourceAssemblySymbol(this);
         }

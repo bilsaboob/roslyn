@@ -37,7 +37,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         internal SubstitutedMethodSymbol(NamedTypeSymbol containingSymbol, MethodSymbol originalDefinition)
             : this(containingSymbol, containingSymbol.TypeSubstitution, originalDefinition, constructedFrom: null)
         {
-            Debug.Assert(containingSymbol is SubstitutedNamedTypeSymbol || containingSymbol is SubstitutedErrorTypeSymbol);
+            var assertIsTrue = containingSymbol is SubstitutedNamedTypeSymbol || containingSymbol is SubstitutedErrorTypeSymbol;
+            assertIsTrue = assertIsTrue || (containingSymbol as NamedTypeSymbolWithAnnotations).UnderlyingType is SubstitutedNamedTypeSymbol || (containingSymbol as NamedTypeSymbolWithAnnotations).UnderlyingType is SubstitutedErrorTypeSymbol;
+
+            Debug.Assert(assertIsTrue);
             Debug.Assert(TypeSymbol.Equals(originalDefinition.ContainingType, containingSymbol.OriginalDefinition, TypeCompareKind.ConsiderEverything2));
         }
 
