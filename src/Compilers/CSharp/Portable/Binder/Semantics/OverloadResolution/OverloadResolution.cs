@@ -828,7 +828,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     allowRefOmittedArguments: allowRefOmittedArguments,
                     inferWithDynamic: inferWithDynamic,
                     completeResults: completeResults,
-                    useSiteDiagnostics: ref useSiteDiagnostics)
+                    useSiteDiagnostics: ref useSiteDiagnostics,
+                    receiverOpt)
                 : default(MemberResolutionResult<TMember>);
 
             var result = normalResult;
@@ -3113,12 +3114,26 @@ namespace Microsoft.CodeAnalysis.CSharp
             bool allowRefOmittedArguments,
             bool inferWithDynamic,
             bool completeResults,
-            ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+            ref HashSet<DiagnosticInfo> useSiteDiagnostics,
+            BoundExpression receiver = null
+            )
             where TMember : Symbol
         {
+            if (member is MethodSymbol method && method.IsExtensionMethod && method.ParameterCount > 0)
+            {
+                var typesMatch = false;
+                if (arguments.Arguments.Count > 0) {
+                    var thisParam = method.Parameters[0];
+                    var arg = arguments.Argument(0);
+                    typesMatch = Binder.IsTypeAssignableFrom(arg?.Type as NamedTypeSymbol, thisParam?.Type as NamedTypeSymbol);
+                }
+                if (!typesMatch)
+                    return new MemberResolutionResult<TMember>(member, leastOverriddenMember, MemberAnalysisResult.RequiredParameterMissing(0));
+            }
+
             // AnalyzeArguments matches arguments to parameter names and positions. 
             // For that purpose we use the most derived member.
-            var argumentAnalysis = AnalyzeArguments(member, arguments, isMethodGroupConversion, expanded: false);
+            var argumentAnalysis = AnalyzeArguments(member, arguments, isMethodGroupConversion, expanded: false, hasReceiver: receiver != null);
 
             // handle spread parameters - if the initial analysis failed
             if (!argumentAnalysis.IsValid && argumentAnalysis.HasSpreadParameters)
@@ -3129,7 +3144,32 @@ namespace Microsoft.CodeAnalysis.CSharp
             // handle invalid lambda arguments - if the initial analysis failed
             if (!argumentAnalysis.IsValid && argumentAnalysis.HasUnmatchedLambdaArguments)
             {
-                argumentAnalysis = AnalyzeLambdaArguments(member, arguments, argumentAnalysis, isMethodGroupConversion);
+                var onlyUnmatchedArguments = !argumentAnalysis.HasLambdaArgumentsWithThisScope;
+
+                argumentAnalysis = AnalyzeLambdaArguments(
+                    member,
+                    arguments,
+                    argumentAnalysis,
+                    isMethodGroupConversion,
+                    onlyUnmatchedArguments: onlyUnmatchedArguments,
+                    onlyThisScopedLambdas: false,
+                    acceptInvalidResult: true,
+                    hasReceiver: receiver != null
+                );
+            }
+            else if (argumentAnalysis.HasLambdaArgumentsWithThisScope)
+            {
+                // we have a lambda argument to a delegate with a "this" parameter scope... we need to adjust this parameter
+                argumentAnalysis = AnalyzeLambdaArguments(
+                    member,
+                    arguments,
+                    argumentAnalysis,
+                    isMethodGroupConversion,
+                    onlyUnmatchedArguments: false,
+                    onlyThisScopedLambdas: true,
+                    acceptInvalidResult: true,
+                    hasReceiver: receiver != null
+                );
             }
 
             if (!argumentAnalysis.IsValid)
@@ -3201,7 +3241,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             return applicableResult;
         }
 
-        private ArgumentAnalysisResult AnalyzeLambdaArguments(Symbol member, AnalyzedArguments arguments, ArgumentAnalysisResult argumentAnalysis, bool isMethodGroupConversion)
+        private ArgumentAnalysisResult AnalyzeLambdaArguments(
+            Symbol member, AnalyzedArguments arguments, ArgumentAnalysisResult argumentAnalysis,
+            bool isMethodGroupConversion,
+            bool onlyUnmatchedArguments,
+            bool onlyThisScopedLambdas,
+            bool acceptInvalidResult,
+            bool hasReceiver)
         {
             var parameters = member.GetParameters();
 
@@ -3218,23 +3264,27 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 // only need to do this for the args that failed to match the parameter
                 var paramIndex = argumentAnalysis.ParameterFromUnmatchedArgument(i);
-                if (paramIndex == -1)
+                if (paramIndex == -1 && !onlyUnmatchedArguments)
+                    paramIndex = argumentAnalysis.ParameterFromArgument(i);
+
+                if (paramIndex == -1 || paramIndex >= parameters.Length)
                 {
                     newArguments.Add(arg);
                     newArgumentNames.Add(argName);
                     newArgumentRefKinds.Add(argRef);
                     continue;
                 }
-                if (paramIndex >= parameters.Length) continue;
 
                 var param = parameters[paramIndex];
-                if (param.Type?.IsDelegateType() != true) continue;
-
-                var newArg = TryBuildAdaptedLambdaArg(param.Type, arg, i);
-                if (newArg == null) continue;
+                var newArg = arg;
+                if (param.Type?.IsDelegateType() == true)
+                {
+                    newArg = TryBuildAdaptedLambdaArg(param.Type, arg, i, onlyThisScopedLambdas);
+                    if (newArg == null) 
+                        newArg = arg;
+                }
 
                 newArguments.Add(newArg);
-
                 newArgumentNames.Add(argName);
                 newArgumentRefKinds.Add(argRef);
             }
@@ -3244,10 +3294,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 newArgumentRefKinds.ToImmutableAndFree(),
                 newArgumentNames.ToImmutableAndFree()
             );
+            newAnalyzedArguments.IsExtensionMethodInvocation = arguments.IsExtensionMethodInvocation;
 
             // we now have the new arguments available - replace the argumnet analysis
-            var newArgumentAnalysis = AnalyzeArguments(member, newAnalyzedArguments, isMethodGroupConversion, expanded: false);
-            if (newArgumentAnalysis.IsValid)
+            var newArgumentAnalysis = AnalyzeArguments(member, newAnalyzedArguments, isMethodGroupConversion, expanded: false, hasReceiver: hasReceiver);
+            if (newArgumentAnalysis.IsValid || acceptInvalidResult)
             {
                 // we have successfully bound the old arguments to new spread args - upating the initial analysis will overwrite it's internals...
                 argumentAnalysis = newArgumentAnalysis;
@@ -3260,7 +3311,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return argumentAnalysis;
         }
 
-        private BoundExpression TryBuildAdaptedLambdaArg(TypeSymbol paramType, BoundExpression arg, int argIndex)
+        private BoundExpression TryBuildAdaptedLambdaArg(TypeSymbol paramType, BoundExpression arg, int argIndex, bool onlyThisScopedLambdas)
         {
             // can only fix parameters that are lambda types
             if (paramType?.IsDelegateType() != true) return null;
@@ -3271,23 +3322,30 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (arg is UnboundLambda lambda && lambda.Syntax is LambdaExpressionSyntax lambdaSyntax)
             {
-                return BuildAdaptedLambdaArg(lambda, lambdaSyntax, paramType.DelegateParameters(), argIndex);
+                var firstParamIsThis = paramType?.AnnotationTypeKind == TypeAnnotationKind.ThisParamType;
+                if (onlyThisScopedLambdas && !firstParamIsThis)
+                    return arg;
+
+                return BuildAdaptedLambdaArg(lambda, lambdaSyntax, paramType.DelegateParameters(), argIndex, firstParamIsThis);
             }
 
             return arg;
         }
 
-        private BoundExpression BuildAdaptedLambdaArg(UnboundLambda lambda, LambdaExpressionSyntax lambdaSyntax, ImmutableArray<ParameterSymbol> expectedParameters, int argIndex)
+        private BoundExpression BuildAdaptedLambdaArg(UnboundLambda lambda, LambdaExpressionSyntax lambdaSyntax, ImmutableArray<ParameterSymbol> expectedParameters, int argIndex, bool firstParamIsThis)
         {
             // the lambda has parameters - now we need to "fill" in the missing parameters for the lambda to match the expected parameters
             var parametersListSyntax = new SeparatedSyntaxList<ParameterSyntax>();
             var allParamsMatch = true;
+            var hasAnyThisParam = false;
 
             // just iterate the expected parameters
             var lambdaParamIndex = 0;
             for (var i = 0; i < expectedParameters.Length; ++i)
             {
                 var expectedParam = expectedParameters[i];
+                var isThis = firstParamIsThis && i == 0;
+                if (isThis) hasAnyThisParam = true;
 
                 // check if we can compare the lamda param
                 TypeSymbol lambdaParamType = null;
@@ -3312,10 +3370,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (paramsMatch)
                 {
                     // it's a valid conversion ... so we can use the parameter "as is" ...
-                    var paramSyntax = SyntaxFactory.Parameter(default, default, SyntaxFactory.Identifier(lambdaParamName), SyntaxFactory.IdentifierName(lambdaParamType.Name), null)
-                        .WithOriginalParamIndexAnnotation(lambdaParamIndex);
+                    var paramName = isThis ? "@this" : lambdaParamName;
+                    var paramSyntax = SyntaxFactory.Parameter(default, default, SyntaxFactory.Identifier(paramName), SyntaxFactory.IdentifierName(lambdaParamType.Name), null);
+
+                    // only valid if it's not "this" ... which is a scope parameter that is not assignable to any lambda args...
+                    if (!isThis) paramSyntax = paramSyntax.WithOriginalParamIndexAnnotation(lambdaParamIndex);
+
                     parametersListSyntax = parametersListSyntax.Add(paramSyntax);
-                    lambdaParamIndex++;
+
+                    // stay on the same parameter if we are on "this"
+                    if (!isThis || lambdaParamName == "@this") lambdaParamIndex++;
                 }
                 else
                 {
@@ -3327,22 +3391,39 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (lambdaParamType is null && !string.IsNullOrEmpty(lambdaParamName))
                         name = lambdaParamName;
 
-                    var paramSyntax = SyntaxFactory.Parameter(default, default, SyntaxFactory.Identifier(name), SyntaxFactory.IdentifierName(expectedParam.Type.Name), null);
+                    var paramName = isThis ? "@this" : name;
+                    var paramSyntax = SyntaxFactory.Parameter(default, default, SyntaxFactory.Identifier(paramName), SyntaxFactory.IdentifierName(expectedParam.Type.Name), null);
 
                     // if we have a name but not a type, use the lambda param index as the original param index ... we expected to match it...
-                    if (lambdaParamType is null && !string.IsNullOrEmpty(lambdaParamName))
+                    if (lambdaParamType is null && !string.IsNullOrEmpty(lambdaParamName) && !isThis)
                         paramSyntax = paramSyntax.WithOriginalParamIndexAnnotation(lambdaParamIndex);
 
-                    // if there was no type to compare with... just move to the next param to be matched... we won't be able to "successfully" match it anyway...
-                    if (lambdaParamType is null)
-                        lambdaParamIndex++;
-
                     parametersListSyntax = parametersListSyntax.Add(paramSyntax);
+
+                    // if there was no type to compare with... just move to the next param to be matched... we won't be able to "successfully" match it anyway...
+                    if (lambdaParamType is null && (!isThis || lambdaParamName == "@this")) lambdaParamIndex++;
                 }
             }
 
             // we should be at the end of the lambda parameters if successful
-            if (allParamsMatch || lambdaParamIndex < lambda.ParameterCount) return lambda;
+            if (allParamsMatch || lambdaParamIndex < lambda.ParameterCount)
+            {
+                if (!hasAnyThisParam) return lambda;
+
+                for (var i = lambdaParamIndex; i < lambda.ParameterCount; ++i)
+                {
+                    IdentifierNameSyntax paramTypeSyntax = null;
+                    if (lambda.HasExplicitlyTypedParameterList)
+                    {
+                        var lambdaParamType = lambda.ParameterType(i);
+                        if (!(lambdaParamType is null))
+                            paramTypeSyntax = SyntaxFactory.IdentifierName(lambdaParamType.Name);
+                    }
+                    var lambdaParamName = lambda.ParameterName(i);
+                    var paramSyntax = SyntaxFactory.Parameter(default, default, SyntaxFactory.Identifier(lambdaParamName), paramTypeSyntax, null);
+                    parametersListSyntax = parametersListSyntax.Add(paramSyntax);
+                }
+            }
 
             // create the new lambda syntax and bind it
             var parametersSyntax = SyntaxFactory.ParameterList(parametersListSyntax);
@@ -3360,7 +3441,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             try
             {
                 var newUnboundLambda = _binder.BindExpression(newLambdaSyntax, diagnostics) as UnboundLambda;
-                return newUnboundLambda.WithOriginalLambdaSyntax(lambdaSyntax);
+                return (UnboundLambda)newUnboundLambda.WithOriginalSyntax(lambdaSyntax);
             }
             finally
             {
@@ -3423,7 +3504,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var param = parameters[i];
 
                 var argIndex = argumentAnalysis.ArgumentFromParameter(i);
-                if (argIndex == -1) continue;
+                if (argIndex == -1)
+                    argIndex = argumentAnalysis.UnmatchedArgumentFromParameter(i);
+
+                if (argIndex == -1)
+                    continue;
 
                 if (param.IsSpread)
                 {
@@ -3455,6 +3540,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 newArgumentRefKinds.ToImmutableAndFree(),
                 newArgumentNames.ToImmutableAndFree()
             );
+            newAnalyzedArguments.IsExtensionMethodInvocation = arguments.IsExtensionMethodInvocation;
 
             // finally free the spread args
             for (var i = 0; i < spreadArguments.Count; ++i)
@@ -3507,7 +3593,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (argMemberType?.IsDelegateType() == true)
                 {
                     // try adapting the argument
-                    var adaptedArg = TryBuildAdaptedLambdaArg(argMemberType, arg, -1);
+                    var adaptedArg = TryBuildAdaptedLambdaArg(argMemberType, arg, -1, onlyThisScopedLambdas: false);
                     if (adaptedArg != null) arg = adaptedArg;
                 }
 
@@ -3925,6 +4011,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             ref HashSet<DiagnosticInfo> useSiteDiagnostics,
             bool forExtensionMethodThisArg)
         {
+            if (argument == null) return Conversion.NoConversion;
+
             // Spec 7.5.3.1
             // For each argument in A, the parameter passing mode of the argument (i.e., value, ref, or out) is identical
             // to the parameter passing mode of the corresponding parameter, and

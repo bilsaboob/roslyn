@@ -59,7 +59,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             Symbol symbol,
             AnalyzedArguments arguments,
             bool isMethodGroupConversion,
-            bool expanded)
+            bool expanded,
+            bool hasReceiver = false)
         {
             Debug.Assert((object)symbol != null);
             Debug.Assert(arguments != null);
@@ -79,6 +80,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var parameterPosition = 0;
             var hasAnyMatchedSpreadArgs = false;
             var hasAnyUnmatchedLambdaArgs = false;
+            var hasAnyLambdaArgWithThisScope = false;
 
             void mapParameter(int argPos, int paramPos, bool isUnmatched = false)
             {
@@ -150,6 +152,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var namedParamPos = namedParameterPosition ?? -1;
                     mapParameter(argumentPosition, namedParamPos);
 
+                    // check if the parameter is of a lambda type that has first argument with "this" scope
+                    if (argIsLambda && !hasAnyLambdaArgWithThisScope && namedParamPos != -1)
+                    {
+                        var param = parameters[namedParamPos];
+                        if (param?.Type?.IsDelegateType() == true && param?.Type?.AnnotationTypeKind == TypeAnnotationKind.ThisParamType)
+                            hasAnyLambdaArgWithThisScope = true;
+                    }
+
                     // set this as the first unmatched argument if it's named and no position available - no parameter with the specified name exist!
                     if (namedParameterPosition == null && unmatchedArgumentIndex == null)
                     {
@@ -200,6 +210,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         var param = parameters[parameterPosition];
 
+                        // check if the parameter is of a lambda type that has first argument with "this" scope
+                        if (argIsLambda && !hasAnyLambdaArgWithThisScope)
+                        {
+                            if (param?.Type?.IsDelegateType() == true && param?.Type?.AnnotationTypeKind == TypeAnnotationKind.ThisParamType)
+                                hasAnyLambdaArgWithThisScope = true;
+                        }
+
                         // the type on arg and param don't match - however, if both are lambas, we may perform a discard on the parameters allowing us to match anyway!
                         if (argIsLambda && param.Type?.IsDelegateType() == true)
                         {
@@ -227,6 +244,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     parameterPosition = tmpParameterPosition;
 
+                    // check if the parameter is of a lambda type that has first argument with "this" scope
+                    if (argIsLambda && !hasAnyLambdaArgWithThisScope && parameterCount > parameterPosition)
+                    {
+                        var param = parameters[parameterPosition];
+                        if (param?.Type?.IsDelegateType() == true && param?.Type?.AnnotationTypeKind == TypeAnnotationKind.ThisParamType)
+                            hasAnyLambdaArgWithThisScope = true;
+                    }
+
                     // if the arg is a lambda ... then we have an unmatched lambd arg that may be corrected later on ...
                     if (argIsLambda)
                     {
@@ -246,6 +271,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
                 else
                 {
+                    // check if the parameter is of a lambda type that has first argument with "this" scope
+                    if (argIsLambda && !hasAnyLambdaArgWithThisScope && parameterCount > parameterPosition)
+                    {
+                        var param = parameters[parameterPosition];
+                        if (param?.Type?.IsDelegateType() == true && param?.Type?.AnnotationTypeKind == TypeAnnotationKind.ThisParamType)
+                            hasAnyLambdaArgWithThisScope = true;
+                    }
+
                     // map the parameter
                     mapParameter(argumentPosition, parameterPosition);
                 }
@@ -281,6 +314,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var analysis = ArgumentAnalysisResult.NoCorrespondingNamedParameter(unmatchedArgumentIndex.Value, argsToParameters.ToImmutableArray(), unmatchedArgsToParameters.ToImmutableArray());
                     analysis.HasUnmatchedLambdaArguments = hasAnyUnmatchedLambdaArgs;
                     analysis.HasSpreadParameters = hasAnyMatchedSpreadArgs;
+                    analysis.HasLambdaArgumentsWithThisScope = hasAnyLambdaArgWithThisScope;
                     return analysis;
                 }
                 else
@@ -288,6 +322,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var analysis = ArgumentAnalysisResult.NoCorrespondingParameter(unmatchedArgumentIndex.Value, argsToParameters.ToImmutableArray(), unmatchedArgsToParameters.ToImmutableArray());
                     analysis.HasUnmatchedLambdaArguments = hasAnyUnmatchedLambdaArgs;
                     analysis.HasSpreadParameters = hasAnyMatchedSpreadArgs;
+                    analysis.HasLambdaArgumentsWithThisScope = hasAnyLambdaArgWithThisScope;
                     return analysis;
                 }
             }
@@ -330,6 +365,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 ArgumentAnalysisResult.NormalForm(argsToParameters.ToImmutableArray());
 
             result.HasSpreadParameters = hasAnyMatchedSpreadArgs;
+            result.HasLambdaArgumentsWithThisScope = hasAnyLambdaArgWithThisScope;
 
             return result;
         }
