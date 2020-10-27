@@ -23,6 +23,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private readonly bool _isSynthesized;
         private readonly bool _isAsync;
         private readonly bool _isStatic;
+        private readonly int _thisParamIndex;
 
         /// <summary>
         /// This symbol is used as the return type of a LambdaSymbol when we are interpreting
@@ -45,7 +46,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             ImmutableArray<RefKind> parameterRefKinds,
             RefKind refKind,
             TypeWithAnnotations returnType,
-            DiagnosticBag diagnostics)
+            DiagnosticBag diagnostics,
+            int thisParamIndex = -1)
         {
             _containingSymbol = containingSymbol;
             _messageID = unboundLambda.Data.MessageID;
@@ -56,8 +58,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _isSynthesized = unboundLambda.WasCompilerGenerated;
             _isAsync = unboundLambda.IsAsync;
             _isStatic = unboundLambda.IsStatic;
+            _thisParamIndex = thisParamIndex;
             // No point in making this lazy. We are always going to need these soon after creation of the symbol.
-            _parameters = MakeParameters(compilation, unboundLambda, parameterTypes, parameterRefKinds, diagnostics);
+            _parameters = MakeParameters(compilation, unboundLambda, parameterTypes, parameterRefKinds, diagnostics, thisParamIndex);
         }
 
         public MessageID MessageID { get { return _messageID; } }
@@ -319,7 +322,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             UnboundLambda unboundLambda,
             ImmutableArray<TypeWithAnnotations> parameterTypes,
             ImmutableArray<RefKind> parameterRefKinds,
-            DiagnosticBag diagnostics)
+            DiagnosticBag diagnostics,
+            int thisParamIndex = -1)
         {
             Debug.Assert(parameterTypes.Length == parameterRefKinds.Length);
 
@@ -370,6 +374,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var location = unboundLambda.ParameterLocation(p);
                 var locations = location == null ? ImmutableArray<Location>.Empty : ImmutableArray.Create<Location>(location);
                 var parameter = new SourceSimpleParameterSymbol(owner: this, type, ordinal: p, refKind, name, unboundLambda.ParameterIsDiscard(p), locations);
+
+                if (p == thisParamIndex) parameter.IsThis = true;
 
                 var originalLocation = GetOriginalParameterLocation(p);
                 if (originalLocation != null)

@@ -437,7 +437,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// The type containing the binding context
         /// </summary>
-        internal NamedTypeSymbol? ContainingType
+        internal virtual NamedTypeSymbol? ContainingType
         {
             get
             {
@@ -449,6 +449,23 @@ namespace Microsoft.CodeAnalysis.CSharp
                     NamedTypeSymbol namedType => namedType,
                     _ => member.ContainingType
                 };
+            }
+        }
+
+        protected virtual NamedTypeSymbol? ParentContainingType
+        {
+            get
+            {
+                return null;
+            }
+        }
+
+        protected virtual bool InLambdaWithThisScope
+        {
+            get
+            {
+                ContainingMemberOrLambda.ContainingSymbolWithThisScope(out var islabmda);
+                return islabmda;
             }
         }
 

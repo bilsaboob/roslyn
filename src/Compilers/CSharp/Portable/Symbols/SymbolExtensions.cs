@@ -10,6 +10,8 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Resources;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Roslyn.Utilities;
 
 using static System.Linq.ImmutableArrayExtensions;
@@ -131,6 +133,38 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             return containingMember;
+        }
+
+        internal static (Symbol, TypeSymbol)? ContainingSymbolWithThisScope(this Symbol? containingMember, out bool isLambda)
+        {
+            isLambda = false;
+
+            // we want to find the parent method / lambda expression that is a valid "this scope" owner ...
+            // 1. method within the 
+            while (containingMember is object && containingMember.Kind == SymbolKind.Method)
+            {
+                var method = (MethodSymbol)containingMember;
+                if (method.MethodKind != MethodKind.AnonymousFunction && method.MethodKind != MethodKind.LocalFunction) break;
+                if (method.MethodKind == MethodKind.AnonymousFunction)
+                {
+                    // anonymouse functions / lambda expressions may have "this parameter" set
+                    if (method.ParameterCount > 0)
+                    {
+                        var param = method.Parameters[0];
+                        var isThis = param.IsThis || (param.GetNonNullSyntaxNode() as ParameterSyntax)?.Modifiers.Any(SyntaxKind.ThisKeyword) == true;
+                        if (isThis)
+                        {
+                            isLambda = true;
+                            return (method, param.Type);
+                        }
+                    }
+                }
+                containingMember = containingMember.ContainingSymbol;
+            }
+
+            if (containingMember is null) return null;
+
+            return (containingMember, containingMember.ContainingType);
         }
 
         internal static ParameterSymbol? EnclosingThisSymbol(this Symbol containingMember)

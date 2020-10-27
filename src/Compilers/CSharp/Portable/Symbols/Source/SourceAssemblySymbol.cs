@@ -2672,7 +2672,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public override AssemblyMetadata GetMetadata() => null;
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.SourceAssemblySymbol(this);
         }

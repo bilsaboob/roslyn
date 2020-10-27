@@ -888,7 +888,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Return error code that has highest priority while calculating use site error for this symbol. 
         /// Supposed to be ErrorCode, but it causes inconsistent accessibility error.
         /// </summary>
-        protected virtual int HighestPriorityUseSiteError
+        protected internal virtual int HighestPriorityUseSiteError
         {
             get
             {
@@ -1560,7 +1560,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return ToString();
         }
 
-        protected abstract ISymbol CreateISymbol();
+        protected internal abstract ISymbol CreateISymbol();
 
         internal ISymbol ISymbol
         {

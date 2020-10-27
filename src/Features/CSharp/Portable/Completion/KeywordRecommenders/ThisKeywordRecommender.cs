@@ -20,10 +20,37 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.KeywordRecommenders
 
         protected override bool IsValidContext(int position, CSharpSyntaxContext context, CancellationToken cancellationToken)
         {
+            // the token must be "this" like
+            if (!"this".Contains(context.LeftToken.Text ?? "_") && !"this".Contains(context.TargetToken.Text ?? "_"))
+                return false;
+
             return
                 IsInstanceExpressionOrStatement(context) ||
                 IsThisParameterModifierContext(context) ||
-                IsConstructorInitializerContext(context);
+                IsConstructorInitializerContext(context) ||
+                IsInLambdaExpressionWithReceiver(context, cancellationToken);
+        }
+
+        private static bool IsInLambdaExpressionWithReceiver(CSharpSyntaxContext context, CancellationToken cancellationToken)
+        {
+            var targetToken = context.TargetToken;
+            var enclosingSymbol = context.SemanticModel.GetEnclosingSymbol(targetToken.SpanStart, cancellationToken);
+
+            if (enclosingSymbol is IMethodSymbol method && (method.MethodKind == MethodKind.AnonymousFunction))
+            {
+                // anonymouse functions / lambda expressions may have "this parameter" set
+                if (method.Parameters.Length > 0)
+                {
+                    var param = method.Parameters[0];
+                    var isThis = param.IsThis || (param.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as ParameterSyntax)?.Modifiers.Any(SyntaxKind.ThisKeyword) == true;
+                    if (isThis)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static bool IsInstanceExpressionOrStatement(CSharpSyntaxContext context)

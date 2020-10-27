@@ -40,7 +40,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public override bool Equals(Symbol? obj, TypeCompareKind compareKind) => obj is DiscardSymbol other && this.TypeWithAnnotations.Equals(other.TypeWithAnnotations, compareKind);
         public override int GetHashCode() => this.TypeWithAnnotations.GetHashCode();
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.DiscardSymbol(this);
         }

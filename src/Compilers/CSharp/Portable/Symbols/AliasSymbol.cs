@@ -367,7 +367,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get { return true; }
         }
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.AliasSymbol(this);
         }

@@ -185,7 +185,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
                 : false;
 
             var isStatementContext = !isPreProcessorDirectiveContext
-                ? targetToken.IsBeginningOfStatementContext()
+                ? targetToken.IsBeginningOfStatementContext() || (leftToken.IsWord() && leftToken.IsBeginningOfStatementContext())
                 : false;
 
             var isGlobalStatementContext = !isPreProcessorDirectiveContext

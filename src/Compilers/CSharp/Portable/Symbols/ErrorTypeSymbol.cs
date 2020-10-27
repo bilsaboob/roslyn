@@ -454,7 +454,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return ImmutableArray<NamedTypeSymbol>.Empty;
         }
 
-        protected override NamedTypeSymbol ConstructCore(ImmutableArray<TypeWithAnnotations> typeArguments, bool unbound)
+        protected internal override NamedTypeSymbol ConstructCore(ImmutableArray<TypeWithAnnotations> typeArguments, bool unbound)
         {
             return new ConstructedErrorTypeSymbol(this, typeArguments);
         }
@@ -535,12 +535,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal override NamedTypeSymbol? NativeIntegerUnderlyingType => null;
 
-        protected sealed override ISymbol CreateISymbol()
+        protected internal sealed override ISymbol CreateISymbol()
         {
             return new PublicModel.ErrorTypeSymbol(this, DefaultNullableAnnotation);
         }
 
-        protected sealed override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
+        protected internal sealed override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
         {
             Debug.Assert(nullableAnnotation != DefaultNullableAnnotation);
             return new PublicModel.ErrorTypeSymbol(this, nullableAnnotation);

@@ -365,7 +365,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         internal virtual ErrorCode ForbiddenDiagnostic => ErrorCode.ERR_VariableUsedBeforeDeclaration;
 
-        protected sealed override ISymbol CreateISymbol()
+        protected internal sealed override ISymbol CreateISymbol()
         {
             return new PublicModel.LocalSymbol(this);
         }

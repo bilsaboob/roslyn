@@ -316,7 +316,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return RuntimeHelpers.GetHashCode(this);
         }
 
-        protected virtual ImmutableArray<NamedTypeSymbol> GetAllInterfaces()
+        protected internal virtual ImmutableArray<NamedTypeSymbol> GetAllInterfaces()
         {
             var info = this.GetInterfaceInfo();
             if (info == s_noInterfaces)
@@ -336,7 +336,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// TypeSymbol.Interfaces as the source of edge data, which has had cycles and infinitely
         /// long dependency cycles removed. Consequently, it is possible (and we do) use the
         /// simplest version of Tarjan's topological sorting algorithm.
-        protected virtual ImmutableArray<NamedTypeSymbol> MakeAllInterfaces()
+        protected internal virtual ImmutableArray<NamedTypeSymbol> MakeAllInterfaces()
         {
             var result = ArrayBuilder<NamedTypeSymbol>.GetInstance();
             var visited = new HashSet<NamedTypeSymbol>(SymbolEqualityComparer.ConsiderEverything);
@@ -516,7 +516,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// Return error code that has highest priority while calculating use site error for this symbol. 
         /// </summary>
-        protected override int HighestPriorityUseSiteError
+        protected internal override int HighestPriorityUseSiteError
         {
             get
             {
@@ -2241,7 +2241,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal CodeAnalysis.NullableAnnotation DefaultNullableAnnotation => NullableAnnotationExtensions.ToPublicAnnotation(this, NullableAnnotation.Oblivious);
 
-        protected abstract ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation);
+        protected internal abstract ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation);
 
         TypeKind ITypeSymbolInternal.TypeKind => this.TypeKind;
 

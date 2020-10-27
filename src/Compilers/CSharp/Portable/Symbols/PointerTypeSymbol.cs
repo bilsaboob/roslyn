@@ -296,12 +296,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return this.PointedAtTypeWithAnnotations.GetUnificationUseSiteDiagnosticRecursive(ref result, owner, ref checkedTypes);
         }
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.PointerTypeSymbol(this, DefaultNullableAnnotation);
         }
 
-        protected override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
+        protected internal override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
         {
             Debug.Assert(nullableAnnotation != DefaultNullableAnnotation);
             return new PublicModel.PointerTypeSymbol(this, nullableAnnotation);

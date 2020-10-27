@@ -374,7 +374,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         public abstract ModuleMetadata GetMetadata();
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.ModuleSymbol(this);
         }

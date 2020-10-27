@@ -187,6 +187,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
                     }
 
                     return false;
+
+                case SyntaxKind.IdentifierToken:
+                    {
+                        if (token.Parent?.IsKind(SyntaxKind.IdentifierName) == true &&
+                            token.Parent.Parent.IsKind(SyntaxKind.ExpressionStatement))
+                        {
+                            return true;
+                        }
+
+                        return false;
+                    }
             }
 
             return false;

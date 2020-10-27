@@ -30,6 +30,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     {
         private readonly SmallDictionary<SyntaxNode, Binder> _map;
         private Symbol _containingMemberOrLambda;
+        private TypeSymbol _thisLambdaContextType;
         private Binder _enclosing;
         private readonly SyntaxNode _root;
 
@@ -137,6 +138,22 @@ namespace Microsoft.CodeAnalysis.CSharp
             _containingMemberOrLambda = containingMemberOrLambda;
             _enclosing = enclosing;
             _root = root;
+
+            if (_containingMemberOrLambda is MethodSymbol containingMethod && containingMethod.MethodKind == MethodKind.AnonymousFunction)
+            {
+                if (containingMethod.ParameterCount > 0)
+                {
+                    var firstParam = containingMethod.Parameters[0];
+                    if (firstParam.IsThis)
+                    {
+                        var type = firstParam.Type;
+                        if (!(type is null) && !type.IsErrorType())
+                        {
+                            _thisLambdaContextType = type;
+                        }
+                    }
+                }
+            }
         }
 
         #region Starting points - these nodes contain statements
@@ -362,17 +379,30 @@ namespace Microsoft.CodeAnalysis.CSharp
             var currentBlockBinder = CurrentBlockBinder;
 
             Debug.Assert((object)_containingMemberOrLambda == _enclosing.ContainingMemberOrLambda);
-            var blockBinder = new BlockBinder(_enclosing, node);
-            AddToMap(node, blockBinder);
 
-            CurrentBlockBinder = blockBinder;
+            Binder binder;
+            var enclosing = _enclosing;
+            if (!(_thisLambdaContextType is null) && node == ((LambdaExpressionSyntax)_root).Body)
+            {
+                // bind to the enclosing type
+                var blockBinder = new BlockBinder(enclosing, node);
+                CurrentBlockBinder = blockBinder;
+                binder = new InThisContextContainerBinder(_containingMemberOrLambda, (NamedTypeSymbol)_thisLambdaContextType, blockBinder);
+            }
+            else
+            {
+                var blockBinder = new BlockBinder(enclosing, node);
+                binder = CurrentBlockBinder = blockBinder;
+            }
+
+            AddToMap(node, binder);
 
             try
             {
                 // Visit all the statements inside this block
                 foreach (StatementSyntax statement in node.Statements)
                 {
-                    Visit(statement, blockBinder);
+                    Visit(statement, binder);
                 }
             }
             finally

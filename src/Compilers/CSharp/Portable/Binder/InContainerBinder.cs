@@ -13,13 +13,87 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
+    internal class InThisContextContainerBinder : InContainerBinder
+    {
+        private Symbol _containingMemberOrLambda;
+        private NamedTypeSymbol _thisScope;
+
+        internal InThisContextContainerBinder(Symbol containingMemberOrLambda, NamedTypeSymbol thisScope, Binder next)
+            : base(thisScope, next)
+        {
+            _containingMemberOrLambda = containingMemberOrLambda;
+            _thisScope = thisScope;
+        }
+
+        internal override Symbol ContainingMemberOrLambda
+            => _containingMemberOrLambda;
+
+        internal override Imports GetImports(ConsList<TypeSymbol> basesBeingResolved)
+            => Binder_GetImports(basesBeingResolved);
+
+        protected override AssemblySymbol GetForwardedToAssemblyInUsingNamespaces(string name, ref NamespaceOrTypeSymbol qualifierOpt, DiagnosticBag diagnostics, Location location)
+            => Binder_GetForwardedToAssemblyInUsingNamespaces(name, ref qualifierOpt, diagnostics, location);
+
+        internal override ImportChain ImportChain
+            => Binder_ImportChain;
+
+        internal override NamedTypeSymbol ContainingType
+            => _thisScope;
+
+        protected override NamedTypeSymbol? ParentContainingType
+            => Next?.ContainingType;
+
+        internal override void LookupSymbolsInSingleBinder(
+            LookupResult result, string name, int arity, ConsList<TypeSymbol> basesBeingResolved, LookupOptions options, Binder originalBinder, bool diagnose, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+            => base.LookupSymbolsInSingleBinder(result, name, arity, basesBeingResolved, options, originalBinder, diagnose, ref useSiteDiagnostics);
+
+        protected override void AddLookupSymbolsInfoInSingleBinder(LookupSymbolsInfo result, LookupOptions options, Binder originalBinder)
+            => base.AddLookupSymbolsInfoInSingleBinder(result, options, originalBinder);
+
+        protected override SourceLocalSymbol LookupLocal(SyntaxToken nameToken)
+            => Binder_LookupLocal(nameToken);
+
+        protected override LocalFunctionSymbol LookupLocalFunction(SyntaxToken nameToken)
+            => Binder_LookupLocalFunction(nameToken);
+
+        internal override uint LocalScopeDepth
+            => Binder_LocalScopeDepth;
+
+        internal override bool IsAccessibleHelper(Symbol symbol, TypeSymbol accessThroughType, out bool failedThroughTypeCheck, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<TypeSymbol> basesBeingResolved)
+        {
+            var evaluated = false;
+
+            if ((object)this.ContainingType != null)
+            {
+                evaluated = true;
+                if (this.IsSymbolAccessibleConditional(symbol, this.ContainingType, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics))
+                    return true;
+            }
+
+            if ((object)this.ParentContainingType != null)
+            {
+                evaluated = true;
+                if (this.IsSymbolAccessibleConditional(symbol, this.ParentContainingType, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics))
+                    return true;
+            }
+
+            if (evaluated)
+            {
+                failedThroughTypeCheck = false;
+                return false;
+            }
+
+            return Next.IsAccessibleHelper(symbol, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics, basesBeingResolved);  // delegate to containing Binder, eventually checking assembly.
+        }
+    }
+
     /// <summary>
     /// A binder that places the members of a symbol in scope.  If there is a container declaration
     /// with using directives, those are merged when looking up names.
     /// </summary>
-    internal sealed class InContainerBinder : Binder
+    internal class InContainerBinder : Binder
     {
-        private readonly NamespaceOrTypeSymbol _container;
+        protected readonly NamespaceOrTypeSymbol _container;
         private readonly Func<ConsList<TypeSymbol>, Imports> _computeImports;
         private Imports _lazyImports;
         private ImportChain _lazyImportChain;
@@ -78,7 +152,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             _computeImports = computeImports;
         }
 
-        internal NamespaceOrTypeSymbol Container
+        internal virtual NamespaceOrTypeSymbol Container
         {
             get
             {
@@ -97,6 +171,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             return _lazyImports;
         }
+
+        protected Imports Binder_GetImports(ConsList<TypeSymbol> basesBeingResolved)
+            => base.GetImports(basesBeingResolved);
 
         /// <summary>
         /// Look for a type forwarder for the given type in any referenced assemblies, checking any using namespaces in
@@ -129,6 +206,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             return base.GetForwardedToAssemblyInUsingNamespaces(name, ref qualifierOpt, diagnostics, location);
         }
 
+        protected AssemblySymbol Binder_GetForwardedToAssemblyInUsingNamespaces(string name, ref NamespaceOrTypeSymbol qualifierOpt, DiagnosticBag diagnostics, Location location)
+        {
+            return base.GetForwardedToAssemblyInUsingNamespaces(name, ref qualifierOpt, diagnostics, location);
+        }
+
         internal override ImportChain ImportChain
         {
             get
@@ -147,6 +229,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Debug.Assert(_lazyImportChain != null);
 
                 return _lazyImportChain;
+            }
+        }
+
+        protected ImportChain Binder_ImportChain
+        {
+            get
+            {
+                return base.ImportChain;
             }
         }
 
@@ -308,11 +398,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
 
+        protected SourceLocalSymbol Binder_LookupLocal(SyntaxToken nameToken)
+            => base.LookupLocal(nameToken);
+
         protected override LocalFunctionSymbol LookupLocalFunction(SyntaxToken nameToken)
         {
             return null;
         }
 
+        protected LocalFunctionSymbol Binder_LookupLocalFunction(SyntaxToken nameToken)
+            => base.LookupLocalFunction(nameToken);
+
         internal override uint LocalScopeDepth => Binder.ExternalScope;
+
+        protected uint Binder_LocalScopeDepth => base.LocalScopeDepth;
     }
 }

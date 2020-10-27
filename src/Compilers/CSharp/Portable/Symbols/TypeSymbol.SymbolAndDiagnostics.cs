@@ -6,8 +6,19 @@ using System.Collections.Immutable;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
+    internal enum TypeAnnotationKind
+    {
+        ThisParamType
+    }
+
     internal partial class TypeSymbol
     {
+        internal TypeAnnotationKind? AnnotationTypeKind { get; set; }
+
+        internal TypeSymbol AnnotationType { get; set; }
+
+        internal virtual TypeSymbol Self => this;
+
         /// <summary>
         /// Represents the method by which this type implements a given interface type
         /// and/or the corresponding diagnostics.

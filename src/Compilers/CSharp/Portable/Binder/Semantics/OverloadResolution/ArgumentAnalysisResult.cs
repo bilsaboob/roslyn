@@ -18,7 +18,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public int ArgumentFromParameter(int param)
         {
             Debug.Assert(param >= 0);
-            if (ArgsToParamsOpt.IsDefault) return param;
+            if (ArgsToParamsOpt.IsDefault) return -1;
             for (var i = 0; i < ArgsToParamsOpt.Length; ++i)
             {
                 if (ArgsToParamsOpt[i] == param) return i;
@@ -29,7 +29,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public int UnmatchedArgumentFromParameter(int param)
         {
             Debug.Assert(param >= 0);
-            if (UnmatchedArgsToParamsOpt.IsDefault) return param;
+            if (UnmatchedArgsToParamsOpt.IsDefault) return -1;
             for (var i = 0; i < UnmatchedArgsToParamsOpt.Length; ++i)
             {
                 if (UnmatchedArgsToParamsOpt[i] == param) return i;
@@ -72,11 +72,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.UnmatchedArgsToParamsOpt = unmatchedArgsToParamsOpt;
             this.HasSpreadParameters = false;
             this.HasUnmatchedLambdaArguments = false;
+            this.HasLambdaArgumentsWithThisScope = false;
         }
 
         public bool HasSpreadParameters { get; set; }
 
         public bool HasUnmatchedLambdaArguments { get; set; }
+
+        public bool HasLambdaArgumentsWithThisScope { get; set; }
 
         public bool IsValid
         {

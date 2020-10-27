@@ -130,7 +130,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
                         filterText: escapedName));
                 }
 
-                var allParameterNames = parameterLists.SelectMany(pl => pl).Select(p => p.Name).ToDictionary(n => n);
+                var allParameterNames = new Dictionary<string, string>();
+                foreach (var name in parameterLists.SelectMany(pl => pl).Select(p => p.Name))
+                    allParameterNames[name] = name;
 
                 // add spread parameter symbols
                 foreach (var parameter in unspecifiedParameters)

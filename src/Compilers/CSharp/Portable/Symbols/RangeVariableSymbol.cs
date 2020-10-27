@@ -173,7 +173,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return Hash.Combine(_locations[0].GetHashCode(), _containingSymbol.GetHashCode());
         }
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.RangeVariableSymbol(this);
         }

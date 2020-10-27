@@ -4617,9 +4617,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             var name = node.Name;
 
             // Extension methods, all scopes.
-            if (node.SearchExtensionMethods)
+            if (node.SearchExtensionMethods && receiver != null)
             {
-                Debug.Assert(receiver != null);
                 int arity;
                 LookupOptions options;
                 if (typeArguments.IsDefault)

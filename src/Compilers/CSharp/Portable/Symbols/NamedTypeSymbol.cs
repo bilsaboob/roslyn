@@ -1062,7 +1062,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return this.ConstructCore(typeArguments, unbound);
         }
 
-        protected virtual NamedTypeSymbol ConstructCore(ImmutableArray<TypeWithAnnotations> typeArguments, bool unbound)
+        protected internal virtual NamedTypeSymbol ConstructCore(ImmutableArray<TypeWithAnnotations> typeArguments, bool unbound)
         {
             return new ConstructedNamedTypeSymbol(this, typeArguments, unbound);
         }
@@ -1528,12 +1528,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         internal abstract NamedTypeSymbol NativeIntegerUnderlyingType { get; }
 
-        protected override ISymbol CreateISymbol()
+        protected internal override ISymbol CreateISymbol()
         {
             return new PublicModel.NonErrorNamedTypeSymbol(this, DefaultNullableAnnotation);
         }
 
-        protected override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
+        protected internal override ITypeSymbol CreateITypeSymbol(CodeAnalysis.NullableAnnotation nullableAnnotation)
         {
             Debug.Assert(nullableAnnotation != DefaultNullableAnnotation);
             return new PublicModel.NonErrorNamedTypeSymbol(this, nullableAnnotation);
