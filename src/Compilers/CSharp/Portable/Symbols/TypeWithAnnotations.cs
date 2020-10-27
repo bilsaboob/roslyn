@@ -32,6 +32,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             internal string GetDebuggerDisplay() => Value.GetDebuggerDisplay();
         }
 
+        internal readonly TypeAnnotationKind? AnnotationTypeKind;
+
+        internal readonly TypeSymbol AnnotationType;
+
         /// <summary>
         /// The underlying type, unless overridden by _extensions.
         /// </summary>
@@ -45,7 +49,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public readonly NullableAnnotation NullableAnnotation;
 
-        private TypeWithAnnotations(TypeSymbol defaultType, NullableAnnotation nullableAnnotation, Extensions extensions)
+        private TypeWithAnnotations(TypeSymbol defaultType, NullableAnnotation nullableAnnotation, Extensions extensions, TypeSymbol annotationType = null, TypeAnnotationKind? annotationTypeKind = null)
         {
             Debug.Assert(defaultType?.IsNullableType() != true || nullableAnnotation == NullableAnnotation.Annotated);
             Debug.Assert(extensions != null);
@@ -53,6 +57,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             DefaultType = defaultType;
             NullableAnnotation = nullableAnnotation;
             _extensions = extensions;
+
+            AnnotationTypeKind = annotationTypeKind;
+            AnnotationType = annotationType;
+        }
+
+        public TypeWithAnnotations WithAnnotationType(TypeSymbol type, TypeAnnotationKind annotationTypeKind)
+        {
+            return new TypeWithAnnotations(DefaultType, NullableAnnotation, _extensions, type, annotationTypeKind);
         }
 
         public override string ToString() => Type.ToString();
@@ -245,7 +257,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _extensions.WithModifiers(this, customModifiers);
 
         public bool IsResolved => _extensions?.IsResolved != false;
-        public TypeSymbol Type => _extensions?.GetResolvedType(DefaultType);
+        public TypeSymbol Type
+        {
+            get
+            {
+                var resolvedType = _extensions?.GetResolvedType(DefaultType);
+                if (this.AnnotationType is null) return resolvedType;
+
+                if (resolvedType is NamedTypeSymbol namedType)
+                    resolvedType = new NamedTypeSymbolWithAnnotations(namedType, AnnotationType, AnnotationTypeKind.Value);
+
+                return resolvedType;
+            }
+        }
         public TypeSymbol NullableUnderlyingTypeOrSelf => _extensions.GetNullableUnderlyingTypeOrSelf(DefaultType);
 
         /// <summary>
