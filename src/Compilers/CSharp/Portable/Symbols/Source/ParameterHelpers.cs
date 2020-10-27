@@ -48,6 +48,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         diagnostics.Add(ErrorCode.ERR_DefaultConstructorRequiredForSpreadParam, syntax.Location, parameterType.Type.Name);
                     }
 
+                    var isThis = syntax?.Modifiers.Any(SyntaxKind.ThisKeyword) == true;
+
                     var p = SourceParameterSymbol.Create(
                         context,
                         owner,
@@ -62,6 +64,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         declarationDiagnostics);
 
                     p.IsSpread = isSpread;
+                    p.IsThis = isThis;
 
                     return p;
                 }
