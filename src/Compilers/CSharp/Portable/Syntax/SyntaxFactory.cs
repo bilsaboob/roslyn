@@ -1554,6 +1554,22 @@ namespace Microsoft.CodeAnalysis.CSharp
             return IdentifierName(Identifier(name));
         }
 
+        public static IdentifierNameSyntax IdentifierName(string name, SyntaxNode parent, int position)
+        {
+            return IdentifierName(Identifier(name), parent, position);
+        }
+
+        public static IdentifierNameSyntax IdentifierName(SyntaxToken identifier, SyntaxNode parent, int position)
+        {
+            switch (identifier.Kind())
+            {
+                case SyntaxKind.IdentifierToken:
+                case SyntaxKind.GlobalKeyword: break;
+                default: throw new ArgumentException(nameof(identifier));
+            }
+            return (IdentifierNameSyntax)Syntax.InternalSyntax.SyntaxFactory.IdentifierName((Syntax.InternalSyntax.SyntaxToken)identifier.Node!).CreateRed(parent, position);
+        }
+
         // direct access to parsing for common grammar areas
 
         /// <summary>
