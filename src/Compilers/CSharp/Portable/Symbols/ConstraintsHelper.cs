@@ -810,7 +810,9 @@ hasRelatedInterfaces:
             Debug.Assert(substitution != null);
 
             // The type parameters must be original definitions of type parameters from the containing symbol.
-            Debug.Assert(ReferenceEquals(typeParameter.ContainingSymbol, containingSymbol.OriginalDefinition));
+            var assertIsTrue = ReferenceEquals(typeParameter.ContainingSymbol, containingSymbol.OriginalDefinition);
+            assertIsTrue = assertIsTrue || (containingSymbol is NamedTypeSymbolWithAnnotations namedTypeWithAnnotations && ReferenceEquals(typeParameter.ContainingSymbol, containingSymbol.OriginalDefinition.OriginalDefinition));
+            Debug.Assert(assertIsTrue);
 
             if (typeArgument.Type.IsErrorType())
             {
