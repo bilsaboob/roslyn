@@ -132,7 +132,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
                 : token;
         }
 
-        private static bool IsWord(SyntaxToken token)
+        public static bool IsWord(this SyntaxToken token)
             => CSharpSyntaxFacts.Instance.IsWord(token);
 
         public static SyntaxToken GetNextNonZeroWidthTokenOrEndOfFile(this SyntaxToken token)
