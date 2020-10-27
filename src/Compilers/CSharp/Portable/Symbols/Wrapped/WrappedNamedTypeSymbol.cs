@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
@@ -25,11 +26,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         protected readonly NamedTypeSymbol _underlyingType;
 
-        public WrappedNamedTypeSymbol(NamedTypeSymbol underlyingType, TupleExtraData tupleData)
+        public WrappedNamedTypeSymbol(NamedTypeSymbol underlyingType, TupleExtraData tupleData, TypeSymbol annotationType = null, TypeAnnotationKind? annotationTypeKind = null)
             : base(tupleData)
         {
             Debug.Assert((object)underlyingType != null);
             _underlyingType = underlyingType;
+
+            AnnotationType = annotationType;
+            AnnotationTypeKind = annotationTypeKind;
         }
 
         public NamedTypeSymbol UnderlyingNamedType
