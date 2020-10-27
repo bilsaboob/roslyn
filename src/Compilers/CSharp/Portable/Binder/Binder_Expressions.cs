@@ -13,6 +13,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -21,18 +22,31 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// </summary>
     internal partial class Binder
     {
+        internal bool HasThis(bool isExplicit, out bool inStaticContext)
+        {
+            return HasThis(isExplicit, out inStaticContext, out var isLambda, out var thisType);
+        }
         /// <summary>
         /// Determines whether "this" reference is available within the current context.
         /// </summary>
         /// <param name="isExplicit">The reference was explicitly specified in syntax.</param>
         /// <param name="inStaticContext">True if "this" is not available due to the current method/property/field initializer being static.</param>
         /// <returns>True if a reference to "this" is available.</returns>
-        internal bool HasThis(bool isExplicit, out bool inStaticContext)
+        internal bool HasThis(bool isExplicit, out bool inStaticContext, out bool isLambda, out TypeSymbol thisType)
         {
-            var memberOpt = this.ContainingMemberOrLambda?.ContainingNonLambdaMember();
-            if (memberOpt?.IsStatic == true)
+            isLambda = false;
+            Symbol member = null;
+            thisType = null;
+            var symbol = this.ContainingMemberOrLambda?.ContainingSymbolWithThisScope(out isLambda);
+            if (symbol != null)
             {
-                inStaticContext = memberOpt.Kind == SymbolKind.Field || memberOpt.Kind == SymbolKind.Method || memberOpt.Kind == SymbolKind.Property;
+                member = symbol.Value.Item1;
+                thisType = symbol.Value.Item2;
+            }
+
+            if (member?.IsStatic == true)
+            {
+                inStaticContext = member.Kind == SymbolKind.Field || member.Kind == SymbolKind.Method || member.Kind == SymbolKind.Property;
                 return false;
             }
 
@@ -43,8 +57,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return false;
             }
 
-            var containingType = memberOpt?.ContainingType;
-            bool inTopLevelScriptMember = (object)containingType != null && containingType.IsScriptClass;
+            bool inTopLevelScriptMember = (object)thisType != null;
+
+            if (thisType is NamedTypeSymbol namedThisType)
+                inTopLevelScriptMember = inTopLevelScriptMember && namedThisType.IsScriptClass;
 
             // "this" is not allowed in field initializers (that are not script variable initializers):
             if (InFieldInitializer && !inTopLevelScriptMember)
@@ -513,6 +529,26 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
         }
+        private BoundExpression BindThisInLambdaWithThisScope(SyntaxNode node, bool invoked = false, bool indexed = false, bool compilerGenerated = false)
+        {
+            var diagnostics = DiagnosticBag.GetInstance();
+            try
+            {
+                return BindThisInLambdaWithThisScope(node, diagnostics, invoked, indexed, compilerGenerated);
+            }
+            finally
+            {
+                diagnostics.Free();
+            }
+        }
+
+        private BoundExpression BindThisInLambdaWithThisScope(SyntaxNode node, DiagnosticBag diagnostics, bool invoked = false, bool indexed = false, bool compilerGenerated = false)
+        {
+            var ident = BindIdentifier(SyntaxFactory.IdentifierName("@this", node.Parent, node.Position), invoked, indexed, diagnostics, tryResolveExtensionMethods: false) as BoundExpression;
+            if (compilerGenerated) ident.WasCompilerGenerated = true;
+            else ident = ident.WithOriginalSyntax(node) as BoundExpression;
+            return ident;
+        }
 
         private BoundExpression BindExpressionInternal(ExpressionSyntax node, DiagnosticBag diagnostics, bool invoked, bool indexed)
         {
@@ -529,7 +565,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.SimpleLambdaExpression:
                     return BindAnonymousFunction((AnonymousFunctionExpressionSyntax)node, diagnostics);
                 case SyntaxKind.ThisExpression:
-                    return BindThis((ThisExpressionSyntax)node, diagnostics);
+                    {
+                        var boundThis = BindThis((ThisExpressionSyntax)node, diagnostics, out var isLambda);
+                        if (isLambda)
+                            return BindThisInLambdaWithThisScope(node, diagnostics, invoked, indexed);
+                        return boundThis;
+                    }
                 case SyntaxKind.BaseExpression:
                     return BindBase((BaseExpressionSyntax)node, diagnostics);
                 case SyntaxKind.InvocationExpression:
@@ -1650,7 +1691,30 @@ namespace Microsoft.CodeAnalysis.CSharp
             // base type of the current type, then there should be a "this" associated with the
             // method group. Otherwise, it should be null.
 
+            var isForExtensionMethod = false;
+            var isInThisLambdaScope = this.InLambdaWithThisScope;
+            var usedParentContainingType = false;
             var currentType = this.ContainingType;
+            var declaringType = members[0].ContainingType;
+
+            // use the type of the first parameter as declaring type for extension methods
+            if (members[0] is MethodSymbol method && method.IsExtensionMethod && method.ParameterCount > 0) {
+                isForExtensionMethod = true;
+                declaringType = method.Parameters[0].Type as NamedTypeSymbol;
+            }
+
+            var receiverMatches = MatchReceiverType(currentType, declaringType, isForExtensionMethod);
+            if (!receiverMatches && isInThisLambdaScope)
+            {
+                var parentCurrentType = this.ParentContainingType;
+                if (!(parentCurrentType is null) && MatchReceiverType(parentCurrentType, declaringType, isForExtensionMethod))
+                {
+                    usedParentContainingType = true;
+                    receiverMatches = true;
+                    currentType = parentCurrentType;
+                }
+            }
+
             if ((object)currentType == null)
             {
                 // This may happen if there is no containing type, 
@@ -1658,12 +1722,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return null;
             }
 
-            var declaringType = members[0].ContainingType;
-
-            HashSet<DiagnosticInfo> unused = null;
-            if (currentType.IsEqualToOrDerivedFrom(declaringType, TypeCompareKind.ConsiderEverything, useSiteDiagnostics: ref unused) ||
-                (currentType.IsInterface && (declaringType.IsObjectType() || currentType.AllInterfacesNoUseSiteDiagnostics.Contains(declaringType))))
+            if (receiverMatches || isForExtensionMethod)
             {
+                if (isInThisLambdaScope && !usedParentContainingType)
+                    return BindThisInLambdaWithThisScope(syntax, compilerGenerated: true);
+
                 return ThisReference(syntax, currentType, wasCompilerGenerated: true);
             }
             else
@@ -1914,10 +1977,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             var currentType = this.ContainingType;
-            HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+            var usedParentContainingType = false;
             NamedTypeSymbol declaringType = member.ContainingType;
-            if (currentType.IsEqualToOrDerivedFrom(declaringType, TypeCompareKind.ConsiderEverything, useSiteDiagnostics: ref useSiteDiagnostics) ||
-                (currentType.IsInterface && (declaringType.IsObjectType() || currentType.AllInterfacesNoUseSiteDiagnostics.Contains(declaringType))))
+            var isInThisLambdaScope = InLambdaWithThisScope;
+
+            var receiverMatches = MatchReceiverType(currentType, declaringType);
+            if (!receiverMatches && isInThisLambdaScope)
+            {
+                var parentCurrentType = this.ParentContainingType;
+                if (!(parentCurrentType is null) && MatchReceiverType(parentCurrentType, declaringType))
+                {
+                    usedParentContainingType = true;
+                    receiverMatches = true;
+                    currentType = parentCurrentType;
+                }
+            }
+
+            if (receiverMatches)
             {
                 bool hasErrors = false;
                 if (EnclosingNameofArgument != node)
@@ -1938,10 +2014,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         // not an instance member if the container is a type, like when binding default parameter values.
                         var containingMember = ContainingMember();
-                        bool locationIsInstanceMember = !containingMember.IsStatic &&
-                            (containingMember.Kind != SymbolKind.NamedType || currentType.IsScriptClass);
+                        bool locationIsInstanceMember = !containingMember.IsStatic && (containingMember.Kind != SymbolKind.NamedType || currentType.IsScriptClass);
 
-                        if (!locationIsInstanceMember)
+                        if (!locationIsInstanceMember && !isInThisLambdaScope)
                         {
                             // error CS0120: An object reference is required for the non-static field, method, or property '{0}'
                             Error(diagnostics, ErrorCode.ERR_ObjectRequired, node, member);
@@ -1952,12 +2027,34 @@ namespace Microsoft.CodeAnalysis.CSharp
                     hasErrors = hasErrors || IsRefOrOutThisParameterCaptured(node, diagnostics);
                 }
 
+                if (isInThisLambdaScope && !usedParentContainingType)
+                    return BindThisInLambdaWithThisScope(node, diagnostics, compilerGenerated: true);
+
                 return ThisReference(node, currentType, hasErrors, wasCompilerGenerated: true);
             }
             else
             {
                 return TryBindInteractiveReceiver(node, declaringType);
             }
+        }
+
+        private bool MatchReceiverType(NamedTypeSymbol? currentType, NamedTypeSymbol? declaringType, bool forExtensionMethod = false)
+        {
+            if (currentType is null || declaringType is null) return false;
+            HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+            return
+                currentType.IsEqualToOrDerivedFrom(declaringType, TypeCompareKind.ConsiderEverything, useSiteDiagnostics: ref useSiteDiagnostics) ||
+               (currentType.IsInterface && (declaringType.IsObjectType() || currentType.AllInterfacesNoUseSiteDiagnostics.Contains(declaringType))) ||
+               (forExtensionMethod && declaringType.IsInterface && currentType.AllInterfacesNoUseSiteDiagnostics.Contains(declaringType))
+               ;
+        }
+
+        internal static bool IsTypeAssignableFrom(NamedTypeSymbol? fromType, NamedTypeSymbol? toType)
+        {
+            if (fromType is null || toType is null) return false;
+            HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+            return fromType.IsEqualToOrDerivedFrom(toType, TypeCompareKind.ConsiderEverything, useSiteDiagnostics: ref useSiteDiagnostics) ||
+              (toType.IsInterface && fromType.AllInterfacesNoUseSiteDiagnostics.Contains(toType));
         }
 
         internal Symbol ContainingMember()
@@ -2103,13 +2200,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             throw ExceptionUtilities.UnexpectedValue(symbol);
         }
 
-        private BoundThisReference BindThis(ThisExpressionSyntax node, DiagnosticBag diagnostics)
+        private BoundThisReference BindThis(ThisExpressionSyntax node, DiagnosticBag diagnostics, out bool isLambda)
         {
             Debug.Assert(node != null);
             bool hasErrors = true;
 
             bool inStaticContext;
-            if (!HasThis(isExplicit: true, inStaticContext: out inStaticContext))
+            var hasThis = HasThis(isExplicit: true, inStaticContext: out inStaticContext, out isLambda, out var thisType);
+            var namedThisType = thisType as NamedTypeSymbol;
+            if (!hasThis || namedThisType is null)
             {
                 //this error is returned in the field initializer case
                 Error(diagnostics, inStaticContext ? ErrorCode.ERR_ThisInStaticMeth : ErrorCode.ERR_ThisInBadContext, node);
@@ -2119,7 +2218,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 hasErrors = IsRefOrOutThisParameterCaptured(node.Token, diagnostics);
             }
 
-            return ThisReference(node, this.ContainingType, hasErrors);
+            return ThisReference(node, namedThisType ?? this.ContainingType, hasErrors);
         }
 
         private BoundThisReference ThisReference(SyntaxNode node, NamedTypeSymbol thisTypeOpt, bool hasErrors = false, bool wasCompilerGenerated = false)
@@ -2666,10 +2765,20 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (trailingBlockArg != null)
             {
-                var trailingArgSyntax = SyntaxFactory.ArgumentWithParent(trailingBlockArg, argumentListSyntax, trailingBlockArg.Position);
+                var trailingArgSyntax = SyntaxFactory.ArgumentWithParent(trailingBlockArg, parent: argumentListSyntax, position: trailingBlockArg.Position);
+
+                var argsCount = result.Arguments.Count;
 
                 BindArgumentAndName(result, diagnostics, ref hadError, ref hadLangVersionError,
                     trailingArgSyntax, allowArglist, isDelegateCreation: isDelegateCreation);
+
+                var newArgsCount = result.Arguments.Count;
+                if (newArgsCount != argsCount)
+                {
+                    var boundArg = result.Arguments[newArgsCount - 1];
+                    boundArg = (BoundExpression)boundArg.WithOriginalSyntax(trailingBlockArg);
+                    result.Arguments[newArgsCount - 1] = boundArg;
+                }
             }
         }
 
@@ -6660,7 +6769,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// invocation into a single argument list to allow overload resolution
         /// to treat the invocation as a static method invocation with no receiver.
         /// </summary>
-        private static void CombineExtensionMethodArguments(BoundExpression receiver, AnalyzedArguments originalArguments, AnalyzedArguments extensionMethodArguments)
+        internal static void CombineExtensionMethodArguments(BoundExpression receiver, AnalyzedArguments originalArguments, AnalyzedArguments extensionMethodArguments)
         {
             Debug.Assert(receiver != null);
             Debug.Assert(extensionMethodArguments.Arguments.Count == 0);
