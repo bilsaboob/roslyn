@@ -87,6 +87,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        internal BoundNode WithOriginalSyntax(SyntaxNode originalSyntax)
+        {
+            // we hackishly replace the syntax back to the old syntax ... but keep the binding and such ...
+            GeneratedSyntax = Syntax;
+            Syntax = originalSyntax;
+            return this;
+        }
+
         /// <summary>
         /// Determines if a bound node, or associated syntax or type has an error (not a warning) 
         /// diagnostic associated with it.
