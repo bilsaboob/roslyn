@@ -618,41 +618,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (syntax.ReturnType == null && !isAsync)
             {
                 // bind as an "System.Action"
+                var isFirstParamThis = false;
+                TypeWithAnnotations thisType = default;
 
-                // check for parameters
-                if (syntax.Parameters.Count > 0)
+                // check for first "receiver" parameter - any param specified with "fn(this type)" - can only be the first parameter that has this
+                if (syntax.Parameters.Count > 0 && syntax.Parameters[0].Modifiers.Any(SyntaxKind.ThisKeyword))
                 {
-                    // bind as an "System.Action<...>" - with argument type parameters
-                    var typeArguments = ImmutableArray.CreateBuilder<TypeWithAnnotations>();
-                    for (var i = 0; i < syntax.Parameters.Count; ++i)
-                    {
-                        var param = syntax.Parameters[i];
-                        if (param.Type != null)
-                        {
-                            // bind the type to make sure we get errors
-                            var paramType = BindType(param.Type, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
-                            typeArguments.Add(paramType);
-                        }
-                    }
-
-                    var wellKnownType = typeArguments.Count == 0 ? WellKnownType.System_Action :
-                         typeArguments.Count > 1 ? (WellKnownType)Enum.Parse(typeof(WellKnownType), $"System_Action_T{typeArguments.Count}") :
-                            WellKnownType.System_Action_T;
-
-                    var actionTypeT = this.GetWellKnownType(wellKnownType, diagnostics, syntax);
-                    var returnTypeT = actionTypeT.Construct(typeArguments.ToImmutable());
-                    var returnType = TypeWithAnnotations.Create(returnTypeT);
-                    return returnType;
+                    isFirstParamThis = true;
+                    thisType = BindType(syntax.Parameters[0].Type, diagnostics);
                 }
-                else
+
+                var returnType = BindLambdaSystemActionType(syntax, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+                if (isFirstParamThis && !thisType.IsDefault)
                 {
-                    // bind as an "System.Action" - without any argument type parameters
-
-                    // get the Action type and construct for the parameters
-                    var actionTypeT = this.GetWellKnownType(WellKnownType.System_Action, diagnostics, syntax);
-                    var returnType = TypeWithAnnotations.Create(actionTypeT);
-                    return returnType;
+                    returnType = returnType.WithAnnotationType(thisType.Type, TypeAnnotationKind.ThisParamType);
                 }
+
+                return returnType;
             }
             else
             {
@@ -703,6 +685,44 @@ namespace Microsoft.CodeAnalysis.CSharp
                     returnType = TypeWithAnnotations.Create(returnTypeT);
                     return returnType;
                 }
+            }
+        }
+
+        private TypeWithAnnotations BindLambdaSystemActionType(LambdaFunctionTypeSyntax syntax, DiagnosticBag diagnostics, ConsList<TypeSymbol> basesBeingResolved, bool suppressUseSiteDiagnostics)
+        {
+            // check for parameters
+            if (syntax.Parameters.Count > 0)
+            {
+                // bind as an "System.Action<...>" - with argument type parameters
+                var typeArguments = ImmutableArray.CreateBuilder<TypeWithAnnotations>();
+                for (var i = 0; i < syntax.Parameters.Count; ++i)
+                {
+                    var param = syntax.Parameters[i];
+                    if (param.Type != null)
+                    {
+                        // bind the type to make sure we get errors
+                        var paramType = BindType(param.Type, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
+                        typeArguments.Add(paramType);
+                    }
+                }
+
+                var wellKnownType = typeArguments.Count == 0 ? WellKnownType.System_Action :
+                     typeArguments.Count > 1 ? (WellKnownType)Enum.Parse(typeof(WellKnownType), $"System_Action_T{typeArguments.Count}") :
+                        WellKnownType.System_Action_T;
+
+                var actionTypeT = this.GetWellKnownType(wellKnownType, diagnostics, syntax);
+                var returnTypeT = actionTypeT.Construct(typeArguments.ToImmutable());
+                var returnType = TypeWithAnnotations.Create(returnTypeT);
+                return returnType;
+            }
+            else
+            {
+                // bind as an "System.Action" - without any argument type parameters
+
+                // get the Action type and construct for the parameters
+                var actionTypeT = this.GetWellKnownType(WellKnownType.System_Action, diagnostics, syntax);
+                var returnType = TypeWithAnnotations.Create(actionTypeT);
+                return returnType;
             }
         }
 
