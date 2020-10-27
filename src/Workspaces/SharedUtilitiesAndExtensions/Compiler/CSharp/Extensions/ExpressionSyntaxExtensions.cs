@@ -587,7 +587,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
             // color color: if you bind "A" and you get a symbol and the type of that symbol is
             // Q; and if you bind "A" *again* as a type and you get type Q, then both A.static
             // and A.instance are permitted
-            if (expression is IdentifierNameSyntax)
+            if (expression is IdentifierNameSyntax || expression is ThisExpressionSyntax)
             {
                 var instanceSymbol = semanticModel.GetSymbolInfo(expression, cancellationToken).GetAnySymbol();
 
@@ -596,7 +596,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
                     var instanceType = instanceSymbol.GetSymbolType();
                     if (instanceType != null)
                     {
-                        var speculativeSymbolInfo = semanticModel.GetSpeculativeSymbolInfo(expression.SpanStart, expression, SpeculativeBindingOption.BindAsTypeOrNamespace);
+                        var bindingOption = SpeculativeBindingOption.BindAsTypeOrNamespace;
+                        if (expression is ThisExpressionSyntax)
+                            bindingOption = SpeculativeBindingOption.BindAsExpression;
+
+                        var speculativeSymbolInfo = semanticModel.GetSpeculativeSymbolInfo(expression.SpanStart, expression, bindingOption);
                         if (speculativeSymbolInfo.CandidateReason != CandidateReason.NotATypeOrNamespace)
                         {
                             var staticType = speculativeSymbolInfo.GetAnySymbol().GetSymbolType();
