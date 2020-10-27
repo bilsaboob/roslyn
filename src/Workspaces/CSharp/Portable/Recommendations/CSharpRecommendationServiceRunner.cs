@@ -244,7 +244,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
                 }
             }
 
-            var symbols = !_context.IsNameOfContext && _context.LeftToken.Parent.IsInStaticContext()
+            var isInStaticContext = _context.LeftToken.Parent.IsInStaticContext();
+            if (isInStaticContext)
+            {
+                // could possibly also be a lambda with "this parameter" scope
+                var enclosingSymbol = _context.SemanticModel.GetEnclosingSymbol(_context.Position);
+                if (enclosingSymbol is IMethodSymbol method)
+                {
+                    if (method.Parameters.FirstOrDefault()?.IsThis == true)
+                        isInStaticContext = false;
+                }
+            }
+            var symbols = !_context.IsNameOfContext && isInStaticContext
                 ? _context.SemanticModel.LookupStaticMembers(_context.LeftToken.SpanStart)
                 : _context.SemanticModel.LookupSymbols(_context.LeftToken.SpanStart);
 
