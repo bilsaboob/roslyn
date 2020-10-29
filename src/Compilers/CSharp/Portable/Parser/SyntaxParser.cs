@@ -1002,6 +1002,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
 
             // try one previous node in the list ... if that fails too ... we give up ...
+            if (list.Count <= 2)
+                return;
+
             replacement = AddTrailingSkippedSyntax((CSharpSyntaxNode)list[list.Count - 2], skippedSyntax);
             list[list.Count - 2] = replacement;
         }
