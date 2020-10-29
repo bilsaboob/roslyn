@@ -323,7 +323,12 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.AsyncComplet
             }
 
             // Handle space as a special commit character which only commits for selected kind of completion items and only in specific "semantic contexts"
-            if (ch == ' ')
+            if (ch == ' ' ||
+                ch == '(' || ch == ')' || ch == '(' || ch == ')' ||
+                ch == ',' || ch == ':' ||
+                ch == '=' ||
+                ch == '>' || ch == '<' || ch == '|' || ch == '&' ||
+                ch == '+' || ch == '-' || ch == '/')
             {
                 // * Only allow completion of "symbols" and "type keywords"
                 // * IGNORE commit of snippets and "other stuff" using "space" ... force explicitly using the "enter" key
@@ -336,6 +341,16 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.AsyncComplet
                     // only allow committing if the text before is really matching what has been typed so far ... for "fuzzy commits" - force explicitly using the "enter" key
                     if (item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCultureIgnoreCase) == true)
                     {
+                        if (IsCommonKeyword(textTypedSoFar))
+                        {
+                            return false;
+                        }
+
+                        // if what is typed short ... it must match "exactly" including the case!
+                        if (textTypedSoFarWithoutSpace.Length <= 3 && item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCulture) != true)
+                            return false;
+
+                        // only if it's not a complete keyword
                         return true;
                     }
                 }
@@ -351,6 +366,10 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.AsyncComplet
                     // only allow committing if the text before is really matching what has been typed so far ... for "fuzzy commits" - force explicitly using the "enter" key
                     if (item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCultureIgnoreCase) == true)
                     {
+                        // if what is typed short ... it must match "exactly" including the case!
+                        if (textTypedSoFarWithoutSpace.Length <= 3 && item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCulture) != true)
+                            return false;
+
                         return true;
                     }
                 }
@@ -360,6 +379,31 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.AsyncComplet
 
             // Fall back to the default rules for this language's completion service.
             return completionRules.DefaultCommitCharacters.IndexOf(ch) >= 0;
+        }
+
+        private static bool IsCommonKeyword(string text)
+        {
+            switch (text?.Trim() ?? "")
+            {
+                case "if":
+                case "else":
+                case "new":
+                case "foreach":
+                case "for":
+                case "typeof":
+                case "while":
+                case "using":
+                case "import":
+                case "switch":
+                case "case":
+                case "namespace":
+                case "class":
+                case "interface":
+                case "struct":
+                    return true;
+            }
+
+            return false;
         }
 
         private static bool IsPredefinedType(string text)
