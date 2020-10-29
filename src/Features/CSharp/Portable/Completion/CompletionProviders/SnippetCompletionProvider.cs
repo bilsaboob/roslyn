@@ -45,6 +45,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
 
         public override async Task ProvideCompletionsAsync(CompletionContext context)
         {
+            return;
+
+            // Snippets are disabled
             try
             {
                 var document = context.Document;
