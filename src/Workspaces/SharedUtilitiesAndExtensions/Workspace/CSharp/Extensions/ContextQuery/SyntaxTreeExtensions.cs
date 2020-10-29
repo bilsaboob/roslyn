@@ -2574,6 +2574,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery
                 return true;
             }
 
+            // if |
+            if (token.IsKind(SyntaxKind.IfKeyword) &&
+                token.Parent.IsKind(SyntaxKind.IfStatement))
+            {
+                return true;
+            }
+
             // - |
             // + |
             // ~ |

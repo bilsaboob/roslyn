@@ -13,6 +13,7 @@ using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.Completion.Providers;
 using Microsoft.CodeAnalysis.CSharp.Extensions;
 using Microsoft.CodeAnalysis.CSharp.Extensions.ContextQuery;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Experiments;
 using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.Options;
@@ -38,38 +39,135 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
         {
             var recommendedItems = await Recommender.GetImmutableRecommendedSymbolsAtPositionAsync(context.SemanticModel, position, context.Workspace, options, cancellationToken).ConfigureAwait(false);
 
-            var filterTypes = context?.IsTypeContext == false;
-            var filterNamedTypes = (context as CSharpSyntaxContext)?.IsNamespaceOrTypeMemberAccessContext == false;
+            // filter predicates
 
-            if (filterTypes || filterNamedTypes)
+            // namespaces
+            var includeNamespaces = false;
+
+            // types
+            var includeTypes = false;
+            var includeTypesWithStatics = false;
+            var includeTypesWithTypesWithStatic = false;
+
+            // locals & members
+            var includeLocals = false;
+            var includeMembers = false;
+
+            // evaluate the predicates
+            if (context is CSharpSyntaxContext csc)
             {
-                IEnumerable<ISymbol> filteredItems = recommendedItems;
-
-                if (filterTypes)
+                if (csc.IsStatementContext)
                 {
-                    // filter away "type symbols"
-                    filteredItems = recommendedItems.Where(item =>
-                        item.Kind != SymbolKind.TypeParameter &&
-                        item.Kind != SymbolKind.ArrayType &&
-                        item.Kind != SymbolKind.PointerType &&
-                        item.Kind != SymbolKind.DynamicType &&
-                        item.Kind != SymbolKind.FunctionPointerType &&
-                        item.Kind != SymbolKind.ErrorType
-                    );
+                    includeNamespaces = true;
+                    includeTypesWithStatics = true;
+                    includeTypesWithTypesWithStatic = true;
+                    includeMembers = true;
+                    includeLocals = true;
                 }
 
-                if (filterNamedTypes)
+                if (csc.IsTypeContext)
                 {
-                    // filter away "names types"
-                    filteredItems = recommendedItems.Where(item =>
-                        item.Kind != SymbolKind.NamedType
-                    );
+                    includeTypes = true;
+                    includeNamespaces = true;
                 }
 
-                recommendedItems = filteredItems.ToImmutableArray();
+                if (csc.IsRightOfNameSeparator)
+                {
+                    includeMembers = true;
+                }
+
+                if (csc.IsAnyExpressionContext)
+                {
+                    includeNamespaces = true;
+                    includeTypesWithStatics = true;
+                    includeTypesWithTypesWithStatic = true;
+                    includeMembers = true;
+                    includeLocals = true;
+                }
             }
 
-            return recommendedItems;
+            // helper filter function
+            bool filter(ISymbol s)
+            {
+                // filter on type symbols
+                if (!includeTypes)
+                {
+                    if (s is ITypeSymbol ts)
+                    {
+                        // only include if it has any static members
+                        if (includeTypesWithStatics)
+                        {
+                            // only if any member is static and not private
+                            if (HasAccessibleStaticMembers(ts))
+                                return true;
+                        }
+
+                        if (includeTypesWithTypesWithStatic)
+                        {
+                            // only if there is a type 
+                            if (HasAccessibleStaticMembersRecursive(ts))
+                                return true;
+                        }
+
+                        return false;
+                    }
+                }
+
+                // filter on namespace
+                if (!includeNamespaces)
+                {
+                    if (s is INamespaceSymbol ns)
+                        return false;
+                }
+
+                // filter on locals
+                if (!includeLocals)
+                {
+                    if (s is ILocalSymbol ls ||
+                        s is ILabelSymbol lbls ||
+                        s is IParameterSymbol ps)
+                    {
+                        return false;
+                    }
+                    else if(s is IMethodSymbol ms)
+                    {
+                        if (ms.MethodKind == MethodKind.LocalFunction)
+                            return false;
+                    }
+                }
+
+                // filter on members
+                if (!includeMembers)
+                {
+                    if (s is IMethodSymbol ms ||
+                        s is IFieldSymbol fs ||
+                        s is IPropertySymbol prs ||
+                        s is IEventSymbol es)
+                    {
+                        if (!s.IsStatic)
+                            return false;
+                    }
+                }
+
+                return true;
+            }
+
+            // apply filter
+            var result = recommendedItems.Where(filter).ToImmutableArray();
+            return result;
+        }
+
+        private static bool HasAccessibleStaticMembersRecursive(ITypeSymbol ts)
+        {
+            return ts.GetTypeMembers().Any(t =>
+                t.GetResultantVisibility() != CodeAnalysis.Shared.Utilities.SymbolVisibility.Private &&
+                (HasAccessibleStaticMembers(t) || HasAccessibleStaticMembersRecursive(t))
+            );
+        }
+
+        private static bool HasAccessibleStaticMembers(ITypeSymbol ts)
+        {
+            return ts.GetMembers().Any(m => m.IsStatic && m.GetResultantVisibility() != CodeAnalysis.Shared.Utilities.SymbolVisibility.Private);
         }
 
         protected override async Task<bool> ShouldProvidePreselectedItemsAsync(CompletionContext completionContext, SyntaxContext syntaxContext, Document document, int position, Lazy<ImmutableArray<ITypeSymbol>> inferredTypes, OptionSet options)
