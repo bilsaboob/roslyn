@@ -234,6 +234,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return TypeHelpers.GetAllMembers(type, IsPossibleSpreadMember).Where(m => m.Kind == SymbolKind.Field || m.Kind == SymbolKind.Property);
         }
 
+        internal static IEnumerable<Symbol> GetPossibleSpreadParamMembers(TypeSymbol type)
+        {
+            return TypeHelpers.GetAllMembers(type, IsPossibleSpreadMember).Where(m => m.Kind == SymbolKind.Field || m.Kind == SymbolKind.Property);
+        }
+
         internal static Symbol GetFirstPossibleSpreadParamMember(IEnumerable<Symbol> members, string name)
         {
             return members.FirstOrDefault(m => IsPossibleSpreadMember(m) && m.Name == name);

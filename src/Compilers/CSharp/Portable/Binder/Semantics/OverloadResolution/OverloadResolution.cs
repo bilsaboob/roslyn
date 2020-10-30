@@ -3566,7 +3566,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var parameters = symbol.GetParameters();
             var spreadParam = parameters[spreadArgAnalysis.ParameterIndex];
-            var spreadTypeMembers = spreadParam.Type.GetMembersUnordered();
+            var spreadTypeMembers = SpreadParamHelpers.GetPossibleSpreadParamMembers(spreadParam.Type);
 
             var initExpressions = ArrayBuilder<BoundExpression>.GetInstance();
 
