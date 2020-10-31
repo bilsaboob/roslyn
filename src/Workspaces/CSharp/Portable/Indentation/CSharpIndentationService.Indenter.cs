@@ -172,8 +172,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                 }
                 else if (containerSyntax is PropertyDeclarationSyntax propDecl)
                 {
+                    startToken = default;
+
+                    if (GetFirstTokenFromAnyNode(propDecl.AccessorList.Accessors, token, out var _, (n, t) => {
+                        if (GetFirstTokenFromNode(n.Body, token, out startToken)) return true;
+                        if (GetFirstTokenFromNode(n.ExpressionBody, token, out startToken)) return true;
+                        return false;
+                    })) {
+                        return GetIndentationFromTokenLine(indenter, startToken);
+                    }
+
+                    if (propDecl.GetNameToken().Span.Contains(token.Span))
+                        return GetIndentationFromTokenLine(indenter, token, additionalSpace: 0);
+
+                    if (propDecl.Modifiers.Any(t => t.Span.Contains(token.Span)))
+                        return GetIndentationFromTokenLine(indenter, token, additionalSpace: 0);
+
                     if (GetFirstTokenFromBody(propDecl, token, out startToken))
                         return GetIndentationFromTokenLine(indenter, startToken);
+
+                    startToken = propDecl.GetFirstToken();
+                    return GetIndentationFromTokenLine(indenter, startToken);
                 }
                 else if (containerSyntax is AccessorDeclarationSyntax accessorDecl)
                 {
