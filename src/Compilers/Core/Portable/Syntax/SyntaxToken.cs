@@ -51,6 +51,8 @@ namespace Microsoft.CodeAnalysis
             return GetType().Name + " " + (Node != null ? Node.KindText : "None") + " " + ToString();
         }
 
+        public bool IsNull => Node is null;
+
         /// <summary>
         /// An integer representing the language specific kind of this token.
         /// </summary>
