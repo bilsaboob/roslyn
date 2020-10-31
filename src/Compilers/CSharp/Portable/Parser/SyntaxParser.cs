@@ -992,29 +992,39 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return SyntaxFirstTokenReplacer.Replace(node, oldToken, newToken, skippedSyntax.FullWidth);
         }
 
-        protected void AddTrailingSkippedSyntax(SyntaxListBuilder list, GreenNode skippedSyntax)
+        protected bool AddTrailingSkippedSyntax(SyntaxListBuilder list, GreenNode skippedSyntax)
         {
-            var replacement = AddTrailingSkippedSyntax((CSharpSyntaxNode)list[list.Count - 1], skippedSyntax);
-            if (replacement != null)
+            // try adding the skipped syntax to the last node ... which could be "zero width" ... then we try the "previous" ...
+            for (var i = list.Count; i > 0; --i)
             {
-                list[list.Count - 1] = replacement;
-                return;
+                var replacement = AddTrailingSkippedSyntax((CSharpSyntaxNode)list[i - 1], skippedSyntax);
+                if (replacement != null)
+                {
+                    list[i - 1] = replacement;
+                    return true;
+                }
             }
 
-            // try one previous node in the list ... if that fails too ... we give up ...
-            if (list.Count <= 2)
-                return;
-
-            replacement = AddTrailingSkippedSyntax((CSharpSyntaxNode)list[list.Count - 2], skippedSyntax);
-            list[list.Count - 2] = replacement;
+            return false;
         }
 
-        protected void AddTrailingSkippedSyntax<TNode>(SyntaxListBuilder<TNode> list, GreenNode skippedSyntax) where TNode : CSharpSyntaxNode
+        protected bool AddTrailingSkippedSyntax<TNode>(SyntaxListBuilder<TNode> list, GreenNode skippedSyntax) where TNode : CSharpSyntaxNode
         {
-            list[list.Count - 1] = AddTrailingSkippedSyntax(list[list.Count - 1], skippedSyntax);
+            // try adding the skipped syntax to the last node ... which could be "zero width" ... then we try the "previous" ...
+            for (var i = list.Count; i > 0; --i)
+            {
+                var replacement = AddTrailingSkippedSyntax(list[i - 1], skippedSyntax);
+                if (replacement != null)
+                {
+                    list[i - 1] = replacement;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        protected TNode AddTrailingSkippedSyntax<TNode>(TNode node, GreenNode skippedSyntax) where TNode : CSharpSyntaxNode
+        protected TNode AddTrailingSkippedSyntax<TNode>(TNode node, GreenNode skippedSyntax, bool allowZeroWidthToken = false) where TNode : CSharpSyntaxNode
         {
             if (skippedSyntax == null) return node;
             var token = node as SyntaxToken;
@@ -1024,7 +1034,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             else
             {
-                var lastToken = node.GetLastNonZeroWidthToken();
+                SyntaxToken lastToken = null;
+                if (allowZeroWidthToken)
+                    lastToken = node.GetLastToken();
+                else
+                    lastToken = node.GetLastNonZeroWidthToken();
                 if (lastToken == null) return null;
                 var newToken = AddSkippedSyntax(lastToken, skippedSyntax, trailing: true);
                 return SyntaxLastTokenReplacer.Replace(node, newToken, lastToken);

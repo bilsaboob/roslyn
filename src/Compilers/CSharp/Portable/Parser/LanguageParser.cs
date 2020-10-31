@@ -394,27 +394,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             ref SyntaxListBuilder initialBadNodes,
             CSharpSyntaxNode skippedSyntax)
         {
-            if (body.Members.Count > 0)
-            {
-                AddTrailingSkippedSyntax(body.Members, skippedSyntax);
-            }
-            else if (body.Attributes.Count > 0)
-            {
-                AddTrailingSkippedSyntax(body.Attributes, skippedSyntax);
-            }
-            else if (body.Usings.Count > 0)
-            {
-                AddTrailingSkippedSyntax(body.Usings, skippedSyntax);
-            }
-            else if (body.Externs.Count > 0)
-            {
-                AddTrailingSkippedSyntax(body.Externs, skippedSyntax);
-            }
-            else if (openBrace != null)
+            var hasHandledSkippedSyntax = false;
+
+            if (!hasHandledSkippedSyntax && body.Members.Count > 0)
+                hasHandledSkippedSyntax = AddTrailingSkippedSyntax(body.Members, skippedSyntax);
+
+            if (!hasHandledSkippedSyntax && body.Attributes.Count > 0)
+                hasHandledSkippedSyntax = AddTrailingSkippedSyntax(body.Attributes, skippedSyntax);
+
+            if (!hasHandledSkippedSyntax && body.Usings.Count > 0)
+                hasHandledSkippedSyntax = AddTrailingSkippedSyntax(body.Usings, skippedSyntax);
+
+            if (!hasHandledSkippedSyntax && body.Externs.Count > 0)
+                hasHandledSkippedSyntax = AddTrailingSkippedSyntax(body.Externs, skippedSyntax);
+
+            if (!hasHandledSkippedSyntax && openBrace != null)
             {
                 openBrace = AddTrailingSkippedSyntax(openBrace, skippedSyntax);
             }
-            else
+            else if(!hasHandledSkippedSyntax)
             {
                 if (initialBadNodes == null)
                 {
@@ -4060,13 +4058,15 @@ parse_member_name:;
             }
             else
             {
+                trailingTrivia = null;
+
                 GreenNode lastItemTrailingTrivia;
                 var action = SkipBadTokensWithExpectedKind(isNotExpectedFunction, abortFunction, expected, out lastItemTrailingTrivia);
                 if (lastItemTrailingTrivia != null)
                 {
-                    AddTrailingSkippedSyntax(list, lastItemTrailingTrivia);
+                    if (!AddTrailingSkippedSyntax(list, lastItemTrailingTrivia))
+                        trailingTrivia = lastItemTrailingTrivia;
                 }
-                trailingTrivia = null;
                 return action;
             }
         }
@@ -4084,13 +4084,16 @@ parse_member_name:;
             }
             else
             {
+                trailingTrivia = null;
+
                 GreenNode lastItemTrailingTrivia;
                 var action = SkipBadTokensWithErrorCode(isNotExpectedFunction, abortFunction, error, out lastItemTrailingTrivia);
                 if (lastItemTrailingTrivia != null)
                 {
-                    AddTrailingSkippedSyntax(list, lastItemTrailingTrivia);
+                    if (!AddTrailingSkippedSyntax(list, lastItemTrailingTrivia))
+                        trailingTrivia = lastItemTrailingTrivia;
                 }
-                trailingTrivia = null;
+
                 return action;
             }
         }
