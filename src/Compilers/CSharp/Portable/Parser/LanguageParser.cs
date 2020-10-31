@@ -10346,7 +10346,28 @@ tryAgain:
                     CurrentToken.Kind == SyntaxKind.OpenBraceToken || CurrentToken.Kind == SyntaxKind.CloseParenToken || CurrentToken.Kind == SyntaxKind.EqualsGreaterThanToken || IsCurrentTokenOnNewline,
                     ErrorCode.ERR_UnexpectedToken
                 );
-                expression = AddTrailingSkippedSyntax(expression, badTokensTrivia);
+
+                // add the unexpected tokens as error
+                if (closeParen != null)
+                {
+                    closeParen = AddTrailingSkippedSyntax(closeParen, badTokensTrivia);
+                }
+                else if (expression != null)
+                {
+                    expression = AddTrailingSkippedSyntax(expression, badTokensTrivia);
+                }
+                else if (type != null)
+                {
+                    type = AddTrailingSkippedSyntax(type, badTokensTrivia);
+                }
+                else if (identifier != null)
+                {
+                    identifier = AddTrailingSkippedSyntax(identifier, badTokensTrivia);
+                }
+                else if (variable != null)
+                {
+                    variable = AddTrailingSkippedSyntax(variable, badTokensTrivia);
+                }
             }
 
             // make sure to always add a close parenthesis
@@ -10397,8 +10418,20 @@ tryAgain:
                 {
                     arrowToken = this.EatToken(SyntaxKind.EqualsGreaterThanToken);
                 }
-                // ok, just parse the statement as is since we have an opening '{'
-                statement = this.ParseEmbeddedStatement();
+
+                // if we have an arrow token, we need to take indentation into account
+                if (arrowToken != null && IsCurrentTokenOnNewline)
+                {
+                    if(!IsCurrentLineIndented)
+                    {
+                        // we are on a newline, but not indented... so we can't have a statement part of the "foreach"
+                        statement = SyntaxFactory.EmptyStatement(default, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken, ";"));
+                    }
+                }
+
+                // parse the statement if we don't have any
+                if(statement == null)
+                    statement = this.ParseEmbeddedStatement();
             }
 
             if (identifier != null)
