@@ -2060,6 +2060,7 @@ tryAgain:
                 case SyntaxKind.ExplicitKeyword:
                 case SyntaxKind.OpenParenToken:    //tuple
                 case SyntaxKind.RefKeyword:
+                case SyntaxKind.ThisKeyword:
                     return true;
 
                 default:
