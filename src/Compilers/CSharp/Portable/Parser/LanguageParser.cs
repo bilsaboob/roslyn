@@ -10419,7 +10419,7 @@ tryAgain:
             try
             {
                 bool first = true;
-                while (!untilPredicate())
+                while (!untilPredicate() && this.CurrentKind != SyntaxKind.EndOfFileToken)
                 {
                     SyntaxToken? token = null;
                     if (first && !this.CurrentToken.ContainsDiagnostics)
