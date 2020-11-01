@@ -171,7 +171,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriters
             MethodSymbol containingSymbol,
             NamedTypeSymbol containingType,
             TypeCompilationState compilationState,
-            DiagnosticBag diagnostics)
+            DiagnosticBag diagnostics
+            )
             where TNode : BoundNode
         {
             // prepare the factory
