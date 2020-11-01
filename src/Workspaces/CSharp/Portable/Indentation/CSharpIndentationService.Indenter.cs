@@ -98,7 +98,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
             return false;
         }
 
-        private static IndentationResult? GetIndentationBasedOnSemanticsForNewLine(Indenter indenter, SyntaxToken token, SyntaxToken prevToken)
+        private static IndentationResult? GetIndentationBasedOnSemanticsForNewLine(Indenter indenter, SyntaxToken token, SyntaxToken prevToken, SyntaxNode parent = null)
         {
             var isTokenArrow = token.IsNull == false && token.IsKind(SyntaxKind.EqualsGreaterThanToken) == true;
             if (isTokenArrow)
@@ -120,13 +120,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
             // if we are in top of the namespace, we should follow the namespace
             // - flat namepace = no indentation
             // - namespace with braces = indentation
+            parent = parent ?? token.Parent;
 
-            var containerSyntax = token.GetAncestor(a => {
+            var containerSyntax = parent.GetAncestorOrThis(a => {
                 switch (a.Kind())
                 {
                     case SyntaxKind.NamespaceDeclaration:
                     // types
                     case SyntaxKind.ClassDeclaration:
+                    case SyntaxKind.InterfaceDeclaration:
+                    case SyntaxKind.StructDeclaration:
+                    case SyntaxKind.EnumDeclaration:
+                    case SyntaxKind.RecordDeclaration:
                     // methods & members
                     case SyntaxKind.MethodDeclaration:
                     case SyntaxKind.LocalFunctionStatement:
@@ -163,6 +168,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                 // handle namespace 
                 if (containerSyntax is NamespaceDeclarationSyntax nsDecl)
                 {
+                    if (token == nsDecl.NamespaceKeyword && nsDecl.Parent != null)
+                    {
+                        // use indentation from "parent scope" ... basically the same as the current token
+                        return GetIndentationFromTokenLine(indenter, token, additionalSpace: 0);
+                    }
+
                     startToken = nsDecl.GetFirstToken();
                     var flatNamespace = nsDecl.OpenBraceToken.Width() == 0;
                     if (flatNamespace)
@@ -206,9 +217,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                     if (GetFirstTokenFromBody(methodDecl, token, out startToken))
                         return GetIndentationFromTokenLine(indenter, startToken);
                 }
-                else if (containerSyntax is ClassDeclarationSyntax classDecl)
+                else if (containerSyntax is TypeDeclarationSyntax typeDecl)
                 {
-                    if (GetFirstTokenFromBody(classDecl, token, out startToken))
+                    if (GetFirstTokenFromBody(typeDecl, token, out startToken))
                         return GetIndentationFromTokenLine(indenter, startToken);
                 }
                 else if (containerSyntax is LocalFunctionStatementSyntax localFunc)
@@ -287,7 +298,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                         return GetIndentationFromTokenLine(indenter, startToken);
                 }
 
-                containerSyntax = token.GetAncestor(a => a.IsKind(SyntaxKind.Block));
+                containerSyntax = parent.GetAncestorOrThis(a => a.IsKind(SyntaxKind.Block));
                 if (containerSyntax is BlockSyntax block)
                 {
                     GetFirstTokenFromNode(block, token, out startToken);

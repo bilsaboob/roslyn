@@ -5,6 +5,8 @@ using Microsoft.CodeAnalysis.Shared.Utilities;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 using Microsoft.CodeAnalysis.CSharp.Extensions;
+using Microsoft.CodeAnalysis.Shared.Extensions;
+using System;
 
 namespace Microsoft.CodeAnalysis.CSharp.Formatting
 {
@@ -16,42 +18,72 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         public override AdjustNewLinesOperation GetAdjustNewLinesOperation(in SyntaxToken previousToken, in SyntaxToken currentToken, in NextGetAdjustNewLinesOperation nextOperation)
         {
-            var nextToken = currentToken.GetNextToken(includeZeroWidth: false, includeSkipped: false);
             var prevToken = currentToken.GetPreviousToken(includeZeroWidth: false, includeSkipped: false);
+            var nextToken = currentToken.GetNextToken(includeZeroWidth: false, includeSkipped: false);
 
-            // newline before "import" keyword - if the previous line was another UsingDirective or a NamespaceDeclaration
-            if (!currentToken.IsKind(SyntaxKind.IdentifierToken, SyntaxKind.DotToken))
-            {
-                if (currentToken.IsKeyword() && currentToken.Text == "import")
-                {
-                    var prevTokenOfInterest = currentToken.FindPreviousToken(t => t.IsKind(SyntaxKind.NamespaceKeyword) || t.Text == "import" || t.IsFirstTokenOnLine(), includeZeroWidth: false, includeSkipped: false);
-                    if (prevTokenOfInterest?.IsKind(SyntaxKind.NamespaceKeyword) == true)
-                        return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
-                    else if (prevTokenOfInterest?.Text == "import")
-                        return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.PreserveLines);
-                }
-                else if (nextToken.IsKeyword() && nextToken.Text == "import")
-                {
-                    var prevTokenOfInterest = currentToken.FindPreviousToken(t => t.IsKind(SyntaxKind.NamespaceKeyword) || t.Text == "import" || t.IsFirstTokenOnLine(), includeZeroWidth: false, includeSkipped: false);
-                    if (prevTokenOfInterest?.IsKind(SyntaxKind.NamespaceKeyword) == true)
-                        return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
-                    else if (prevTokenOfInterest?.Text == "import")
-                        return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.PreserveLines);
-                }
-                else if (currentToken.IsKind(SyntaxKind.NamespaceKeyword) && !currentToken.IsFirstTokenOnLine())
-                {
-                    return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
-                }
-            }
-
-            if (nextToken.IsKind(SyntaxKind.ClassKeyword))
-            {
-                var prevTokenOfInterest = currentToken.FindPreviousToken(t => t.Text == "import" || t.IsFirstTokenOnLine(), includeZeroWidth: false, includeSkipped: false);
-                if (prevTokenOfInterest?.Text == "import")
-                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.PreserveLines);
-            }
+            var op = EvalNewline(prevToken, currentToken, nextToken);
+            if (op != null) return op;
 
             return base.GetAdjustNewLinesOperation(previousToken, currentToken, nextOperation);
         }
+
+        private AdjustNewLinesOperation EvalNewline(SyntaxToken prevToken, SyntaxToken currentToken, SyntaxToken nextToken)
+        {
+            var currentNode = currentToken.Parent?.FirstAncestorOrSelf(n => n is UsingDirectiveSyntax || n is TypeDeclarationSyntax || n is NamespaceDeclarationSyntax);
+
+            // handle "import import" scenarion - text is injected by the editor right after a previous import at the same line...
+            if (currentToken.IsKind(SyntaxKind.SemicolonToken))
+            {
+                // we are at the semicomma
+
+                // handle the case where an import / namespace was pasted
+                if (nextToken.IsKind(SyntaxKind.ImportKeyword) ||
+                    nextToken.IsKind(SyntaxKind.UsingKeyword) ||
+                    nextToken.IsKind(SyntaxKind.NamespaceKeyword))
+                {
+                    if (GetLineDiff(currentToken, nextToken) == 0)
+                        return Newlines(1);
+                    return null;
+                }
+
+                // next we do additional checks only if the semicomma is part of a using statement
+                if (currentNode is UsingDirectiveSyntax)
+                {
+                    // check for following statements of interest
+                    var nextNode = nextToken.Parent?.FirstAncestorOrSelf(n =>
+                        n is TypeDeclarationSyntax ||
+                        n is MethodDeclarationSyntax ||
+                        n is LocalDeclarationStatementSyntax ||
+                        n is StatementSyntax
+                    );
+
+                    if (nextNode != null)
+                    {
+                        // semicomma is followed by a statement ... we add an additional line!
+                        var lineDiff = GetLineDiff(currentToken, nextToken);
+                        if (lineDiff <= 1)
+                            return Newlines(2);
+                        if (lineDiff == 1)
+                            return Newlines(1);
+                        else 
+                            return null;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static int GetLineDiff(SyntaxToken t1, SyntaxToken t2)
+        {
+            if (t1.IsNull || t2.IsNull) return 0;
+
+            var t1StartLine = t1.GetLocation().GetLineSpan().StartLinePosition.Line;
+            var t2StartLine = t2.GetLocation().GetLineSpan().StartLinePosition.Line;
+            return Math.Abs(t1StartLine - t2StartLine);
+        }
+
+        private static AdjustNewLinesOperation Newlines(int numLines, AdjustNewLinesOption option = AdjustNewLinesOption.ForceLines)
+            => CreateAdjustNewLinesOperation(numLines, option);
     }
 }

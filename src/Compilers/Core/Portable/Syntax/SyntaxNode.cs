@@ -728,6 +728,23 @@ namespace Microsoft.CodeAnalysis
             return null;
         }
 
+
+        /// <summary>
+        /// Gets the first node of type TNode that matches the predicate.
+        /// </summary>
+        public SyntaxNode? FirstAncestorOrSelf(Func<SyntaxNode, bool>? predicate = null, bool ascendOutOfTrivia = true)
+        {
+            for (SyntaxNode? node = this; node != null; node = GetParent(node, ascendOutOfTrivia))
+            {
+                if (node != null && (predicate == null || predicate(node)))
+                {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Gets the first node of type TNode that matches the predicate.
         /// </summary>

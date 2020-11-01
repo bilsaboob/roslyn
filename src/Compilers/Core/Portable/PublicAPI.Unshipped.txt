@@ -19,7 +19,7 @@ Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol
 Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol.AsFieldSymbol.get -> Microsoft.CodeAnalysis.IFieldSymbol
 Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol.ParamSymbol.get -> Microsoft.CodeAnalysis.ISymbol
 Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol.SpreadParamSymbol(Microsoft.CodeAnalysis.ISymbol memberSymbol, Microsoft.CodeAnalysis.ISymbol paramSymbol) -> void
-Microsoft.CodeAnalysis.SyntaxNode.FindToken(int position, bool findInsideTrivia = false, bool findInsideSkippedTrivia = false) -> Microsoft.CodeAnalysis.SyntaxToken
+Microsoft.CodeAnalysis.SyntaxNode.FirstAncestorOrSelf(System.Func<Microsoft.CodeAnalysis.SyntaxNode, bool> predicate = null, bool ascendOutOfTrivia = true) -> Microsoft.CodeAnalysis.SyntaxNode
 Microsoft.CodeAnalysis.SyntaxNode.GetLastToken(bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false, System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> predicate = null) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.SyntaxNode.HasErrors.get -> bool
 Microsoft.CodeAnalysis.SyntaxNodeOrToken.GetLeadingTriviaExceptSkippedTokens() -> System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.SyntaxTrivia>
