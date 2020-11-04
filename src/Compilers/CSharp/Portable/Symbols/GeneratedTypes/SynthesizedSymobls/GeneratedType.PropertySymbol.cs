@@ -87,7 +87,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 => PropDescriptor.IsExplicitInterfaceImplementation;
 
             public sealed override bool IsExtern
-                => false;
+                => PropDescriptor.IsExtern;
 
             // Type
             public override TypeWithAnnotations TypeWithAnnotations

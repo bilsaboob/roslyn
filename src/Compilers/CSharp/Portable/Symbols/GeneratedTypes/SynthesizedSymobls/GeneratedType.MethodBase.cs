@@ -64,6 +64,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             public override bool IsVirtual
                 => Descriptor.IsVirtual;
 
+            public override bool IsOverride
+                => Descriptor.IsOverride;
+
             public override bool IsAsync
                 => Descriptor.IsAsync;
 
@@ -87,6 +90,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             public override string Name
                 => Descriptor.Name;
 
+            internal override bool HasSpecialName
+                => false;
+
             // Syntax declaration
             public override ImmutableArray<Location> Locations
                 => Descriptor.Locations ?? ImmutableArray<Location>.Empty;
@@ -106,6 +112,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             #endregion
 
             #region Default overrides
+
+            public override RefKind RefKind
+                => RefKind.None;
 
             internal override bool GenerateDebugInfo
                 => false;
@@ -146,6 +155,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             internal override bool IsMetadataNewSlot(bool ignoreInterfaceImplementationChanges = false)
                 => Descriptor.IsInterfaceImplementation;
+
+            internal override bool IsMetadataVirtual(bool ignoreInterfaceImplementationChanges = false)
+                => Descriptor.IsVirtual;
+
+            internal override bool IsMetadataFinal
+                => Descriptor.IsFinal;
 
             internal override void AddSynthesizedAttributes(PEModuleBuilder moduleBuilder, ref ArrayBuilder<SynthesizedAttributeData> attributes)
             {

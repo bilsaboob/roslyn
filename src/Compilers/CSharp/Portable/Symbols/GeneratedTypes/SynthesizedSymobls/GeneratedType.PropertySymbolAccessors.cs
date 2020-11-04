@@ -126,20 +126,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             public GeneratedTypePropertySymbol PropertySymbol { get; protected set; }
 
-            internal override bool IsMetadataNewSlot(bool ignoreInterfaceImplementationChanges = false)
-                => Descriptor.IsInterfaceImplementation;
-
-            public override bool IsVirtual
-                => Descriptor.IsVirtual;
-
             public override MethodKind MethodKind
                 => _methodKind;
 
+            internal override bool HasSpecialName
+                => true;
+
             public override bool ReturnsVoid
                 => MethodKind == MethodKind.PropertySet;
-
-            public override RefKind RefKind
-                => RefKind.None;
 
             public override TypeWithAnnotations ReturnTypeWithAnnotations
                 => Descriptor.Type;
@@ -149,21 +143,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             public override Symbol AssociatedSymbol
                 => PropertySymbol;
-
-            public override ImmutableArray<Location> Locations
-                => Descriptor.Locations ?? ImmutableArray<Location>.Empty;
-
-            public override bool IsOverride
-                => Descriptor.IsOverride;
-
-            internal sealed override bool IsMetadataVirtual(bool ignoreInterfaceImplementationChanges = false)
-                => Descriptor.IsVirtual;
-
-            internal override bool IsMetadataFinal
-                => Descriptor.IsFinal;
-
-            internal override bool HasSpecialName
-                => true;
 
             internal override void AddSynthesizedAttributes(PEModuleBuilder moduleBuilder, ref ArrayBuilder<SynthesizedAttributeData> attributes)
             {
