@@ -623,6 +623,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             return New(ctor, args);
         }
 
+        public BoundObjectCreationExpression New(NamedTypeSymbol type, ImmutableArray<BoundExpression> args, SyntaxNode syntax = null)
+        {
+            var ctor = type.InstanceConstructors.Single(c => c.ParameterCount == args.Length);
+            return New(ctor, args, syntax);
+        }
+
         public BoundObjectCreationExpression TryNew(NamedTypeSymbol type, params BoundExpression[] args)
         {
             var ctor = type.InstanceConstructors.FirstOrDefault(c => c.ParameterCount == args.Length);
@@ -1246,7 +1252,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 CodeAnalysis.WellKnownMember.System_Reflection_FieldInfo__GetFieldFromHandle2);
         }
 
-        public BoundExpression Convert(TypeSymbol type, BoundExpression arg)
+        public BoundExpression Convert(TypeSymbol type, BoundExpression arg, SyntaxNode syntax = null)
         {
             if (TypeSymbol.Equals(type, arg.Type, TypeCompareKind.ConsiderEverything2))
             {
@@ -1261,10 +1267,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             // If this happens, we should probably check if the method has ObsoleteAttribute.
             Debug.Assert(c.Method is null, "Why are we synthesizing a user-defined conversion after initial binding?");
 
-            return Convert(type, arg, c);
+            return Convert(type, arg, c, isChecked: false, syntax);
         }
 
-        public BoundExpression Convert(TypeSymbol type, BoundExpression arg, Conversion conversion, bool isChecked = false)
+        public BoundExpression Convert(TypeSymbol type, BoundExpression arg, Conversion conversion, bool isChecked = false, SyntaxNode syntax = null)
         {
             // NOTE: We can see user-defined conversions at this point because there are places in the bound tree where
             // the binder stashes Conversion objects for later consumption (e.g. foreach, nullable, increment).
@@ -1288,7 +1294,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return this.Call(arg, this.SpecialMethod(CodeAnalysis.SpecialMember.System_Nullable_T_get_Value).AsMember((NamedTypeSymbol)arg.Type));
             }
 
-            return new BoundConversion(Syntax, arg, conversion, @checked: isChecked, explicitCastInCode: true, conversionGroupOpt: null, null, type) { WasCompilerGenerated = true };
+            return new BoundConversion(syntax ?? Syntax, arg, conversion, @checked: isChecked, explicitCastInCode: true, conversionGroupOpt: null, null, type) { WasCompilerGenerated = true };
         }
 
         public BoundExpression ArrayOrEmpty(TypeSymbol elementType, BoundExpression[] elements)

@@ -5665,12 +5665,19 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
+            BuildDefaultInterfaceImplementationType(type, diagnostics);
+
             var boundExpr = BindClassCreationExpression(node, type.Name, typeNode, type, analyzedArguments, diagnostics, initializerOpt, type, wasTargetTyped);
             return boundExpr;
 
             // interfaces can't be instantiated in C#
             /*diagnostics.Add(ErrorCode.ERR_NoNewAbstract, node.Location, type);
             return MakeBadExpressionForObjectCreation(node, type, analyzedArguments, initializerOpt, typeNode, diagnostics);*/
+        }
+
+        private NamedTypeSymbol BuildDefaultInterfaceImplementationType(NamedTypeSymbol interfaceType, DiagnosticBag diagnostics)
+        {
+            return DefaultInterfaceImplTypeGenerator.Generate(Compilation, interfaceType, diagnostics);
         }
 
         private BoundExpression BindComImportCoClassCreationExpression(SyntaxNode node, NamedTypeSymbol interfaceType, NamedTypeSymbol coClassType, DiagnosticBag diagnostics, SyntaxNode typeNode, AnalyzedArguments analyzedArguments, InitializerExpressionSyntax initializerOpt, bool wasTargetTyped)
@@ -5976,6 +5983,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             allInstanceConstructors = type.InstanceConstructors;
+
+            if (type.IsInterfaceType())
+            {
+                var defaultImplType = DefaultInterfaceImplTypeGenerator.GetOrGenerate(Compilation, type);
+                if (!(defaultImplType is null))
+                {
+                    allInstanceConstructors = ImmutableArray.Create<MethodSymbol>(defaultImplType.SynthesizedInterfaceConstructor);
+                }
+            }
+
             return FilterInaccessibleConstructors(allInstanceConstructors, allowProtectedConstructorsOfBaseType, ref useSiteDiagnostics);
         }
 

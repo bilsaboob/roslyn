@@ -3424,7 +3424,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // We won't insert a parameterless constructor for a struct if there already is one.
             // We don't expect anything to be emitted, but it should be in the symbol table.
             if ((!hasParameterlessInstanceConstructor && this.IsStructType()) ||
-                (!hasInstanceConstructor && !this.IsStatic))
+                (!hasInstanceConstructor && !this.IsStatic && !this.IsInterfaceType()))
             {
                 members.Add((this.TypeKind == TypeKind.Submission) ?
                     new SynthesizedSubmissionConstructor(this, diagnostics) :
