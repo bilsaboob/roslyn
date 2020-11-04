@@ -18,9 +18,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriters
             if (!node.Type.IsInterfaceType())
                 return base.VisitObjectCreationExpression(node);
 
-            // replace with an object creation of the default implementation type
+            var boundNode = TryRewriteInterfaceObjectCreation(node);
+            if (boundNode != null) return boundNode;
 
             return base.VisitObjectCreationExpression(node);
+        }
+
+        private BoundNode TryRewriteInterfaceObjectCreation(BoundObjectCreationExpression node)
+        {
+            var interfaceType = node.Type as NamedTypeSymbol;
+            if (interfaceType is null) return null;
+
+            // get or build the default interface implementation class
+            var defaultImplType = DefaultInterfaceImplTypeGenerator.GetOrGenerate(Compilation, interfaceType, _diagnostics);
+            if (defaultImplType is null) return null;
+
+            // generate a new object creation but also convert it to the initial interface type
+            var newObjectCreation = _F.New(defaultImplType, ImmutableArray<BoundExpression>.Empty, node.Syntax);
+            var newConversion = _F.Convert(interfaceType, newObjectCreation, node.Syntax);
+            return newConversion;
         }
     }
 }

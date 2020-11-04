@@ -147,20 +147,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriters
     {
         protected SyntheticBoundNodeFactory _F;
         protected DiagnosticBag _diagnostics;
+        protected TypeCompilationState _compilationState;
 
         protected virtual void _ctor(
             MethodSymbol containingMethod,
             NamedTypeSymbol containingType,
             SyntheticBoundNodeFactory factory,
+            TypeCompilationState compilationState,
             DiagnosticBag diagnostics)
         {
             _F = factory;
             _F.CurrentType = containingType;
             _F.CurrentFunction = containingMethod;
             _diagnostics = diagnostics;
+            _compilationState = compilationState;
         }
 
         public SyntheticBoundNodeFactory NodeFactory => _F;
+
+        public CSharpCompilation Compilation => _compilationState.Compilation;
     }
 
     internal abstract class BoundTreeMethodRewriter<TRewriter> : BoundTreeMethodRewriter
@@ -180,7 +185,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriters
 
             // create and init the rewriter
             var rewriter = new TRewriter();
-            rewriter._ctor(containingSymbol, containingType, factory, diagnostics);
+            rewriter._ctor(containingSymbol, containingType, factory, compilationState, diagnostics);
 
             // apply the rewrite
             var newNode = rewriter.Visit(node) as TNode;
