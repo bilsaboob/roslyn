@@ -4043,7 +4043,7 @@ parse_member_name:;
             // it can append skipped trivia to the last element, regardless of whether that element is a node or a token.
             GreenNode trailingTrivia;
             var action = this.SkipBadListTokensWithExpectedKindHelper(list.UnderlyingBuilder, isNotExpectedFunction, abortFunction, expected, out trailingTrivia);
-            if (trailingTrivia != null)
+            if (trailingTrivia != null && startToken != null)
             {
                 startToken = AddTrailingSkippedSyntax(startToken, trailingTrivia);
             }
@@ -4061,7 +4061,7 @@ parse_member_name:;
         {
             GreenNode trailingTrivia;
             var action = this.SkipBadListTokensWithErrorCodeHelper(list, isNotExpectedFunction, abortFunction, error, out trailingTrivia);
-            if (trailingTrivia != null)
+            if (trailingTrivia != null && startToken != null)
             {
                 startToken = AddTrailingSkippedSyntax(startToken, trailingTrivia);
             }
@@ -14506,6 +14506,38 @@ tryAgain:
 
 #nullable restore
 
+        private InitializerExpressionSyntax TryParseObjectOrCollectionInitializer(out ResetPoint resetPoint, out bool hasMissingTokens, out bool hasErrorDiagnostics)
+        {
+            hasMissingTokens = false;
+            hasErrorDiagnostics = false;
+            resetPoint = this.GetResetPoint();
+            InitializerExpressionSyntax initializer = null;
+            try
+            {
+                initializer = ParseObjectOrCollectionInitializer();
+            }
+            catch (Exception ex)
+            {
+                initializer = null;
+            }
+            finally
+            {
+                if (initializer != null)
+                {
+                    if (initializer.ContainsDiagnostics && initializer.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+                        hasErrorDiagnostics = true;
+
+                    // check if we have any missing tokens or error diagnostics?
+                    // (lambda.ContainsDiagnostics && lambda.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+                    var missingToken = initializer.GetFirstToken(t => t.IsMissing);
+                    if (missingToken != null)
+                        hasMissingTokens = true;
+                }
+            }
+
+            return initializer;
+        }
+
         private InitializerExpressionSyntax ParseObjectOrCollectionInitializer()
         {
             var openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
@@ -14628,7 +14660,41 @@ tryAgain:
             ExpressionSyntax expression;
             if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
             {
-                expression = this.ParseObjectOrCollectionInitializer();
+                // try parsing object initializer first
+                expression = this.TryParseObjectOrCollectionInitializer(out var beforeInitializerResetPoint, out var initializerHasMissingTokens, out var initializerHasErrors);
+
+                // if successfully parsed initilizer, then let's accept that - even though there may be ambiguity with {...} lambda expresion... we simply have to live with it...
+                if (expression != null && !initializerHasMissingTokens && !initializerHasErrors)
+                {
+                    this.Release(ref beforeInitializerResetPoint);
+                }
+                // this could possibly be a lambda expression or another initializer expression
+                else if (AllowLambdaExpression)
+                {
+                    // reset so that we can attempt parsing the lambda
+                    this.Reset(ref beforeInitializerResetPoint);
+
+                    var lambda = TryParseLambdaExpression(out var beforeLambdaResetPoint, out var lambdaHasMissingTokens, out var lambdaHasErrors);
+
+                    if (lambda != null && !lambdaHasMissingTokens && !lambdaHasErrors)
+                    {
+                        this.Release(ref beforeLambdaResetPoint);
+                        this.Release(ref beforeInitializerResetPoint);
+                        expression = lambda;
+                    }
+                    else
+                    {
+                        // reset to the before lambda and accept the initializer "as is"
+                        this.Reset(ref beforeLambdaResetPoint);
+                        this.Release(ref beforeLambdaResetPoint);
+                        this.Release(ref beforeInitializerResetPoint);
+                    }
+                }
+                else
+                {
+                    // releset the reset point ... we will accept the expresion "as is"
+                    this.Release(ref beforeInitializerResetPoint);
+                }
             }
             else
             {
@@ -14998,6 +15064,38 @@ tryAgain:
             {
                 _pool.Free(newModifiers);
             }
+        }
+
+        private LambdaExpressionSyntax TryParseLambdaExpression(out ResetPoint resetPoint, out bool hasMissingTokens, out bool hasErrorDiagnostics)
+        {
+            hasMissingTokens = false;
+            hasErrorDiagnostics = false;
+            resetPoint = this.GetResetPoint();
+            LambdaExpressionSyntax lambda = null;
+            try
+            {
+                lambda = ParseLambdaExpression();
+            }
+            catch (Exception ex)
+            {
+                lambda = null;
+            }
+            finally
+            {
+                if (lambda != null)
+                {
+                    if (lambda.ContainsDiagnostics && lambda.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+                        hasErrorDiagnostics = true;
+
+                    // check if we have any missing tokens or error diagnostics?
+                    // (lambda.ContainsDiagnostics && lambda.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+                    var missingToken = lambda.GetFirstToken(t => t.IsMissing);
+                    if (missingToken != null)
+                        hasMissingTokens = true;
+                }
+            }
+
+            return lambda;
         }
 
         private LambdaExpressionSyntax ParseLambdaExpression()

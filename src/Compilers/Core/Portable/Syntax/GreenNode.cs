@@ -773,6 +773,40 @@ namespace Microsoft.CodeAnalysis
             return this;
         }
 
+        internal T? GetFirstTerminal<T>(Func<T, bool> predicate)
+            where T : GreenNode
+        {
+            if (this is T thisT)
+            {
+                if (predicate(thisT))
+                    return thisT;
+            }
+
+            for (int i = 0, n = SlotCount; i < n; i++)
+            {
+                var child = GetSlot(i);
+                if (child is T childT)
+                {
+                    if (predicate(childT))
+                        return childT;
+                }
+            }
+
+            for (int i = 0, n = SlotCount; i < n; i++)
+            {
+                var child = GetSlot(i);
+                if (child != null)
+                {
+                    // try with the sub children
+                    var firstSubTerminal = child.GetFirstTerminal(predicate);
+                    if (firstSubTerminal != null)
+                        return firstSubTerminal;
+                }
+            }
+
+            return null;
+        }
+
         internal GreenNode? GetFirstTerminal()
         {
             GreenNode? node = this;
