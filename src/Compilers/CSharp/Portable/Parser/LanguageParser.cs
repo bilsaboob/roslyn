@@ -14289,7 +14289,10 @@ tryAgain:
                         }
                         else if (this.CurrentToken.Kind == SyntaxKind.CommaToken || this.IsPossibleExpression())
                         {
-                            list.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
+                            if (CurrentKind != SyntaxKind.CommaToken && IsCurrentTokenOnNewline)
+                                list.AddSeparator(SyntaxFactory.FakeToken(SyntaxKind.CommaToken));
+                            else
+                                list.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
 
                             // check for exit case after legal trailing comma
                             if (this.CurrentToken.Kind == SyntaxKind.CloseBraceToken)
@@ -14470,7 +14473,10 @@ tryAgain:
                         }
                         else if (IsPossibleExpression() || CurrentToken.Kind == SyntaxKind.CommaToken)
                         {
-                            list.AddSeparator(EatToken(SyntaxKind.CommaToken));
+                            if (CurrentKind != SyntaxKind.CommaToken && IsCurrentTokenOnNewline)
+                                list.AddSeparator(SyntaxFactory.FakeToken(SyntaxKind.CommaToken));
+                            else
+                                list.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
 
                             // check for exit case after legal trailing comma
                             if (CurrentToken.Kind == SyntaxKind.CloseBraceToken)
@@ -14594,7 +14600,10 @@ tryAgain:
                         }
                         else if (this.CurrentToken.Kind == SyntaxKind.CommaToken || this.IsInitializerMember())
                         {
-                            list.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
+                            if (CurrentKind != SyntaxKind.CommaToken && IsCurrentTokenOnNewline)
+                                list.AddSeparator(SyntaxFactory.FakeToken(SyntaxKind.CommaToken));
+                            else
+                                list.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
 
                             // check for exit case after legal trailing comma
                             if (this.CurrentToken.Kind == SyntaxKind.CloseBraceToken)
@@ -14649,7 +14658,7 @@ tryAgain:
         {
             return this.SkipBadSeparatedListTokensWithExpectedKind(ref startToken, list,
                 p => p.CurrentToken.Kind != SyntaxKind.CommaToken && !p.IsPossibleExpression(),
-                p => p.CurrentToken.Kind == SyntaxKind.CloseBraceToken || p.IsTerminator(),
+                p => p.CurrentToken.Kind == SyntaxKind.CloseBraceToken || p.IsTerminator() || (p.IsCurrentTokenOnNewline && (p.IsInitializerMember() || p.IsPossibleExpression())),
                 expected);
         }
 
@@ -14760,7 +14769,11 @@ tryAgain:
                         }
                         else if (this.CurrentToken.Kind == SyntaxKind.CommaToken || this.IsPossibleExpression())
                         {
-                            list.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
+                            if (CurrentKind != SyntaxKind.CommaToken && IsCurrentTokenOnNewline)
+                                list.AddSeparator(SyntaxFactory.FakeToken(SyntaxKind.CommaToken));
+                            else
+                                list.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
+
                             if (this.CurrentToken.Kind == SyntaxKind.CloseBraceToken)
                             {
                                 closeBraceError = MakeError(this.CurrentToken, ErrorCode.ERR_ExpressionExpected);
