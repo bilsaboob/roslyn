@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Diagnostics;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
+using Microsoft.CodeAnalysis.PooledObjects;
 
 namespace Microsoft.CodeAnalysis.CSharp.Rewriters
 {
@@ -35,6 +36,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriters
 
             // generate a new object creation but also convert it to the initial interface type
             var newObjectCreation = _F.New(defaultImplType, ImmutableArray<BoundExpression>.Empty, node.Syntax);
+
+            if (node.InitializerExpressionOpt != null)
+            {
+                var newReceiver = new BoundObjectOrCollectionValuePlaceholder(node.InitializerExpressionOpt.Placeholder.Syntax, defaultImplType) { WasCompilerGenerated = true };
+                var newInitializer = _F.ObjectInitializer(newReceiver, defaultImplType, node.InitializerExpressionOpt.Initializers);
+                newObjectCreation = newObjectCreation.UpdateInitializer(newInitializer);
+            }
+
             var newConversion = _F.Convert(interfaceType, newObjectCreation, node.Syntax);
             return newConversion;
         }
