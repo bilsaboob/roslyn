@@ -16,28 +16,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal partial class GeneratedTypesManager
     {
-        internal class GeneratedTypePropertySymbol : PropertySymbol
+        internal class GeneratedPropertyMember : PropertySymbol
         {
             private NamedTypeSymbol _containingType;
-            private int _memberIndex;
 
-            private GeneratedTypePropertyAccessorSymbol _getter;
-            private GeneratedTypePropertyAccessorSymbol _setter;
+            private GeneratedProperteyAccessor _getter;
+            private GeneratedProperteyAccessor _setter;
             private FieldSymbol _backingField;
 
-            internal GeneratedTypePropertySymbol(
-                GeneratedPropertyMemberDescriptor descriptor,
-                int index
+            internal GeneratedPropertyMember(
+                GeneratedPropertyMemberDescriptor descriptor
                 )
             {
                 PropDescriptor = descriptor;
-                _memberIndex = index;
             }
 
-            public virtual GeneratedTypePropertySymbol Build(
+            public virtual GeneratedPropertyMember Build(
                 NamedTypeSymbol containingType,
-                GeneratedTypePropertyAccessorSymbol getter,
-                GeneratedTypePropertyAccessorSymbol setter,
+                GeneratedProperteyAccessor getter,
+                GeneratedProperteyAccessor setter,
                 FieldSymbol backingField
                 )
             {
@@ -53,8 +50,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             internal GeneratedPropertyMemberDescriptor PropDescriptor { get; }
 
             #region Implementation
-
-            internal override int? MemberIndexOpt => _memberIndex;
 
             // Parent namespace / type
             public override Symbol ContainingSymbol
@@ -84,7 +79,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 => PropDescriptor.IsOverride;
 
             internal sealed override bool IsExplicitInterfaceImplementation
-                => PropDescriptor.IsExplicitInterfaceImplementation;
+                => PropDescriptor.ExplicitInterfaceMember != null;
 
             public sealed override bool IsExtern
                 => PropDescriptor.IsExtern;
@@ -102,7 +97,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             // Explicit interface
             public override ImmutableArray<PropertySymbol> ExplicitInterfaceImplementations
-                => ImmutableArray<PropertySymbol>.Empty;
+                => (PropDescriptor.ExplicitInterfaceMember as PropertySymbol) != null ? ImmutableArray.Create(PropDescriptor.ExplicitInterfaceMember as PropertySymbol) : ImmutableArray<PropertySymbol>.Empty;
 
             // Syntax declaration
             public override ImmutableArray<Location> Locations
@@ -160,7 +155,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     return true;
                 }
 
-                var other = obj as GeneratedTypePropertySymbol;
+                var other = obj as GeneratedPropertyMember;
                 if ((object)other == null)
                 {
                     return false;

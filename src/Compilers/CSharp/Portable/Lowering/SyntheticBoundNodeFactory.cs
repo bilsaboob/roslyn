@@ -476,7 +476,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new BoundStatementList(Syntax, ImmutableArray.Create(first, second)) { WasCompilerGenerated = true };
         }
 
-        public BoundReturnStatement Return(BoundExpression? expression = null)
+        public BoundReturnStatement Return(BoundExpression? expression = null, TypeSymbol? forceType = null)
         {
             Debug.Assert(CurrentFunction is { });
 
@@ -484,7 +484,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 // If necessary, add a conversion on the return expression.
                 HashSet<DiagnosticInfo>? useSiteDiagnostics = null;
-                var conversion = Compilation.Conversions.ClassifyConversionFromType(expression.Type, CurrentFunction.ReturnType, ref useSiteDiagnostics);
+                var conversionType = forceType ?? CurrentFunction.ReturnType;
+                var conversion = Compilation.Conversions.ClassifyConversionFromType(expression.Type, conversionType, ref useSiteDiagnostics);
                 Debug.Assert(useSiteDiagnostics.IsNullOrEmpty());
                 Debug.Assert(conversion.Kind != ConversionKind.NoConversion);
                 if (conversion.Kind != ConversionKind.Identity)

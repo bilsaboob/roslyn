@@ -61,6 +61,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             public bool IsOut { get; set; }
             public bool IsOptional { get; set; }
             public bool IsParams { get; set; }
+
+            public RefKind? RefKind { get; set; }
+            public ImmutableArray<CustomModifier>? RefCustomModifiers { get; set; }
+
+            public ConstantValue ExplicitDefaultConstantValue { get; set; }
+        }
+
+        internal class GeneratedTypeParameterDescriptor : GeneratedSymbolDescriptor
+        {
+            public string Name { get; set; }
+
+            public VarianceKind Variance { get; internal set; }
+
+            public ImmutableArray<TypeWithAnnotations>? ConstraintTypes { get; internal set; }
+
+            public bool HasConstructorConstraint { get; set; }
+            public bool HasReferenceTypeConstraint { get; set; }
+            public bool HasNotNullConstraint { get; set; }
+            public bool HasValueTypeConstraint { get; set; }
+            public bool HasUnmanagedTypeConstraint { get; set; }
         }
 
         internal class GeneratedMemberDescriptor : GeneratedSymbolDescriptor
@@ -87,11 +107,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             public bool IsVolatile { get; set; }
             public bool IsConst { get; set; }
 
-            public bool IsExplicitInterfaceImplementation { get; set; }
-            public Symbol ExplicitInterface { get; set; }
-
             public bool IsInterfaceImplementation { get; set; }
             public Symbol Interface { get; set; }
+            public Symbol ExplicitInterfaceMember { get; set; }
 
             public TypeWithAnnotations Type { get; set; }
             public ImmutableArray<TypeParameterSymbol>? TypeParameters { get; set; }
@@ -100,6 +118,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal class GeneratedMethodMemberDescriptor : GeneratedMemberDescriptor
         {
+            public int Arity { get; set; }
+            public ImmutableArray<ParameterSymbol>? Parameters { get; set; }
         }
 
         internal class GeneratedFieldMemberDescriptor : GeneratedMemberDescriptor

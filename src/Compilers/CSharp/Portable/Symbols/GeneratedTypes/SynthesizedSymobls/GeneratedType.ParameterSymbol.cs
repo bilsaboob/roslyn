@@ -44,13 +44,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 => Descriptor.Type;
 
             public override RefKind RefKind
-                => RefKind.None;
+                => Descriptor.RefKind ?? RefKind.None;
 
             public override bool IsDiscard
                 => false;
 
             public override ImmutableArray<CustomModifier> RefCustomModifiers
-                => ImmutableArray<CustomModifier>.Empty;
+                => Descriptor.RefCustomModifiers ?? ImmutableArray<CustomModifier>.Empty;
 
             public override int Ordinal
                 => _ordinal;
@@ -80,7 +80,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 => Descriptor.IsOut;
 
             internal override ConstantValue ExplicitDefaultConstantValue
-                => ConstantValue.Unset;
+                => Descriptor.ExplicitDefaultConstantValue;
 
             internal override bool IsIDispatchConstant
                 => false;

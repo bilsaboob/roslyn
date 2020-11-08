@@ -99,7 +99,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     {
                         var member = _member.Build(type, TypeDescriptor, memberIndex++, _diagnostics);
 
-                        if (member is GeneratedTypePropertySymbol propMember)
+                        if (member is GeneratedPropertyMember propMember)
                         {
                             members.Add(propMember);
                             if (propMember.GetMethod != null)

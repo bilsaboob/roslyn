@@ -8,7 +8,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal enum TypeAnnotationKind
     {
-        ThisParamType
+        ThisParamType,
+        OriginalType
     }
 
     internal partial class TypeSymbol

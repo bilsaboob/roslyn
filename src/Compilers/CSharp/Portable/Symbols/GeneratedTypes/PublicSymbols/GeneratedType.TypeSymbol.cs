@@ -72,7 +72,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             // Parent namespace / type
             public override Symbol ContainingSymbol
-                => _typeDescriptor.ContainingSymbol ?? Manager.CodeGenNamespace;
+                => _typeDescriptor.ContainingSymbol ?? Manager.KnownSymbols.CodeGenNamespace;
 
             // Visibility
             public override Accessibility DeclaredAccessibility
@@ -106,10 +106,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             // Base type & interfaces
             internal override NamedTypeSymbol BaseTypeNoUseSiteDiagnostics
-                => _typeDescriptor.BaseType ?? Manager.System_Object;
+                => _typeDescriptor.BaseType ?? Manager.KnownSymbols.System_Object;
 
             internal override NamedTypeSymbol GetDeclaredBaseType(ConsList<TypeSymbol> basesBeingResolved)
-                => _typeDescriptor.BaseType ?? Manager.System_Object;
+                => _typeDescriptor.BaseType ?? Manager.KnownSymbols.System_Object;
 
             internal override ImmutableArray<NamedTypeSymbol> GetDeclaredInterfaces(ConsList<TypeSymbol> basesBeingResolved)
                 => _typeDescriptor.Interfaces ?? ImmutableArray<NamedTypeSymbol>.Empty;

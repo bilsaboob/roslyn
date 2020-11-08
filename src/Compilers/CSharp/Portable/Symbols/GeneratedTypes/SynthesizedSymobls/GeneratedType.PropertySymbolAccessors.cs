@@ -16,17 +16,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal partial class GeneratedTypesManager
     {
-        internal class GeneratedTypePropertyGetAccessorSymbol : GeneratedTypePropertyAccessorSymbol
+        internal class GeneratedPropertyGetterAccessor : GeneratedProperteyAccessor
         {
-            internal GeneratedTypePropertyGetAccessorSymbol(GeneratedPropertyMemberDescriptor propDescriptor)
+            internal GeneratedPropertyGetterAccessor(GeneratedPropertyMemberDescriptor propDescriptor)
                 : base(propDescriptor, MethodKind.PropertyGet)
             {
             }
+
+            public new GeneratedPropertyGetterAccessor Build(
+                NamedTypeSymbol containingType,
+                GeneratedPropertyMember property,
+                Func<SyntheticBoundNodeFactory, BoundStatement> bodyGenerator
+                )
+            {
+                base.Build(containingType, property, bodyGenerator);
+                return this;
+            }
+
         }
 
-        internal class GeneratedTypePropertySetAccessorSymbol : GeneratedTypePropertyAccessorSymbol
+        internal class GeneratedPropertySetterAccessor : GeneratedProperteyAccessor
         {
-            internal GeneratedTypePropertySetAccessorSymbol(
+            internal GeneratedPropertySetterAccessor(
                 GeneratedPropertyMemberDescriptor propDescriptor)
                 : base(propDescriptor, MethodKind.PropertySet)
             {
@@ -34,18 +45,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             public GeneratedParameterSymbol ValueParameter { get; protected set; }
 
-            public override GeneratedTypePropertyAccessorSymbol Build(
+            public new GeneratedPropertySetterAccessor Build(
                 NamedTypeSymbol containingType,
-                GeneratedTypePropertySymbol property,
+                GeneratedPropertyMember property,
                 Func<SyntheticBoundNodeFactory, BoundStatement> bodyGenerator
                 )
             {
-                base.Build(
-                    containingType,
-                    property,
-                    bodyGenerator
-                );
-
                 // build the "value" parameter for the setter
                 var pd = new GeneratedParameterDescriptor()
                 {
@@ -55,11 +60,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 ValueParameter = new GeneratedParameterSymbol(pd, 0);
                 ValueParameter.Build(this);
 
-                // add the paramter
-                _parameters = ImmutableArray.Create<ParameterSymbol>(ValueParameter);
+                Descriptor.Parameters = ImmutableArray.Create<ParameterSymbol>(ValueParameter);
 
                 // set void type for the return type
-                Descriptor.Type = TypeWithAnnotations.Create(((GeneratedTypeSymbol)this.ContainingSymbol).Manager.System_Void);
+                Descriptor.Type = TypeWithAnnotations.Create(((GeneratedTypeSymbol)containingType).Manager.KnownSymbols.System_Void);
+
+                base.Build(
+                    containingType,
+                    property,
+                    bodyGenerator
+                );
 
                 return this;
             }
@@ -68,28 +78,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// Represents a getter for generated type property.
         /// </summary>
-        internal class GeneratedTypePropertyAccessorSymbol : SynthesizedMethodBase
+        internal abstract class GeneratedProperteyAccessor : SynthesizedMethodBase
         {
-            private MethodKind _methodKind;
             private Func<SyntheticBoundNodeFactory, BoundStatement> _bodyGenerator;
-            protected ImmutableArray<ParameterSymbol> _parameters;
 
-            internal GeneratedTypePropertyAccessorSymbol(
+            internal GeneratedProperteyAccessor(
                 GeneratedPropertyMemberDescriptor propDescriptor,
                 MethodKind methodKind
                 )
                 // winmdobj output only effects setters, so we can always set this to false
-                : base(GetDescriptor(propDescriptor, methodKind))
+                : base(GetDescriptor(propDescriptor, methodKind), methodKind)
             {
                 _methodKind = methodKind;
-                _parameters = ImmutableArray<ParameterSymbol>.Empty;
             }
 
             protected static GeneratedMethodMemberDescriptor GetDescriptor(GeneratedPropertyMemberDescriptor propDescriptor, MethodKind methodKind)
             {
                 var d = new GeneratedMethodMemberDescriptor();
                 var isGetter = methodKind == MethodKind.PropertyGet;
+
                 d.Name = SourcePropertyAccessorSymbol.GetAccessorName(propDescriptor.Name, getNotSet: isGetter, isWinMdOutput: false);
+
                 d.Type = propDescriptor.Type;
                 d.Accessibility = propDescriptor.Accessibility;
                 d.Locations = propDescriptor.Locations;
@@ -108,15 +117,34 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     d.IsVirtual = true;
                 }
 
+                // build an explicit interface name
+                if (propDescriptor.ExplicitInterfaceMember != null)
+                {
+                    var name = ExplicitInterfaceHelpers.GetMemberNameWithoutInterfaceName(propDescriptor.Name);
+                    name = SourcePropertyAccessorSymbol.GetAccessorName(name, getNotSet: isGetter, isWinMdOutput: false);
+                    d.Name = ExplicitInterfaceHelpers.GetMemberName(name, (TypeSymbol)propDescriptor.Interface, null);
+                    d.Accessibility = Accessibility.Private;
+
+                    if (propDescriptor.ExplicitInterfaceMember is PropertySymbol prop)
+                    {
+                        if (isGetter)
+                            d.ExplicitInterfaceMember = prop.GetMethod;
+                        else
+                            d.ExplicitInterfaceMember = prop.SetMethod;
+                    }
+                }
+
                 return d;
             }
 
-            public virtual GeneratedTypePropertyAccessorSymbol Build(
+            protected virtual GeneratedProperteyAccessor Build(
                 NamedTypeSymbol containingType,
-                GeneratedTypePropertySymbol property,
+                GeneratedPropertyMember property,
                 Func<SyntheticBoundNodeFactory, BoundStatement> bodyGenerator
                 )
             {
+                base.Build(containingType);
+
                 _containingType = containingType;
                 PropertySymbol = property;
 
@@ -124,22 +152,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return this;
             }
 
-            public GeneratedTypePropertySymbol PropertySymbol { get; protected set; }
-
-            public override MethodKind MethodKind
-                => _methodKind;
+            public GeneratedPropertyMember PropertySymbol { get; protected set; }
 
             internal override bool HasSpecialName
                 => true;
 
             public override bool ReturnsVoid
                 => MethodKind == MethodKind.PropertySet;
-
-            public override TypeWithAnnotations ReturnTypeWithAnnotations
-                => Descriptor.Type;
-
-            public override ImmutableArray<ParameterSymbol> Parameters
-                => _parameters;
 
             public override Symbol AssociatedSymbol
                 => PropertySymbol;

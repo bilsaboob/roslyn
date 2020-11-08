@@ -24,6 +24,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             Compilation = compilation;
 
             _generatedTypesByKey = new ConcurrentDictionary<string, GeneratedTypeSymbol>();
+
+            KnownSymbols = new ManagerKnownSymbols(this);
+            KnownMembers = new ManagerKnownMembers(this);
         }
 
         #region Compilation
@@ -71,25 +74,74 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         #endregion
 
         #region Member construction
-        internal PropertyMemberBuilder GetPropertyMemberBuilder()
+        internal PropertyMemberBuilder NewPropertyMember()
         {
             var pd = new GeneratedPropertyMemberDescriptor();
-            return new PropertyMemberBuilder(pd);
+            return new PropertyMemberBuilder(pd) { Manager = this };
+        }
+
+        internal MethodMemberBuilder NewMethodMember()
+        {
+            var md = new GeneratedMethodMemberDescriptor();
+            return new MethodMemberBuilder(md) { Manager = this };
         }
         #endregion
 
         #region Known symbols
-        public Symbol CodeGenNamespace
+        public ManagerKnownSymbols KnownSymbols { get; private set; }
+
+        internal class ManagerKnownSymbols
+        {
+            internal ManagerKnownSymbols(GeneratedTypesManager manager)
+            {
+                Manager = manager;
+            }
+
+            private GeneratedTypesManager Manager { get; }
+            private CSharpCompilation Compilation => Manager.Compilation;
+
+            public Symbol CodeGenNamespace
             => Compilation.SourceModule.GlobalNamespace;
 
-        public NamedTypeSymbol System_Object
-            => Compilation.GetSpecialType(SpecialType.System_Object);
+            public NamedTypeSymbol System_Object
+                => Compilation.GetSpecialType(SpecialType.System_Object);
 
-        public NamedTypeSymbol System_Void
-            => Compilation.GetSpecialType(SpecialType.System_Void);
+            public NamedTypeSymbol System_Void
+                => Compilation.GetSpecialType(SpecialType.System_Void);
 
-        public NamedTypeSymbol System_Diagnostics_DebuggerBrowsableState
-            => Compilation.GetWellKnownType(WellKnownType.System_Diagnostics_DebuggerBrowsableState);
+            public NamedTypeSymbol System_Diagnostics_DebuggerBrowsableState
+                => Compilation.GetWellKnownType(WellKnownType.System_Diagnostics_DebuggerBrowsableState);
+
+            public NamedTypeSymbol System_Threading_Tasks_Task
+                => Compilation.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task);
+
+            public NamedTypeSymbol System_Threading_Tasks_Task_T
+                => Compilation.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task_T);
+        }
+
+        #endregion
+
+        #region Known members
+
+        public ManagerKnownMembers KnownMembers { get; private set; }
+
+        internal class ManagerKnownMembers
+        {
+            internal ManagerKnownMembers(GeneratedTypesManager manager)
+            {
+                Manager = manager;
+            }
+
+            private GeneratedTypesManager Manager { get; }
+            private CSharpCompilation Compilation => Manager.Compilation;
+
+            public PropertySymbol System_Threading_Tasks_Task_CompletedTask
+                => Manager.KnownSymbols.System_Threading_Tasks_Task.GetMembers("CompletedTask").FirstOrDefault(p => p is PropertySymbol) as PropertySymbol;
+
+            public MethodSymbol System_Threading_Tasks_Task_FromResult
+                => Manager.KnownSymbols.System_Threading_Tasks_Task.GetMembers("FromResult").FirstOrDefault(p => p is MethodSymbol) as MethodSymbol;
+        }
+
         #endregion
     }
 }
