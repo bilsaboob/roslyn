@@ -730,6 +730,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (returnType.Type?.Name?.StartsWith("Task") != true)
             {
+                var originReturnType = returnType;
+
                 if (returnType.Type is null)
                 {
                     // just return a Task
@@ -760,6 +762,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                         returnType = TypeWithAnnotations.Create(returnTaskTypeT);
                     }
                 }
+
+                return returnType.WithAnnotationType(originReturnType.Type, TypeAnnotationKind.OriginalType);
             }
 
             return returnType;

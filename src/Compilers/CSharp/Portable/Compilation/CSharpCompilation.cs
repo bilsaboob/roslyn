@@ -93,6 +93,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         private readonly AnonymousTypeManager _anonymousTypeManager;
 
+        private readonly GeneratedTypesManager _generatedTypesManager;
+
         private NamespaceSymbol? _lazyGlobalNamespace;
 
         internal readonly BuiltInOperators builtInOperators;
@@ -171,6 +173,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             get
             {
                 return _anonymousTypeManager;
+            }
+        }
+
+        internal GeneratedTypesManager GeneratedTypesManager
+        {
+            get
+            {
+                return _generatedTypesManager;
             }
         }
 
@@ -412,6 +422,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             _previousSubmissionImports = new Lazy<Imports>(ExpandPreviousSubmissionImports);
             _globalNamespaceAlias = new Lazy<AliasSymbol>(CreateGlobalNamespaceAlias);
             _anonymousTypeManager = new AnonymousTypeManager(this);
+            _generatedTypesManager = new GeneratedTypesManager(this);
             this.LanguageVersion = CommonLanguageVersion(syntaxAndDeclarations.ExternalSyntaxTrees);
 
             if (isSubmission)

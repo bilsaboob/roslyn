@@ -164,6 +164,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var embeddedTypes = moduleBeingBuiltOpt.GetEmbeddedTypes(diagnostics);
                 methodCompiler.CompileSynthesizedMethods(embeddedTypes, diagnostics);
 
+                // Compile the generated types if any
+                compilation.GeneratedTypesManager.CompileGeneratedTypes(methodCompiler, moduleBeingBuiltOpt, diagnostics);
+                methodCompiler.WaitForWorkers();
+
                 // By this time we have processed all types reachable from module's global namespace
                 compilation.AnonymousTypeManager.AssignTemplatesNamesAndCompile(methodCompiler, moduleBeingBuiltOpt, diagnostics);
                 methodCompiler.WaitForWorkers();

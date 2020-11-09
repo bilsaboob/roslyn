@@ -13,6 +13,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriters
             bool hasTrailingExpression,
             bool originalBodyNested)
         {
+            // rewrite object instantiation of interface types into instantiations of their corresponding default implementation type
+            block = InterfaceObjectCreationRewriter.Rewrite(
+                block,
+                method,
+                method.ContainingType,
+                compilationState,
+                diagnostics
+            );
+
             // rewrite try/catch "inline method" statements to promote variable declarations to the outer scope
             block = MethodInlineTryCatchBlockRewriter.Rewrite(
                 block,

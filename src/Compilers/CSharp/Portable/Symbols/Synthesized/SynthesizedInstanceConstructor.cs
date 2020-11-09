@@ -36,7 +36,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public override Accessibility DeclaredAccessibility
         {
-            get { return ContainingType.IsAbstract ? Accessibility.Protected : Accessibility.Public; }
+            get { return (ContainingType.IsAbstract && !ContainingType.IsInterface) ? Accessibility.Protected : Accessibility.Public; }
         }
 
         internal override bool IsMetadataFinal

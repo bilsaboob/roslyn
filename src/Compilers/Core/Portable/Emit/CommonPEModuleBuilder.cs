@@ -572,6 +572,13 @@ namespace Microsoft.CodeAnalysis.Emit
                 yield return typeDef;
             }
 
+            foreach (var typeDef in GetGeneratedTypeDefinitions(context))
+            {
+                AddTopLevelType(names, typeDef);
+                VisitTopLevelType(typeReferenceIndexer, typeDef);
+                yield return typeDef;
+            }
+
             foreach (var typeDef in GetTopLevelTypeDefinitionsCore(context))
             {
                 AddTopLevelType(names, typeDef);
@@ -602,6 +609,8 @@ namespace Microsoft.CodeAnalysis.Emit
                 _namesOfTopLevelTypes = names;
             }
         }
+
+        public virtual IEnumerable<Cci.INamespaceTypeDefinition> GetGeneratedTypeDefinitions(EmitContext context) => Enumerable.Empty<Cci.INamespaceTypeDefinition>();
 
         public override IEnumerable<Cci.INamespaceTypeDefinition> GetAdditionalTopLevelTypeDefinitions(EmitContext context)
             => GetAdditionalTopLevelTypes(context.Diagnostics);

@@ -432,5 +432,32 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             return result;
         }
+
+        public static AccessorListSyntax FakeAccessorList(bool getter = true, bool setter = true)
+        {
+            SyntaxList<AccessorDeclarationSyntax> accessors = null;
+
+            if (getter && setter)
+            {
+                accessors = SyntaxFactory.List(
+                    SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration, default, default, SyntaxFactory.FakeToken(SyntaxKind.GetKeyword), null, null, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken)),
+                    SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration, default, default, SyntaxFactory.FakeToken(SyntaxKind.SetKeyword), null, null, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken))
+                );
+            }
+            else if (getter)
+            {
+                accessors = SyntaxFactory.List(
+                    SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration, default, default, SyntaxFactory.FakeToken(SyntaxKind.GetKeyword), null, null, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken))
+                );
+            }
+            else if(setter)
+            {
+                accessors = SyntaxFactory.List(
+                    SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration, default, default, SyntaxFactory.FakeToken(SyntaxKind.SetKeyword), null, null, SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken))
+                );
+            }
+
+            return AccessorList(FakeToken(SyntaxKind.OpenBraceToken), accessors, FakeToken(SyntaxKind.CloseBraceToken));
+        }
     }
 }

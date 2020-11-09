@@ -307,7 +307,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         // Equality options for parameter types and return types (if return is considered).
         private readonly TypeCompareKind _typeComparison;
 
-        private MemberSignatureComparer(
+        internal MemberSignatureComparer(
             bool considerName,
             bool considerExplicitlyImplementedInterfaces,
             bool considerReturnType,

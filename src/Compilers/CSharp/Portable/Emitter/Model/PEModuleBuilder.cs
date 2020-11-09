@@ -406,6 +406,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Emit
             return Compilation.AnonymousTypeManager.GetAllCreatedTemplates();
         }
 
+        public override IEnumerable<Cci.INamespaceTypeDefinition> GetGeneratedTypeDefinitions(EmitContext context)
+        {
+            if (context.MetadataOnly)
+            {
+                return SpecializedCollections.EmptyEnumerable<Cci.INamespaceTypeDefinition>();
+            }
+
+            return Compilation.GeneratedTypesManager.GetGeneratedTypes();
+        }
+
         public override IEnumerable<Cci.INamespaceTypeDefinition> GetTopLevelSourceTypeDefinitions(EmitContext context)
         {
             var namespacesToProcess = new Stack<NamespaceSymbol>();

@@ -476,7 +476,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new BoundStatementList(Syntax, ImmutableArray.Create(first, second)) { WasCompilerGenerated = true };
         }
 
-        public BoundReturnStatement Return(BoundExpression? expression = null)
+        public BoundReturnStatement Return(BoundExpression? expression = null, TypeSymbol? forceType = null)
         {
             Debug.Assert(CurrentFunction is { });
 
@@ -484,7 +484,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 // If necessary, add a conversion on the return expression.
                 HashSet<DiagnosticInfo>? useSiteDiagnostics = null;
-                var conversion = Compilation.Conversions.ClassifyConversionFromType(expression.Type, CurrentFunction.ReturnType, ref useSiteDiagnostics);
+                var conversionType = forceType ?? CurrentFunction.ReturnType;
+                var conversion = Compilation.Conversions.ClassifyConversionFromType(expression.Type, conversionType, ref useSiteDiagnostics);
                 Debug.Assert(useSiteDiagnostics.IsNullOrEmpty());
                 Debug.Assert(conversion.Kind != ConversionKind.NoConversion);
                 if (conversion.Kind != ConversionKind.Identity)
@@ -621,6 +622,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var ctor = type.InstanceConstructors.Single(c => c.ParameterCount == args.Length);
             return New(ctor, args);
+        }
+
+        public BoundObjectCreationExpression New(NamedTypeSymbol type, ImmutableArray<BoundExpression> args, SyntaxNode syntax = null)
+        {
+            var ctor = type.InstanceConstructors.Single(c => c.ParameterCount == args.Length);
+            return New(ctor, args, syntax);
         }
 
         public BoundObjectCreationExpression TryNew(NamedTypeSymbol type, params BoundExpression[] args)
@@ -1246,7 +1253,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 CodeAnalysis.WellKnownMember.System_Reflection_FieldInfo__GetFieldFromHandle2);
         }
 
-        public BoundExpression Convert(TypeSymbol type, BoundExpression arg)
+        public BoundExpression Convert(TypeSymbol type, BoundExpression arg, SyntaxNode syntax = null)
         {
             if (TypeSymbol.Equals(type, arg.Type, TypeCompareKind.ConsiderEverything2))
             {
@@ -1261,10 +1268,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             // If this happens, we should probably check if the method has ObsoleteAttribute.
             Debug.Assert(c.Method is null, "Why are we synthesizing a user-defined conversion after initial binding?");
 
-            return Convert(type, arg, c);
+            return Convert(type, arg, c, isChecked: false, syntax);
         }
 
-        public BoundExpression Convert(TypeSymbol type, BoundExpression arg, Conversion conversion, bool isChecked = false)
+        public BoundExpression Convert(TypeSymbol type, BoundExpression arg, Conversion conversion, bool isChecked = false, SyntaxNode syntax = null)
         {
             // NOTE: We can see user-defined conversions at this point because there are places in the bound tree where
             // the binder stashes Conversion objects for later consumption (e.g. foreach, nullable, increment).
@@ -1288,7 +1295,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return this.Call(arg, this.SpecialMethod(CodeAnalysis.SpecialMember.System_Nullable_T_get_Value).AsMember((NamedTypeSymbol)arg.Type));
             }
 
-            return new BoundConversion(Syntax, arg, conversion, @checked: isChecked, explicitCastInCode: true, conversionGroupOpt: null, null, type) { WasCompilerGenerated = true };
+            return new BoundConversion(syntax ?? Syntax, arg, conversion, @checked: isChecked, explicitCastInCode: true, conversionGroupOpt: null, null, type) { WasCompilerGenerated = true };
         }
 
         public BoundExpression ArrayOrEmpty(TypeSymbol elementType, BoundExpression[] elements)

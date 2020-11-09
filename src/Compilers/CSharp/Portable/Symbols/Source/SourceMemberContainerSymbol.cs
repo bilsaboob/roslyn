@@ -2451,12 +2451,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 case TypeKind.Struct:
                     CheckForStructBadInitializers(builder, diagnostics);
                     CheckForStructDefaultConstructors(builder.NonTypeNonIndexerMembers, isEnum: false, diagnostics: diagnostics);
-                    AddSynthesizedConstructorsIfNecessary(builder.NonTypeNonIndexerMembers, builder.StaticInitializers, diagnostics);
+                    AddSynthesizedConstructorsIfNecessary(builder.NonTypeNonIndexerMembers, builder.StaticInitializers, diagnostics, TypeKind);
                     break;
 
                 case TypeKind.Enum:
                     CheckForStructDefaultConstructors(builder.NonTypeNonIndexerMembers, isEnum: true, diagnostics: diagnostics);
-                    AddSynthesizedConstructorsIfNecessary(builder.NonTypeNonIndexerMembers, builder.StaticInitializers, diagnostics);
+                    AddSynthesizedConstructorsIfNecessary(builder.NonTypeNonIndexerMembers, builder.StaticInitializers, diagnostics, TypeKind);
                     break;
 
                 case TypeKind.Class:
@@ -2464,7 +2464,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 case TypeKind.Submission:
                     // No additional checking required.
                     AddSynthesizedRecordMembersIfNecessary(builder, diagnostics);
-                    AddSynthesizedConstructorsIfNecessary(builder.NonTypeNonIndexerMembers, builder.StaticInitializers, diagnostics);
+                    AddSynthesizedConstructorsIfNecessary(builder.NonTypeNonIndexerMembers, builder.StaticInitializers, diagnostics, TypeKind);
                     break;
 
                 default:
@@ -2910,8 +2910,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     switch (meth.MethodKind)
                     {
                         case MethodKind.Constructor:
-                            diagnostics.Add(ErrorCode.ERR_InterfacesCantContainConstructors, member.Locations[0]);
-                            break;
+                            {
+                                if (!(member is SynthesizedInstanceMethodSymbol))
+                                    diagnostics.Add(ErrorCode.ERR_InterfacesCantContainConstructors, member.Locations[0]);
+                                break;
+                            }
                         case MethodKind.Conversion:
                             diagnostics.Add(ErrorCode.ERR_InterfacesCantContainConversionOrEqualityOperators, member.Locations[0]);
                             break;
@@ -3378,7 +3381,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        private void AddSynthesizedConstructorsIfNecessary(ArrayBuilder<Symbol> members, ArrayBuilder<ArrayBuilder<FieldOrPropertyInitializer.Builder>> staticInitializers, DiagnosticBag diagnostics)
+        private void AddSynthesizedConstructorsIfNecessary(ArrayBuilder<Symbol> members, ArrayBuilder<ArrayBuilder<FieldOrPropertyInitializer.Builder>> staticInitializers, DiagnosticBag diagnostics, TypeKind typeKind)
         {
             //we're not calling the helpers on NamedTypeSymbol base, because those call
             //GetMembers and we're inside a GetMembers call ourselves (i.e. stack overflow)
@@ -3421,7 +3424,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // We won't insert a parameterless constructor for a struct if there already is one.
             // We don't expect anything to be emitted, but it should be in the symbol table.
             if ((!hasParameterlessInstanceConstructor && this.IsStructType()) ||
-                (!hasInstanceConstructor && !this.IsStatic && !this.IsInterface))
+                (!hasInstanceConstructor && !this.IsStatic && !this.IsInterfaceType()))
             {
                 members.Add((this.TypeKind == TypeKind.Submission) ?
                     new SynthesizedSubmissionConstructor(this, diagnostics) :
