@@ -28,6 +28,8 @@ Microsoft.CodeAnalysis.SyntaxNodeOrToken.HasLeadingTriviaExceptSkippedTokens.get
 Microsoft.CodeAnalysis.SyntaxNodeOrToken.HasLeadingTriviaSkippedTokens.get -> bool
 Microsoft.CodeAnalysis.SyntaxNodeOrToken.TokenIndex.get -> int
 Microsoft.CodeAnalysis.SyntaxNodeOrToken.WithLeadingTrivia(System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.SyntaxTrivia> trivia, bool preservePosition = false) -> Microsoft.CodeAnalysis.SyntaxNodeOrToken
+Microsoft.CodeAnalysis.SyntaxToken.GetPreviousToken(System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> predicate, System.Func<Microsoft.CodeAnalysis.SyntaxTrivia, bool> stepInto = null) -> Microsoft.CodeAnalysis.SyntaxToken
+Microsoft.CodeAnalysis.SyntaxToken.GetPreviousTokenWhile(System.Func<Microsoft.CodeAnalysis.SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.SyntaxToken.IsNull.get -> bool
 Microsoft.CodeAnalysis.SyntaxToken.WithLeadingTrivia(System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.SyntaxTrivia> trivia, int position = 0, int index = 0) -> Microsoft.CodeAnalysis.SyntaxToken
 Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider
