@@ -40,14 +40,20 @@ namespace Microsoft.CodeAnalysis.Indentation
                 return new IndentationResult(basePosition: 0, offset: 0);
             }
 
-            if (indentStyle == FormattingOptions.IndentStyle.Smart &&
-                indenter.TryGetSmartTokenIndentation(out var indentationResult))
+            // If the indenter can't produce a valid result, just default to 0 as our indentation.
+            var indentationResult = indenter.GetDesiredIndentation(indentStyle);
+
+            if (indentationResult == null)
             {
-                if (indentationResult.Offset > 0) return indentationResult;
+                if (indentStyle == FormattingOptions.IndentStyle.Smart &&
+                    indenter.TryGetSmartTokenIndentation(out var smartIndentationResult))
+                {
+                    if (smartIndentationResult.Offset > 0)
+                        return smartIndentationResult;
+                }
             }
 
-            // If the indenter can't produce a valid result, just default to 0 as our indentation.
-            return indenter.GetDesiredIndentation(indentStyle) ?? default;
+            return indentationResult ?? default;
         }
 
         private Indenter GetIndenter(Document document, int lineNumber, FormattingOptions.IndentStyle indentStyle, CancellationToken cancellationToken)

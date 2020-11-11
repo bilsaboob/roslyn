@@ -267,6 +267,20 @@ namespace Microsoft.CodeAnalysis.Indentation
 
             public int GetCurrentPositionNotBelongToEndOfFileToken(int position)
                 => Math.Min(Root.EndOfFileToken.FullSpan.Start, position);
+
+            internal bool IsIndentedToken(SyntaxToken? token)
+            {
+                if (token == null || token.Value.IsNull) return false;
+                return LineToBeIndented.Span.OverlapsWith(token.Value.Span);
+            }
+
+            internal bool IsIndentedToken(SyntaxToken token, SyntaxToken? other)
+            {
+                if (other == null || other.Value.IsNull || token != other) return false;
+
+                // must be the line that is being targeted to be true
+                return LineToBeIndented.Span.OverlapsWith(token.Span);
+            }
         }
     }
 }

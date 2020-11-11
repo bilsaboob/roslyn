@@ -379,7 +379,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             arg = null; // do not use compilation state of outer type.
             _cancellationToken.ThrowIfCancellationRequested();
 
-            if (_compilation.Options.ConcurrentBuild)
+            var concurrent = _compilation.Options.ConcurrentBuild;
+            concurrent = false;
+            if (concurrent)
             {
                 Task worker = CompileNamedTypeAsync(symbol);
                 _compilerTasks.Push(worker);
@@ -395,16 +397,16 @@ namespace Microsoft.CodeAnalysis.CSharp
         private Task CompileNamedTypeAsync(NamedTypeSymbol symbol)
         {
             return Task.Run(UICultureUtilities.WithCurrentUICulture(() =>
+            {
+                try
                 {
-                    try
-                    {
-                        CompileNamedType(symbol);
-                    }
-                    catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
-                    {
-                        throw ExceptionUtilities.Unreachable;
-                    }
-                }), _cancellationToken);
+                    CompileNamedType(symbol);
+                }
+                catch (Exception e) when (FatalError.ReportUnlessCanceled(e))
+                {
+                    throw ExceptionUtilities.Unreachable;
+                }
+            }), _cancellationToken);
         }
 
         private void CompileNamedType(NamedTypeSymbol containingType)
@@ -476,6 +478,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case SymbolKind.Method:
                         {
                             MethodSymbol method = (MethodSymbol)member;
+
                             if (method.IsScriptConstructor)
                             {
                                 Debug.Assert(scriptCtorOrdinal == -1);

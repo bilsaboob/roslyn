@@ -615,6 +615,25 @@ namespace Microsoft.CodeAnalysis
             return SyntaxNavigator.Instance.GetNextToken(this, predicate, stepInto);
         }
 
+        public SyntaxToken GetPreviousTokenWhile(Func<SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false, bool movePast = false)
+        {
+            var current = this;
+            if (!predicate(current)) return current;
+
+            while (!current.IsNull)
+            {
+                var prev = current.GetPreviousToken(includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
+                if (!predicate(prev))
+                {
+                    if (!movePast) return current;
+                    return prev;
+                }
+                current = prev;
+            }
+
+            return current;
+        }
+
         /// <summary>
         /// Gets the token that precedes this token in the syntax tree.
         /// </summary>
@@ -636,7 +655,7 @@ namespace Microsoft.CodeAnalysis
         /// true.</param>
         /// <param name="stepInto">Delegate applied to trivia.  If this delegate is present then trailing trivia is
         /// included in the search.</param>
-        internal SyntaxToken GetPreviousToken(Func<SyntaxToken, bool> predicate, Func<SyntaxTrivia, bool>? stepInto = null)
+        public SyntaxToken GetPreviousToken(Func<SyntaxToken, bool> predicate, Func<SyntaxTrivia, bool>? stepInto = null)
         {
             return SyntaxNavigator.Instance.GetPreviousToken(this, predicate, stepInto);
         }
@@ -657,6 +676,9 @@ namespace Microsoft.CodeAnalysis
                 ? Location.None
                 : tree.GetLocation(Span);
         }
+
+        public int Line => GetLocation().GetLineSpan().StartLinePosition.Line;
+        public int Coloumn => GetLocation().GetLineSpan().StartLinePosition.Character;
 
         /// <summary>
         /// Gets a list of all the diagnostics associated with this token and any related trivia.

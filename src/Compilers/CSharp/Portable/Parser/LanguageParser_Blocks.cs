@@ -96,8 +96,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             var wasSimpleExpression = IsSimpleExpression;
             var didAllowLambdaExpression = AllowLambdaExpression;
+            var didAllowTrailingLambda = IsTrailingLambdaAllowed;
             IsSimpleExpression = simpleExpr;
             AllowLambdaExpression = !simpleExpr;
+            IsTrailingLambdaAllowed = !simpleExpr;
             try
             {
                 var exprStat = ParseExpressionStatement(attributes, semicolonRequired: semicolonRequired);
@@ -111,6 +113,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 IsSimpleExpression = wasSimpleExpression;
                 AllowLambdaExpression = didAllowLambdaExpression;
+                IsTrailingLambdaAllowed = didAllowTrailingLambda;
             }
         }
         #endregion

@@ -789,6 +789,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         public static BlockSyntax? FindInnermostCommonBlock(this IEnumerable<SyntaxNode> nodes)
             => nodes.FindInnermostCommonNode<BlockSyntax>();
 
+        public static SyntaxNode GetParentOrThis(this SyntaxNode? node, Func<SyntaxNode, bool> predicate)
+        {
+            if (node == null) return null;
+            if (predicate(node)) return node;
+            if (predicate(node.Parent)) return node.Parent;
+            return null;
+        }
+
         public static SyntaxNode GetAncestorOrThis(this SyntaxNode? node, Func<SyntaxNode, bool> predicate)
         {
             return node.GetAncestorsOrThis(predicate).FirstOrDefault();
@@ -803,6 +811,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
                 {
                     yield return current;
                 }
+
+                current = current.Parent;
+            }
+        }
+
+        public static SyntaxNode GetTopAncestorOrThisWhile(this SyntaxNode? node, Func<SyntaxNode, bool> predicate)
+        {
+            return node.GetAncestorsOrThisWhile(predicate).LastOrDefault();
+        }
+
+        public static IEnumerable<SyntaxNode> GetAncestorsOrThisWhile(this SyntaxNode? node, Func<SyntaxNode, bool> predicate)
+        {
+            var current = node;
+            while (current != null)
+            {
+                if (!predicate(current))
+                {
+                    yield break;
+                }
+
+                yield return current;
 
                 current = current.Parent;
             }

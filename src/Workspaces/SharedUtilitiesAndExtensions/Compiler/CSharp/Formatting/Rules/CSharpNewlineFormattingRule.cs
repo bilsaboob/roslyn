@@ -21,13 +21,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             var prevToken = currentToken.GetPreviousToken(includeZeroWidth: false, includeSkipped: false);
             var nextToken = currentToken.GetNextToken(includeZeroWidth: false, includeSkipped: false);
 
-            var op = EvalNewline(prevToken, currentToken, nextToken);
+            var op = EvalNewlineForSemantics(prevToken, currentToken, nextToken);
             if (op != null) return op;
 
-            return base.GetAdjustNewLinesOperation(previousToken, currentToken, nextOperation);
+            op = EvalNewlineForBraces(previousToken, currentToken, nextToken);
+            if (op != null) return op;
+
+            op = base.GetAdjustNewLinesOperation(previousToken, currentToken, nextOperation);
+            return op;
         }
 
-        private AdjustNewLinesOperation EvalNewline(SyntaxToken prevToken, SyntaxToken currentToken, SyntaxToken nextToken)
+        private AdjustNewLinesOperation EvalNewlineForBraces(SyntaxToken previousToken, SyntaxToken currentToken, SyntaxToken nextToken)
+        {
+            if (currentToken.IsKind(
+                SyntaxKind.OpenBraceToken, SyntaxKind.CloseBraceToken,
+                SyntaxKind.OpenBracketToken, SyntaxKind.CloseBracketToken,
+                SyntaxKind.OpenParenToken, SyntaxKind.CloseParenToken,
+                SyntaxKind.LessThanToken, SyntaxKind.GreaterThanToken
+                ))
+            {
+                // don't adjust anything for brace pairs
+                return Newlines(0, AdjustNewLinesOption.PreserveLines);
+            }
+
+            return null;
+        }
+
+        private AdjustNewLinesOperation EvalNewlineForSemantics(SyntaxToken prevToken, SyntaxToken currentToken, SyntaxToken nextToken)
         {
             var currentNode = currentToken.Parent?.FirstAncestorOrSelf(n => n is UsingDirectiveSyntax || n is TypeDeclarationSyntax || n is NamespaceDeclarationSyntax);
 

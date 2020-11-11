@@ -341,6 +341,42 @@ namespace Microsoft.CodeAnalysis.CSharp
             return base.GetFirstToken(includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
         }
 
+        public SyntaxToken GetFirstTokenOrFirstPrevious(SyntaxToken untilToken, bool includeZeroWidth = true, bool includeSkipped = true, bool includeDirectives = false, bool includeDocumentationComments = false, bool includeSelf = true)
+        {
+            var firstToken = GetFirstToken(includeZeroWidth: includeZeroWidth, includeSkipped: includeSkipped, includeDirectives, includeDocumentationComments);
+            if (!firstToken.IsNull)
+            {
+                if (includeSelf)
+                {
+                    if (firstToken.SpanStart <= untilToken.SpanStart)
+                        return firstToken;
+                }
+                else
+                {
+                    if (firstToken.SpanStart < untilToken.SpanStart)
+                        return firstToken;
+                }
+            }
+            else
+            {
+                firstToken = untilToken;
+            }
+
+            // find the first previous token!
+            while (!firstToken.IsNull)
+            {
+                firstToken = firstToken.GetPreviousToken();
+
+                if (!includeZeroWidth && firstToken.Width == 0)
+                    continue;
+
+                if (firstToken.SpanStart < SpanStart)
+                    break;
+            }
+
+            return firstToken;
+        }
+
         /// <summary>
         /// Gets the first token of the tree rooted by this node.
         /// </summary>
@@ -368,6 +404,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return base.GetLastToken(includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
         }
+
+        public int Line => GetLocation().GetLineSpan().StartLinePosition.Line;
+        public int Coloumn => GetLocation().GetLineSpan().StartLinePosition.Character;
 
         /// <summary>
         /// Finds a token according to the following rules:
