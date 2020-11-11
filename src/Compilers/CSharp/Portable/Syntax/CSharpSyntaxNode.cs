@@ -405,6 +405,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             return base.GetLastToken(includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
         }
 
+        public int Line => GetLocation().GetLineSpan().StartLinePosition.Line;
+        public int Coloumn => GetLocation().GetLineSpan().StartLinePosition.Character;
+
         /// <summary>
         /// Finds a token according to the following rules:
         /// 1) If position matches the End of the node/s FullSpan and the node is CompilationUnit,

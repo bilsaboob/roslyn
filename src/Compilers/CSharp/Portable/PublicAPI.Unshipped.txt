@@ -1,5 +1,7 @@
 Microsoft.CodeAnalysis.CSharp.BoundConversionSyntaxNodeExtensions
+Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.Coloumn.get -> int
 Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.GetFirstTokenOrFirstPrevious(Microsoft.CodeAnalysis.SyntaxToken untilToken, bool includeZeroWidth = true, bool includeSkipped = true, bool includeDirectives = false, bool includeDocumentationComments = false, bool includeSelf = true) -> Microsoft.CodeAnalysis.SyntaxToken
+Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode.Line.get -> int
 Microsoft.CodeAnalysis.CSharp.Conversion.IsConditionalExpression.get -> bool
 Microsoft.CodeAnalysis.CSharp.Symbols.SpreadParamHelpers
 Microsoft.CodeAnalysis.CSharp.Symbols.TypeCache

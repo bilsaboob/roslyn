@@ -615,7 +615,7 @@ namespace Microsoft.CodeAnalysis
             return SyntaxNavigator.Instance.GetNextToken(this, predicate, stepInto);
         }
 
-        public SyntaxToken GetPreviousTokenWhile(Func<SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false)
+        public SyntaxToken GetPreviousTokenWhile(Func<SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false, bool movePast = false)
         {
             var current = this;
             if (!predicate(current)) return current;
@@ -623,7 +623,11 @@ namespace Microsoft.CodeAnalysis
             while (!current.IsNull)
             {
                 var prev = current.GetPreviousToken(includeZeroWidth, includeSkipped, includeDirectives, includeDocumentationComments);
-                if (!predicate(prev)) return current;
+                if (!predicate(prev))
+                {
+                    if (!movePast) return current;
+                    return prev;
+                }
                 current = prev;
             }
 
@@ -672,6 +676,9 @@ namespace Microsoft.CodeAnalysis
                 ? Location.None
                 : tree.GetLocation(Span);
         }
+
+        public int Line => GetLocation().GetLineSpan().StartLinePosition.Line;
+        public int Coloumn => GetLocation().GetLineSpan().StartLinePosition.Character;
 
         /// <summary>
         /// Gets a list of all the diagnostics associated with this token and any related trivia.

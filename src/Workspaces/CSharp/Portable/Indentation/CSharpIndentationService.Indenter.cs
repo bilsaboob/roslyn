@@ -310,6 +310,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                     case SyntaxKind.RemoveAccessorDeclaration:
                     case SyntaxKind.InitAccessorDeclaration:
                     case SyntaxKind.UnknownAccessorDeclaration:
+                    // parameters
+                    case SyntaxKind.Parameter:
+                    case SyntaxKind.ParameterList:
                     // lambdas
                     case SyntaxKind.SimpleLambdaExpression:
                     case SyntaxKind.ParenthesizedLambdaExpression:
@@ -374,6 +377,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
 
                     result = GetIndentationFromBodyNode(indenter, methodDecl, token);
                     if (result != null) return result;
+                }
+                else if (containerSyntax is ParameterSyntax param)
+                {
+                    var paramsList = token.GetAncestor(n => n is ParameterListSyntax) as ParameterListSyntax;
+                    return GetIndentationFromParamsList(indenter, param, paramsList, token);
+                }
+                else if (containerSyntax is ParameterListSyntax paramsList)
+                {
+                    // indent relative to the "previous parameter" otherwise
+                    var paramOrList = token.GetAncestor(n => n is ParameterSyntax || n is ParameterListSyntax);
+                    if (paramOrList is ParameterSyntax p)
+                        return GetIndentationFromParamsList(indenter, p, paramsList, token);
+
+                    return GetIndentationFromParamsList(indenter, null, paramsList, token);
                 }
                 else if (containerSyntax is TypeDeclarationSyntax typeDecl)
                 {
@@ -547,6 +564,83 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
             }
 
             return null;
+        }
+
+        private static IndentationResult? GetIndentationFromParamsList(Indenter indenter, ParameterSyntax param, ParameterListSyntax paramsList, SyntaxToken token)
+        {
+            if (indenter.IsIndentedToken(token, paramsList.OpenParenToken))
+            {
+                // on the open paren, indent based on the start of the params list without indentation... its generally a "bad construct"... but anyway...
+                var beforeListToken = paramsList.GetFirstTokenOrFirstPrevious(paramsList.OpenParenToken, includeSelf: false);
+                return GetIndentationFromTokenLine(indenter, beforeListToken, 0);
+            }
+
+            if (indenter.IsIndentedToken(token, paramsList.CloseParenToken))
+            {
+                // on the close paren, indent based on the start of the params list without indentation
+                return GetIndentationFromTokenLine(indenter, paramsList.OpenParenToken, 0);
+            }
+
+            if (token.IsKind(SyntaxKind.CommaToken))
+            {
+                // we are at a comma... so indent relative to the previous param
+                var prevParamToken = token.GetPreviousTokenWhile(t => t.IsKind(SyntaxKind.CommaToken), movePast: true);
+                return GetIndentationFromParam(indenter, paramsList, prevParamToken);
+            }
+
+            //if empty... then indent based on the open paren
+            if (paramsList.Parameters.Count == 0)
+                return GetIndentationFromTokenLine(indenter, paramsList.OpenParenToken);
+
+            if (param != null)
+            {
+                var paramFirstToken = param.GetFirstToken();
+                return GetIndentationFromParam(indenter, paramsList, paramFirstToken);
+            }
+
+            return GetIndentationFromParam(indenter, paramsList, token);
+        }
+
+        private static IndentationResult? GetIndentationFromParam(Indenter indenter, ParameterListSyntax paramsList, SyntaxToken paramToken)
+        {
+            // if the prev param is on same line as the first param of the list... align with the first parameter
+            var firstParamToken = paramsList.Parameters.FirstOrDefault()?.GetFirstToken();
+            if (firstParamToken != null && firstParamToken?.Line == paramToken.Line)
+            {
+                if (firstParamToken == paramToken)
+                {
+                    // we need to indent relative to the open paren
+                    return GetIndentationFromTokenLine(indenter, paramsList.OpenParenToken);
+                }
+
+                // align with the first parameter
+                return GetIndentationFromToken(indenter, firstParamToken.Value, 0);
+            }
+
+            // find the parameter and try indentig relative to that
+            var paramIndex = paramsList.Parameters.IndexOf(p => p.Span.Contains(paramToken.Span));
+            if (paramIndex != -1)
+            {
+                if (paramIndex == 0)
+                    return GetIndentationFromTokenLine(indenter, paramsList.OpenParenToken);
+
+                // indent relative to the previous parameter however align with the first token on that line!
+                var prevParam = paramsList.Parameters[paramIndex - 1];
+                var prevParamFirstToken = prevParam.GetFirstToken();
+
+                SyntaxToken? firstTokenOnPrevParamLine = prevParamFirstToken;
+                if (!prevParamFirstToken.IsFirstTokenOnLine())
+                    firstTokenOnPrevParamLine = prevParamFirstToken.FindFirstTokenOnLine();
+
+                // use the first param token if it's not within the params list
+                if (firstTokenOnPrevParamLine != null && !paramsList.Span.Contains(firstTokenOnPrevParamLine.Value.Span))
+                    firstTokenOnPrevParamLine = firstParamToken;
+
+                return GetIndentationFromToken(indenter, firstTokenOnPrevParamLine ?? prevParamFirstToken, 0);
+            }
+
+            // not sure what to align with... simply align with the previous parameter token
+            return GetIndentationFromToken(indenter, paramToken, 0);
         }
 
         private static IndentationResult? GetIndentationFromTopExpression(Indenter indenter, SyntaxToken token, bool? align = null, int? alignSpace = null)
