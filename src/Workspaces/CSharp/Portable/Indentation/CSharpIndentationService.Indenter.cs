@@ -313,6 +313,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                     // parameters
                     case SyntaxKind.Parameter:
                     case SyntaxKind.ParameterList:
+                    // call args
+                    case SyntaxKind.Argument:
+                    case SyntaxKind.ArgumentList:
                     // lambdas
                     case SyntaxKind.SimpleLambdaExpression:
                     case SyntaxKind.ParenthesizedLambdaExpression:
@@ -391,6 +394,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                         return GetIndentationFromParamsList(indenter, p, paramsList, token);
 
                     return GetIndentationFromParamsList(indenter, null, paramsList, token);
+                }
+                else if (containerSyntax is ArgumentSyntax arg)
+                {
+                    var argsList = token.GetAncestor(n => n is ArgumentListSyntax) as ArgumentListSyntax;
+                    return GetIndentationFromArgsList(indenter, arg, argsList, token);
+                }
+                else if (containerSyntax is ArgumentListSyntax argsList)
+                {
+                    // indent relative to the "previous parameter" otherwise
+                    var argOrList = token.GetAncestor(n => n is ArgumentSyntax || n is ArgumentListSyntax);
+                    if (argOrList is ArgumentSyntax a)
+                        return GetIndentationFromArgsList(indenter, a, argsList, token);
+
+                    return GetIndentationFromArgsList(indenter, null, argsList, token);
                 }
                 else if (containerSyntax is TypeDeclarationSyntax typeDecl)
                 {
@@ -641,6 +658,83 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
 
             // not sure what to align with... simply align with the previous parameter token
             return GetIndentationFromToken(indenter, paramToken, 0);
+        }
+
+        private static IndentationResult? GetIndentationFromArgsList(Indenter indenter, ArgumentSyntax arg, ArgumentListSyntax argsList, SyntaxToken token)
+        {
+            if (indenter.IsIndentedToken(token, argsList.OpenParenToken))
+            {
+                // on the open paren, indent based on the start of the args list without indentation... its generally a "bad construct"... but anyway...
+                var beforeListToken = argsList.GetFirstTokenOrFirstPrevious(argsList.OpenParenToken, includeSelf: false);
+                return GetIndentationFromTokenLine(indenter, beforeListToken, 0);
+            }
+
+            if (indenter.IsIndentedToken(token, argsList.CloseParenToken))
+            {
+                // on the close paren, indent based on the start of the args list without indentation
+                return GetIndentationFromTokenLine(indenter, argsList.OpenParenToken, 0);
+            }
+
+            if (token.IsKind(SyntaxKind.CommaToken))
+            {
+                // we are at a comma... so indent relative to the previous param
+                var prevParamToken = token.GetPreviousTokenWhile(t => t.IsKind(SyntaxKind.CommaToken), movePast: true);
+                return GetIndentationFromArg(indenter, argsList, prevParamToken);
+            }
+
+            //if empty... then indent based on the open paren
+            if (argsList.Arguments.Count == 0)
+                return GetIndentationFromTokenLine(indenter, argsList.OpenParenToken);
+
+            if (arg != null)
+            {
+                var paramFirstToken = arg.GetFirstToken();
+                return GetIndentationFromArg(indenter, argsList, paramFirstToken);
+            }
+
+            return GetIndentationFromArg(indenter, argsList, token);
+        }
+
+        private static IndentationResult? GetIndentationFromArg(Indenter indenter, ArgumentListSyntax argsList, SyntaxToken argToken)
+        {
+            // if the prev param is on same line as the first param of the list... align with the first parameter
+            var firstArgToken = argsList.Arguments.FirstOrDefault()?.GetFirstToken();
+            if (firstArgToken != null && firstArgToken?.Line == argToken.Line)
+            {
+                if (firstArgToken == argToken)
+                {
+                    // we need to indent relative to the open paren
+                    return GetIndentationFromTokenLine(indenter, argsList.OpenParenToken);
+                }
+
+                // align with the first parameter
+                return GetIndentationFromToken(indenter, firstArgToken.Value, 0);
+            }
+
+            // find the parameter and try indentig relative to that
+            var argIndex = argsList.Arguments.IndexOf(p => p.Span.Contains(argToken.Span));
+            if (argIndex != -1)
+            {
+                if (argIndex == 0)
+                    return GetIndentationFromTokenLine(indenter, argsList.OpenParenToken);
+
+                // indent relative to the previous argument however align with the first token on that line!
+                var prevArg = argsList.Arguments[argIndex - 1];
+                var prevArgFirstToken = prevArg.GetFirstToken();
+
+                SyntaxToken? firstTokeOnPrevArgLine = prevArgFirstToken;
+                if (!prevArgFirstToken.IsFirstTokenOnLine())
+                    firstTokeOnPrevArgLine = prevArgFirstToken.FindFirstTokenOnLine();
+
+                // use the first arg token if it's not within the args list
+                if (firstTokeOnPrevArgLine != null && !argsList.Span.Contains(firstTokeOnPrevArgLine.Value.Span))
+                    firstTokeOnPrevArgLine = firstArgToken;
+
+                return GetIndentationFromToken(indenter, firstTokeOnPrevArgLine ?? prevArgFirstToken, 0);
+            }
+
+            // not sure what to align with... simply align with the previous arg token
+            return GetIndentationFromToken(indenter, argToken, 0);
         }
 
         private static IndentationResult? GetIndentationFromTopExpression(Indenter indenter, SyntaxToken token, bool? align = null, int? alignSpace = null)
