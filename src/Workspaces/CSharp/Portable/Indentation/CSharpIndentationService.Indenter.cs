@@ -120,18 +120,35 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
 
         private static IndentationResult? GetIndentationForArrowToken(Indenter indenter, SyntaxToken token, SyntaxToken prevToken)
         {
-            var isTokenArrow = token.IsNull == false && token.IsKind(SyntaxKind.EqualsGreaterThanToken) == true;
+            var isTokenArrow = !token.IsNull && token.IsKind(SyntaxKind.EqualsGreaterThanToken);
             if (isTokenArrow)
             {
                 // always adjust indentation according to the previous token if the current is an "=>"
                 return GetIndentationFromTokenLine(indenter, prevToken);
             }
 
-            var isPrevTokenArrow = prevToken.IsNull == false && prevToken.IsKind(SyntaxKind.EqualsGreaterThanToken) == true;
+            var isPrevTokenArrow = !prevToken.IsNull && prevToken.IsKind(SyntaxKind.EqualsGreaterThanToken);
             if (isPrevTokenArrow)
             {
                 // always adjust indentation according to the previous "=>" 
                 return GetIndentationFromTokenLine(indenter, prevToken);
+            }
+
+            // check if the previous "skipped" token is an arrow "=>"?... for error recovery scenarios...
+            var prevSkippedToken = token.GetPreviousToken(includeSkipped: true);
+            var isPrevSkippedTokenArrow = !prevSkippedToken.IsNull && prevSkippedToken.IsKind(SyntaxKind.EqualsGreaterThanToken);
+            if (isPrevSkippedTokenArrow)
+            {
+                if (indenter.IsIndentedToken(prevSkippedToken))
+                {
+                    // on the same line as the line that is being indented ... so it's actually the "next token"
+                    return GetIndentationFromTokenLine(indenter, prevToken);
+                }
+                else
+                {
+                    // always adjust indentation according to the previous "=>" 
+                    return GetIndentationFromTokenLine(indenter, prevSkippedToken);
+                }
             }
 
             return null;
@@ -394,18 +411,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                 }
                 else if (containerSyntax is TryStatementSyntax tryStat)
                 {
-                    var firstBlockToken = tryStat.GetFirstTokenOrFirstPrevious(tryStat.TryKeyword);
+                    var firstBlockToken = tryStat.GetFirstTokenOrFirstPrevious(tryStat.TryKeyword, includeSelf: false);
 
                     // try keyword
                     if (indenter.IsIndentedToken(token, tryStat.TryKeyword))
-                        return GetIndentationFromTokenLine(indenter, firstBlockToken);
+                        return GetIndentationFromNodeLine(indenter, tryStat, tryStat.TryKeyword, 0);
 
                     // try indentation on any of the try statement blocks
                     result = GetIndentationFromBlockNode(indenter, tryStat.Block, token);
                     if (result != null) return result;
 
                     // finally
-                    if (tryStat.Finally.Span.Contains(token.Span))
+                    if (tryStat.Finally?.Span.Contains(token.Span) == true)
                     {
                         // finally keyword
                         if (indenter.IsIndentedToken(token, tryStat.Finally?.FinallyKeyword))
@@ -420,7 +437,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                     }
 
                     // catch blocks
-                    if (tryStat.Catches.Span.Contains(token.Span))
+                    if (tryStat.Catches.Span.Contains(token.Span) == true)
                     {
                         // try indentation based on any of the catch blocks
                         result = GetIndentationFromAny(indenter, tryStat.Catches, token, n => {
@@ -711,6 +728,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
         private static IndentationResult? GetIndentationFromBlockNode(Indenter indenter, BlockSyntax block, SyntaxToken token)
         {
             if (block == null) return null;
+            if (!block.Span.Contains(token.Span)) return null;
 
             return GetIndentationFromBlock(indenter, block, block.OpenBraceToken, block.CloseBraceToken, token);
         }
