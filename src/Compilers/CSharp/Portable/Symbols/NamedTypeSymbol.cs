@@ -50,6 +50,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         public abstract ImmutableArray<TypeParameterSymbol> TypeParameters { get; }
 
+        public override bool IsDefinition
+        {
+            get
+            {
+                if (base.IsDefinition) return true;
+
+                if (AnnotationTypeKind == TypeAnnotationKind.OriginalType && !(AnnotationType is null))
+                    return AnnotationType.IsDefinition;
+
+                return false;
+            }
+        }
+
         /// <summary>
         /// Returns the type arguments that have been substituted for the type parameters. 
         /// If nothing has been substituted for a give type parameters,

@@ -1548,7 +1548,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 return false;
             }
-            if ((object)namedType == compilation.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task))
+            if (compilation.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task).Equals(namedType))
             {
                 return true;
             }
@@ -1565,7 +1565,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 return false;
             }
-            if ((object)namedType.ConstructedFrom == compilation.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task_T))
+            if (compilation.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task_T).Equals((object)namedType.ConstructedFrom))
             {
                 return true;
             }
@@ -1579,7 +1579,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return false;
             }
 
-            return (object)namedType.ConstructedFrom == compilation.GetWellKnownType(WellKnownType.System_Collections_Generic_IAsyncEnumerable_T);
+            return compilation.GetWellKnownType(WellKnownType.System_Collections_Generic_IAsyncEnumerable_T).Equals((object)namedType.ConstructedFrom);
         }
 
         internal static bool IsIAsyncEnumeratorType(this TypeSymbol type, CSharpCompilation compilation)
@@ -1589,7 +1589,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return false;
             }
 
-            return (object)namedType.ConstructedFrom == compilation.GetWellKnownType(WellKnownType.System_Collections_Generic_IAsyncEnumerator_T);
+            return compilation.GetWellKnownType(WellKnownType.System_Collections_Generic_IAsyncEnumerator_T).Equals((object)namedType.ConstructedFrom);
         }
 
         /// <summary>

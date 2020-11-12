@@ -274,7 +274,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Returns true if this is the original definition of this symbol.
         /// </summary>
-        public bool IsDefinition
+        public virtual bool IsDefinition
         {
             get
             {
