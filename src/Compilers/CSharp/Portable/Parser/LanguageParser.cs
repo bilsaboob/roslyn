@@ -11833,13 +11833,37 @@ tryAgain:
             Precedence? precedence = null
         )
         {
+            return ParseWithExpressionOptions(
+                isSimpleExpr: isSimpleExpr,
+                isSimpleAssignment: isSimpleAssignment,
+                allowTrailingLambda: allowTrailingLambda,
+                allowBinaryRelationExpr: allowBinaryRelationExpr,
+                allowIsExpr: allowIsExpr,
+                parse: () => ParseSubExpression(precedence ?? Precedence.Expression)
+            );
+        }
+
+        private T ParseWithExpressionOptions<T>(
+            bool? isSimpleExpr = null,
+            bool? isSimpleAssignment = null,
+            bool? allowTrailingLambda = null,
+            bool? allowBinaryRelationExpr = null,
+            bool? allowIsExpr = null,
+            Func<T> parse = null
+            )
+        {
             var wasSimpleExpression = IsSimpleExpression;
             var wasSimpleAssignment = IsSimpleAssignment;
             var wasTrailingLambdaAllowed = IsTrailingLambdaAllowed;
             var wasBinaryRelationExprAllowed = IsBinaryRelationExpressionAllowed;
             var wasIsExprAllowed = IsIsExpressionAllowed;
+            var wasLambdaAllowed = AllowLambdaExpression;
 
-            if (isSimpleExpr != null) IsSimpleExpression = isSimpleExpr.Value;
+            if (isSimpleExpr != null)
+            {
+                IsSimpleExpression = isSimpleExpr.Value;
+                AllowLambdaExpression = !isSimpleExpr.Value;
+            }
             if (isSimpleAssignment != null) IsSimpleAssignment = isSimpleAssignment.Value;
             if (allowTrailingLambda != null) IsTrailingLambdaAllowed = allowTrailingLambda.Value;
             if (allowBinaryRelationExpr != null) IsBinaryRelationExpressionAllowed = allowBinaryRelationExpr.Value;
@@ -11847,7 +11871,8 @@ tryAgain:
 
             try
             {
-                return this.ParseSubExpression(precedence ?? Precedence.Expression);
+                if (parse == null) return default(T);
+                return parse();
             }
             finally
             {
@@ -11856,6 +11881,7 @@ tryAgain:
                 IsIsExpressionAllowed = wasIsExprAllowed;
                 IsBinaryRelationExpressionAllowed = wasBinaryRelationExprAllowed;
                 IsSimpleAssignment = wasSimpleAssignment;
+                AllowLambdaExpression = wasLambdaAllowed;
             }
         }
 
@@ -13202,12 +13228,23 @@ tryAgain:
                 return (ArgumentListSyntax)this.EatNode();
             }
 
-            ParseArgumentList(
-                    openToken: out SyntaxToken openToken,
-                    arguments: out SeparatedSyntaxList<ArgumentSyntax> arguments,
-                    closeToken: out SyntaxToken closeToken,
+            SyntaxToken openToken = null;
+            SyntaxToken closeToken = null;
+
+            // always enable "everything" inside argument list
+            var arguments = ParseWithExpressionOptions(
+                isSimpleExpr: false,
+                isSimpleAssignment: false,
+                allowTrailingLambda: true,
+                allowBinaryRelationExpr: true,
+                allowIsExpr: true,
+                parse: () => ParseArgumentList(
+                    openToken: out openToken,
+                    arguments: out _,
+                    closeToken: out closeToken,
                     openKind: SyntaxKind.OpenParenToken,
-                    closeKind: SyntaxKind.CloseParenToken);
+                    closeKind: SyntaxKind.CloseParenToken)
+            );
 
             ParenthesizedLambdaExpressionSyntax? trailingBlockArg = null;
 
@@ -13227,16 +13264,28 @@ tryAgain:
                 return (BracketedArgumentListSyntax)this.EatNode();
             }
 
-            ParseArgumentList(
-                openToken: out SyntaxToken openToken,
-                arguments: out SeparatedSyntaxList<ArgumentSyntax> arguments,
-                closeToken: out SyntaxToken closeToken,
-                openKind: SyntaxKind.OpenBracketToken,
-                closeKind: SyntaxKind.CloseBracketToken);
+            SyntaxToken openToken = null;
+            SyntaxToken closeToken = null;
+
+            // always enable "everything" inside argument list
+            var arguments = ParseWithExpressionOptions(
+                isSimpleExpr: false,
+                isSimpleAssignment: false,
+                allowTrailingLambda: true,
+                allowBinaryRelationExpr: true,
+                allowIsExpr: true,
+                parse: () => ParseArgumentList(
+                    openToken: out openToken,
+                    arguments: out _,
+                    closeToken: out closeToken,
+                    openKind: SyntaxKind.OpenBracketToken,
+                    closeKind: SyntaxKind.CloseBracketToken)
+            );
+
             return _syntaxFactory.BracketedArgumentList(openToken, arguments, closeToken);
         }
 
-        private void ParseArgumentList(
+        private SeparatedSyntaxList<ArgumentSyntax> ParseArgumentList(
             out SyntaxToken openToken,
             out SeparatedSyntaxList<ArgumentSyntax> arguments,
             out SyntaxToken closeToken,
@@ -13354,6 +13403,8 @@ tryAgain:
                     _pool.Free(list);
                 }
             }
+
+            return arguments;
         }
 
         private PostSkipAction SkipBadArgumentListTokens(ref SyntaxToken open, SeparatedSyntaxListBuilder<ArgumentSyntax> list, SyntaxKind expected, SyntaxKind closeKind, bool allowBinaryExpressions = true, bool allowAssignmentExpressions = true)
