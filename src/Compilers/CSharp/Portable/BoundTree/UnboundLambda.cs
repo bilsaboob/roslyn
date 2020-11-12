@@ -482,7 +482,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public abstract bool HasSignature { get; }
         public abstract bool HasExplicitlyTypedParameterList { get; }
         public abstract int ParameterCount { get; }
-        public abstract bool IsAsync { get; }
+        public abstract bool IsAsync { get; set; }
         public abstract bool HasNames { get; }
         public abstract bool IsStatic { get; }
         public abstract Location ParameterLocation(int index);
@@ -640,6 +640,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                     thisParameterIndex);
                 lambdaBodyBinder = new ExecutableCodeBinder(_unboundLambda.Syntax, lambdaSymbol, ParameterBinder(lambdaSymbol, Binder));
                 block = BindLambdaBody(lambdaSymbol, lambdaBodyBinder, diagnostics);
+
+                if (returnType.Type.IsAsyncTaskType(compilation) && !IsAsync)
+                {
+                    // make this lambda an async lambda per default
+                    if (!Symbols.Source.Helpers.CodeBlockExitPathsFinder.HasAnyTaskReturnTypes(block, compilation))
+                    {
+                        IsAsync = true;
+                        lambdaSymbol._isAsync = true;
+                    }
+                }
             }
 
             if (lambdaSymbol.RefKind == CodeAnalysis.RefKind.RefReadOnly)
@@ -1228,7 +1238,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private readonly ImmutableArray<bool> _parameterIsDiscardOpt;
         private readonly ImmutableArray<TypeWithAnnotations> _parameterTypesWithAnnotations;
         private readonly ImmutableArray<RefKind> _parameterRefKinds;
-        private readonly bool _isAsync;
+        private bool _isAsync;
         private readonly bool _isStatic;
 
         internal PlainUnboundLambdaState(
@@ -1259,7 +1269,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override int ParameterCount { get { return _parameterNames.IsDefault ? 0 : _parameterNames.Length; } }
 
-        public override bool IsAsync { get { return _isAsync; } }
+        public override bool IsAsync { get { return _isAsync; } set { _isAsync = value; } }
 
         public override bool IsStatic => _isStatic;
 

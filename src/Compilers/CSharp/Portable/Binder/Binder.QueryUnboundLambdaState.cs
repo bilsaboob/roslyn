@@ -33,7 +33,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             public override bool HasSignature { get { return true; } }
             public override bool HasExplicitlyTypedParameterList { get { return false; } }
             public override int ParameterCount { get { return _parameters.Length; } }
-            public override bool IsAsync { get { return false; } }
+            public override bool IsAsync { get { return false; } set { } }
             public override bool IsStatic => false;
             public override RefKind RefKind(int index) { return Microsoft.CodeAnalysis.RefKind.None; }
             public override MessageID MessageID { get { return MessageID.IDS_FeatureQueryExpression; } } // TODO: what is the correct ID here?
