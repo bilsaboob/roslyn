@@ -26,6 +26,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Source.Helpers
             visitor.Visit(node);
         }
 
+        public static bool HasAnyTaskReturnTypes(BoundNode node, CSharpCompilation compilation)
+        {
+            var exitPaths = ArrayBuilder<(BoundNode, TypeWithAnnotations?)>.GetInstance();
+            try
+            {
+                var visitor = new CodeBlockExitPathsFinder(exitPaths);
+                visitor.Visit(node);
+                return exitPaths.Any(p => p.Item2.HasValue && p.Item2.Value.Type?.IsAsyncTaskType(compilation) == true);
+            }
+            finally
+            {
+                exitPaths.Free();
+            }
+        }
+
         public override BoundNode Visit(BoundNode node)
         {
             if (!(node is BoundExpression))

@@ -21,7 +21,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private RefKind _refKind;
         private TypeWithAnnotations _returnType;
         private readonly bool _isSynthesized;
-        private readonly bool _isAsync;
+        internal bool _isAsync;
         private readonly bool _isStatic;
         private readonly int _thisParamIndex;
 

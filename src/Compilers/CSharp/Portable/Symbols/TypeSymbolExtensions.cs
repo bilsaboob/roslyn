@@ -1908,6 +1908,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 !returnType.IsIAsyncEnumeratorType(declaringCompilation);
         }
 
+        public static bool IsAsyncTaskType(this TypeSymbol type, CSharpCompilation declaringCompilation)
+        {
+            // Note: we're passing the return type explicitly (rather than using `method.ReturnType`) to avoid cycles
+            return type.IsNonGenericTaskType(declaringCompilation) ||
+                type.IsGenericTaskType(declaringCompilation) ||
+                type.IsIAsyncEnumerableType(declaringCompilation) ||
+                type.IsIAsyncEnumeratorType(declaringCompilation);
+        }
+
         internal static int TypeToIndex(this TypeSymbol type)
         {
             switch (type.GetSpecialTypeSafe())
