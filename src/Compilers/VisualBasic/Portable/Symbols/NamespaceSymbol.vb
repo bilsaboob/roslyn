@@ -590,6 +590,12 @@ Done:
             End Get
         End Property
 
+        Public ReadOnly Property GlobalMembersContainerType As ITypeSymbol Implements INamespaceSymbol.GlobalMembersContainerType
+            Get
+                Return Nothing
+            End Get
+        End Property
+
 #End Region
     End Class
 End Namespace
