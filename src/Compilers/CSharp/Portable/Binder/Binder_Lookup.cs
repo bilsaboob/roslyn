@@ -1216,6 +1216,23 @@ symIsHidden:;
 
         internal static ImmutableArray<Symbol> GetCandidateMembers(NamespaceOrTypeSymbol nsOrType, string name, LookupOptions options, Binder originalBinder)
         {
+            var results = GetCandidateMembers_(nsOrType, name, options, originalBinder);
+
+            if (nsOrType is NamespaceSymbol nsSymbol)
+            {
+                var globalMembersType = nsSymbol.GlobalMembersContainerType;
+                if (!(globalMembersType is null))
+                {
+                    var globalsResults = GetCandidateMembers_(globalMembersType, name, options, originalBinder);
+                    results = results.AddRange(globalsResults);
+                }
+            }
+
+            return results;
+        }
+
+        internal static ImmutableArray<Symbol> GetCandidateMembers_(NamespaceOrTypeSymbol nsOrType, string name, LookupOptions options, Binder originalBinder)
+        {
             if ((options & LookupOptions.NamespacesOrTypesOnly) != 0 && nsOrType is TypeSymbol)
             {
                 return nsOrType.GetTypeMembers(name).Cast<NamedTypeSymbol, Symbol>();
@@ -1235,6 +1252,23 @@ symIsHidden:;
         }
 
         internal static ImmutableArray<Symbol> GetCandidateMembers(NamespaceOrTypeSymbol nsOrType, LookupOptions options, Binder originalBinder)
+        {
+            var results = GetCandidateMembers_(nsOrType, options, originalBinder);
+
+            if (nsOrType is NamespaceSymbol nsSymbol)
+            {
+                var globalMembersType = nsSymbol.GlobalMembersContainerType;
+                if (!(globalMembersType is null))
+                {
+                    var globalsResults = GetCandidateMembers_(globalMembersType, options, originalBinder);
+                    results = results.AddRange(globalsResults);
+                }
+            }
+
+            return results;
+        }
+
+        internal static ImmutableArray<Symbol> GetCandidateMembers_(NamespaceOrTypeSymbol nsOrType, LookupOptions options, Binder originalBinder)
         {
             if ((options & LookupOptions.NamespacesOrTypesOnly) != 0 && nsOrType is TypeSymbol)
             {
