@@ -1545,26 +1545,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (expression is null)
                 {
                     // try also to resolve extension methods rather than returning an error immediately
-                    if (tryResolveExtensionMethods && (object)this.ContainingType != null)
+                    if (tryResolveExtensionMethods)
                     {
-                        // for extension methods... use an implicit receiver... since we didn't really have the "this" in syntax...
-                        var thisExprSyntax = SyntaxFactory.ThisExpression();
-                        var thisBoundNode = BindExpression(thisExprSyntax, diagnostics);
+                        var boundExtensionMethod = TryBindIdentifierAsImplicitExtensionMethod(
+                            node,
+                            typeArgumentsWithAnnotations,
+                            name,
+                            lookupResult,
+                            diagnostics
+                        );
 
-                        if ((object)thisBoundNode != null && (object)thisBoundNode.Type != null)
-                        {
-                            var flags = BoundMethodGroupFlags.HasImplicitReceiver | BoundMethodGroupFlags.SearchExtensionMethods;
-
-                            // return a method group with the receiver and extension method... we also pass the lookup results... so the local methods will be considered too!
-                            return new BoundMethodGroup(
-                                node,
-                                typeArgumentsWithAnnotations,
-                                thisBoundNode,
-                                name,
-                                lookupResult.Symbols.All(s => s.Kind == SymbolKind.Method) ? lookupResult.Symbols.SelectAsArray(s_toMethodSymbolFunc) : ImmutableArray<MethodSymbol>.Empty,
-                                lookupResult,
-                                flags);
-                        }
+                        if (boundExtensionMethod != null) 
+                            return boundExtensionMethod;
                     }
 
                     expression = BadExpression(node);
@@ -1589,6 +1581,44 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             lookupResult.Free();
             return expression;
+        }
+
+        private BoundMethodGroup TryBindIdentifierAsImplicitExtensionMethod(
+            SyntaxNode node,
+            ImmutableArray<TypeWithAnnotations> typeArgumentsWithAnnotations,
+            string name,
+            LookupResult lookupResult,
+            DiagnosticBag diagnostics
+            )
+        {
+            // must be non static containing type
+            if (this.ContainingType is null) return null;
+            if (this.ContainingType.IsStatic) return null;
+
+            // must be non static method / lambda
+            if (this.ContainingMemberOrLambda is null) return null;
+            if (this.ContainingMemberOrLambda.IsStatic) return null;
+
+            // for extension methods... use an implicit receiver... since we didn't really have the "this" in syntax...
+            var thisExprSyntax = SyntaxFactory.ThisExpression();
+            var thisBoundNode = BindExpression(thisExprSyntax, diagnostics);
+
+            if ((object)thisBoundNode != null && (object)thisBoundNode.Type != null)
+            {
+                var flags = BoundMethodGroupFlags.HasImplicitReceiver | BoundMethodGroupFlags.SearchExtensionMethods;
+
+                // return a method group with the receiver and extension method... we also pass the lookup results... so the local methods will be considered too!
+                return new BoundMethodGroup(
+                    node,
+                    typeArgumentsWithAnnotations,
+                    thisBoundNode,
+                    name,
+                    lookupResult.Symbols.All(s => s.Kind == SymbolKind.Method) ? lookupResult.Symbols.SelectAsArray(s_toMethodSymbolFunc) : ImmutableArray<MethodSymbol>.Empty,
+                    lookupResult,
+                    flags);
+            }
+
+            return null;
         }
 
         /// <summary>
