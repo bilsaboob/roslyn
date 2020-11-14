@@ -125,7 +125,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 kind: DeclarationKind.Class,
                 name: NamespaceSymbolHelpers.GetNamespaceMembersContainerClassName(nsDecl.Name.ToString().Trim()),
                 arity: 0,
-                modifiers: DeclarationModifiers.Public | DeclarationModifiers.Partial | DeclarationModifiers.Sealed,
+                modifiers: DeclarationModifiers.Public | DeclarationModifiers.Partial | DeclarationModifiers.Static,
                 declFlags: declFlags,
                 syntaxReference: container,
                 nameLocation: new SourceLocation(container),
