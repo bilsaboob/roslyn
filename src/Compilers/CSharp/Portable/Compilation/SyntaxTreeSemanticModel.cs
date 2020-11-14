@@ -2300,8 +2300,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return container;
             }
 
+            var nsSymbol = (NamespaceSymbol)container;
+
             // another member in a namespace:
-            return ((NamespaceSymbol)container).ImplicitType;
+            return nsSymbol.GlobalMembersContainerType ?? nsSymbol.ImplicitType;
         }
 
         private Symbol GetDeclaredMemberSymbol(CSharpSyntaxNode declarationSyntax)
