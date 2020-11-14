@@ -234,7 +234,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get
             {
-                var name = NamespaceSymbolHelpers.GetNamespaceMembersContainerClassName(this.Name.ToString().Trim());
+                var fullName = (this.QualifiedName ?? this.Name).Trim();
+                var name = NamespaceSymbolHelpers.GetNamespaceMembersContainerClassName(fullName);
                 var types = this.GetTypeMembers(name);
                 if (types.Length == 0) return null;
 
