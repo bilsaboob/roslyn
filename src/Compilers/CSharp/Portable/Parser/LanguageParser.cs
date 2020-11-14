@@ -530,27 +530,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
                         case SyntaxKind.UsingKeyword:
                         case SyntaxKind.ImportKeyword:
-                            if (isGlobal && (this.PeekToken(1).Kind == SyntaxKind.OpenParenToken || (!IsScript && IsPossibleTopLevelUsingLocalDeclarationStatement())))
+                            if (CurrentKind == SyntaxKind.UsingKeyword)
                             {
-                                // Top-level using statement or using local declaration
-                                goto default;
+                                if (this.PeekToken(1).Kind == SyntaxKind.OpenParenToken || (!IsScript && IsPossibleTopLevelUsingLocalDeclarationStatement()))
+                                {
+                                    goto default;
+                                }
+                            }
+
+                            // incomplete members must be processed before we add any nodes to the body:
+                            ReduceIncompleteMembers(ref pendingIncompleteMembers, ref openBrace, ref body, ref initialBadNodes);
+
+                            var @using = this.ParseUsingDirective();
+                            if (seen > NamespaceParts.Usings)
+                            {
+                                @using = this.AddError(@using, ErrorCode.ERR_UsingAfterElements);
+                                this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, @using);
                             }
                             else
                             {
-                                // incomplete members must be processed before we add any nodes to the body:
-                                ReduceIncompleteMembers(ref pendingIncompleteMembers, ref openBrace, ref body, ref initialBadNodes);
-
-                                var @using = this.ParseUsingDirective();
-                                if (seen > NamespaceParts.Usings)
-                                {
-                                    @using = this.AddError(@using, ErrorCode.ERR_UsingAfterElements);
-                                    this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, @using);
-                                }
-                                else
-                                {
-                                    body.Usings.Add(@using);
-                                    seen = NamespaceParts.Usings;
-                                }
+                                body.Usings.Add(@using);
+                                seen = NamespaceParts.Usings;
                             }
 
                             reportUnexpectedToken = true;
@@ -581,7 +581,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                             goto default;
 
                         default:
-                            var memberOrStatement = isGlobal ? this.ParseMemberDeclarationOrStatement(parentKind) : this.ParseMemberDeclaration(parentKind);
+                            var memberOrStatement = this.ParseMemberDeclaration(parentKind);
                             if (memberOrStatement == null)
                             {
                                 // incomplete members must be processed before we add any nodes to the body:
@@ -638,11 +638,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                         else if (seen == NamespaceParts.TypesAndNamespaces)
                         {
                             seen = NamespaceParts.TopLevelStatementsAfterTypesAndNamespaces;
-
-                            if (!IsScript)
-                            {
-                                memberOrStatement = this.AddError(memberOrStatement, ErrorCode.ERR_TopLevelStatementAfterNamespaceOrType);
-                            }
                         }
 
                         break;
@@ -680,7 +675,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
 
             _checkedTopLevelStatementsFeatureAvailability = true;
-            return CheckFeatureAvailability(globalStatementSyntax, MessageID.IDS_TopLevelStatements);
+            return globalStatementSyntax;
         }
 
         private static void AddIncompleteMembers(ref SyntaxListBuilder<MemberDeclarationSyntax> incompleteMembers, ref NamespaceBodyBuilder body)
@@ -2199,7 +2194,6 @@ tryAgain:
         {
             // "top-level" expressions and statements should never occur inside an asynchronous context
             Debug.Assert(!IsInAsync);
-            Debug.Assert(parentKind == SyntaxKind.CompilationUnit);
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -2211,6 +2205,8 @@ tryAgain:
                     return (MemberDeclarationSyntax)this.EatNode();
                 }
             }
+
+            var isNamespaceStatement = parentKind == SyntaxKind.NamespaceDeclaration;
 
             var saveTermState = _termState;
 
@@ -2856,7 +2852,7 @@ parse_member_name:;
                 // Check for constructor form
                 if ((CurrentKind == SyntaxKind.IdentifierToken || CurrentKind == SyntaxKind.ThisKeyword) && this.PeekToken(1).Kind == SyntaxKind.OpenParenToken)
                 {
-                    if (parentName == null || parentName.Text == this.CurrentToken.Text || CurrentKind == SyntaxKind.ThisKeyword)
+                    if (parentName?.Text == this.CurrentToken.Text || CurrentKind == SyntaxKind.ThisKeyword)
                     {
                         return this.ParseConstructorDeclaration(attributes, modifiers);
                     }
