@@ -425,7 +425,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                     else
                     {
-                        container = ((NamespaceSymbol)containingSymbol).ImplicitType;
+                        var nsSymbol = (NamespaceSymbol)containingSymbol;
+                        container = nsSymbol.GlobalMembersContainerType ?? nsSymbol.ImplicitType;
                     }
                 }
 
