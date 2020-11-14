@@ -6325,6 +6325,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return BadExpression(node, boundLeft);
             }
 
+            var initialBoundLeft = boundLeft;
             boundLeft = BindToNaturalType(boundLeft, diagnostics);
             leftType = boundLeft.Type;
             var lookupResult = LookupResult.GetInstance();
@@ -6389,17 +6390,27 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 }
                                 else
                                 {
-                                    Debug.Assert(sym.Kind == SymbolKind.NamedType);
-                                    var type = (NamedTypeSymbol)sym;
+                                    Debug.Assert(sym.Kind == SymbolKind.NamedType || sym.Kind == SymbolKind.Method);
 
-                                    if (rightHasTypeArguments)
+                                    if (sym.Kind == SymbolKind.NamedType)
                                     {
-                                        type = ConstructNamedTypeUnlessTypeArgumentOmitted(right, type, typeArgumentsSyntax, typeArguments, diagnostics);
+                                        var type = (NamedTypeSymbol)sym;
+
+                                        if (rightHasTypeArguments)
+                                        {
+                                            type = ConstructNamedTypeUnlessTypeArgumentOmitted(right, type, typeArgumentsSyntax, typeArguments, diagnostics);
+                                        }
+
+                                        ReportDiagnosticsIfObsolete(diagnostics, type, node, hasBaseReceiver: false);
+
+                                        return new BoundTypeExpression(node, null, type);
                                     }
-
-                                    ReportDiagnosticsIfObsolete(diagnostics, type, node, hasBaseReceiver: false);
-
-                                    return new BoundTypeExpression(node, null, type);
+                                    else if (sym.Kind == SymbolKind.Method)
+                                    {
+                                        // bind to method in global namespace type - which should be the containing symbol
+                                        boundLeft = new BoundTypeExpression(initialBoundLeft.Syntax, null, (TypeSymbol)sym.ContainingSymbol);
+                                        return BindMemberOfType(node, right, rightName, rightArity, indexed, boundLeft, typeArgumentsSyntax, typeArguments, lookupResult, BoundMethodGroupFlags.None, diagnostics: diagnostics);
+                                    }
                                 }
                             }
                             else if (lookupResult.Kind == LookupResultKind.WrongArity)
