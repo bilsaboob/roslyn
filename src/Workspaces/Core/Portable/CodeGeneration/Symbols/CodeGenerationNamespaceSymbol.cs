@@ -64,5 +64,7 @@ namespace Microsoft.CodeAnalysis.CodeGeneration
                 return ImmutableArray.Create<INamespaceSymbol>(this);
             }
         }
+
+        public ITypeSymbol GlobalMembersContainerType => null;
     }
 }

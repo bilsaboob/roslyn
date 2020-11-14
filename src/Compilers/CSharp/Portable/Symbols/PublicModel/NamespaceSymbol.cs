@@ -28,6 +28,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.PublicModel
 
         Compilation INamespaceSymbol.ContainingCompilation => _underlying.ContainingCompilation;
 
+        ITypeSymbol INamespaceSymbol.GlobalMembersContainerType => _underlying.GlobalMembersContainerType?.GetPublicSymbol();
+
         ImmutableArray<INamespaceSymbol> INamespaceSymbol.ConstituentNamespaces
         {
             get

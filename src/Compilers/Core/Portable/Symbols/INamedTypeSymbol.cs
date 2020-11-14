@@ -11,6 +11,19 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.CodeAnalysis
 {
+    public static class NamespaceSymbolHelpers
+    {
+        public static string GetNamespaceMembersContainerClassName(string namespaceName)
+        {
+            return $"__Namespace__{namespaceName.Replace('.', '_')}";
+        }
+
+        public static bool IsNamespaceMembersContainerClassName(string name)
+        {
+            return name?.StartsWith("__Namespace__") == true;
+        }
+    }
+
     /// <summary>
     /// Represents a type other than an array, a pointer, a type parameter.
     /// </summary>

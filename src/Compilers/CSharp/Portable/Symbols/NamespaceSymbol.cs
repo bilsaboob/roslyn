@@ -223,10 +223,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get
             {
                 var types = this.GetTypeMembers(TypeSymbol.ImplicitTypeName);
-                if (types.Length == 0)
-                {
-                    return null;
-                }
+                if (types.Length == 0) return null;
+
+                Debug.Assert(types.Length == 1);
+                return types[0];
+            }
+        }
+
+        public NamedTypeSymbol GlobalMembersContainerType
+        {
+            get
+            {
+                var name = NamespaceSymbolHelpers.GetNamespaceMembersContainerClassName(this.Name.ToString().Trim());
+                var types = this.GetTypeMembers(name);
+                if (types.Length == 0) return null;
 
                 Debug.Assert(types.Length == 1);
                 return types[0];
