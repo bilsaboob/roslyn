@@ -178,8 +178,15 @@ namespace Microsoft.CodeAnalysis.CodeRefactorings
                     isBlocking,
                     cancellationToken);
 
-                var task = provider.ComputeRefactoringsAsync(context) ?? Task.CompletedTask;
-                await task.ConfigureAwait(false);
+                try
+                {
+                    var task = provider.ComputeRefactoringsAsync(context) ?? Task.CompletedTask;
+                    await task.ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // don't crash... just ignore the result
+                }
 
                 var result = actions.Count > 0
                     ? new CodeRefactoring(provider, actions.ToImmutable())
