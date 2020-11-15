@@ -134,6 +134,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal static DeclarationModifiers MakeModifiers(NamedTypeSymbol containingType, SyntaxToken firstIdentifier, SyntaxTokenList modifiers, DiagnosticBag diagnostics, out bool modifierErrors)
         {
+            // make sure we have "static" modifier for members in a namespace container class
+            if (NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(containingType?.Name ?? ""))
+            {
+                // we are in a namespace class - so the modifiers must have static!
+                if (!modifiers.Any(SyntaxKind.StaticKeyword))
+                    modifiers = modifiers.Add(SyntaxFactory.FakeToken(SyntaxKind.StaticKeyword));
+            }
+
             DeclarationModifiers defaultAccess =
                 (containingType.IsInterface) ? DeclarationModifiers.Public : DeclarationModifiers.Private;
 
