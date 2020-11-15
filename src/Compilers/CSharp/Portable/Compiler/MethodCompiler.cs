@@ -380,7 +380,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             _cancellationToken.ThrowIfCancellationRequested();
 
             var concurrent = _compilation.Options.ConcurrentBuild;
-            concurrent = false;
             if (concurrent)
             {
                 Task worker = CompileNamedTypeAsync(symbol);
