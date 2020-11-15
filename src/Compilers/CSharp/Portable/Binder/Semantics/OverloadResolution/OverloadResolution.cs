@@ -4035,7 +4035,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // - Then, any parameter whose type is open (i.e. contains a type parameter; see §4.4.2) is elided, along with its corresponding parameter(s).
             // and
             // - The modified parameter list for F is applicable to the modified argument list in terms of section §7.5.3.1
-            if (ignoreOpenTypes && parameterType.ContainsTypeParameter(parameterContainer: (MethodSymbol)candidate))
+            if (ignoreOpenTypes && candidate is MethodSymbol methodCandidate && parameterType.ContainsTypeParameter(parameterContainer: methodCandidate))
             {
                 // defer applicability check to runtime:
                 return Conversion.ImplicitDynamic;
