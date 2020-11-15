@@ -451,6 +451,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             TypeWithAnnotations returnType;
             GetTypeOrReturnType(symbol, refKind: out _, out returnType, refCustomModifiers: out _);
+            if (returnType.Type is null)
+            {
+                var errorType = new ExtendedErrorTypeSymbol(symbol.DeclaringCompilation, "", arity: 0, errorInfo: null, unreported: false);
+                returnType = TypeWithAnnotations.Create(errorType);
+            }
             return returnType;
         }
 
