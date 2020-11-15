@@ -13007,15 +13007,40 @@ tryAgain:
                         //
                         // It's far more likely the member access expression is simply incomplete and
                         // there is a new declaration on the next line.
-                        if (this.CurrentToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia) &&
-                            this.PeekToken(1).Kind == SyntaxKind.IdentifierToken &&
-                            this.PeekToken(2).ContextualKind == SyntaxKind.IdentifierToken)
+
+                        // in order for it to be a member access it must be either on same line or on a newline with indentation! compared to the current
+
+                        var isAtEndOfLine = this.CurrentToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia);
+                        if (isAtEndOfLine)
                         {
-                            expr = _syntaxFactory.MemberAccessExpression(
+                            // check if next token is indented and a valid member access token
+                            var isBadExpression = false;
+                            var nextToken = this.PeekToken(1);
+
+                            // next token may not be a member modifier
+                            if (!IsTrueIdentifier(nextToken))
+                                isBadExpression = true;
+
+                            if (!isBadExpression && SyntaxFacts.IsMemberModifier(nextToken.Kind))
+                                isBadExpression = true;
+
+                            if (!isBadExpression && SyntaxFacts.IsAccessibilityModifier(nextToken.Kind))
+                                isBadExpression = true;
+
+                            // next token must be indented
+                            if (!isBadExpression)
+                            {
+                                if (!IsTokenLineIndentedRelativeToCurrent(1))
+                                    isBadExpression = true;
+                            }
+
+                            if (isBadExpression)
+                            {
+                                expr = _syntaxFactory.MemberAccessExpression(
                                 SyntaxKind.SimpleMemberAccessExpression, expr, this.EatToken(),
                                 this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected));
-
-                            return expr;
+                                return expr;
+                            }
                         }
 
                         expr = _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, this.EatToken(), this.ParseSimpleName(NameOptions.InExpression));
