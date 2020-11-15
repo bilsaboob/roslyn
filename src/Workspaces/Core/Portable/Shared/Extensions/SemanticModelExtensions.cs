@@ -45,7 +45,8 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
                 return symbol.ContainingType;
             }
 
-            if (symbol.IsThisParameter())
+            var isThis = symbol.IsThisParameter() && (symbol.Name == "this" || symbol.Name == "@this");
+            if (isThis)
             {
                 // Map references to this/base to the actual type that those correspond to.
                 return type;
