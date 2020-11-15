@@ -416,8 +416,20 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     if (includeType)
                     {
-                        containingType.Accept(this.NotFirstVisitor);
-                        AddPunctuation(SyntaxKind.DotToken);
+                        if (NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(containingType?.Name ?? ""))
+                        {
+                            var containingNamespace = containingType?.ContainingNamespace;
+                            if (containingNamespace != null && !containingNamespace.IsGlobalNamespace)
+                            {
+                                containingNamespace.Accept(this.NotFirstVisitor);
+                                AddPunctuation(SyntaxKind.DotToken);
+                            }
+                        }
+                        else
+                        {
+                            containingType.Accept(this.NotFirstVisitor);
+                            AddPunctuation(SyntaxKind.DotToken);
+                        }
                     }
                 }
             }
