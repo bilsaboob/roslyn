@@ -764,7 +764,16 @@ namespace Microsoft.Cci
 
         public static FieldAttributes GetFieldAttributes(IFieldDefinition fieldDef)
         {
+            var isGlobal = NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName((fieldDef.ContainingTypeDefinition as INamedTypeDefinition)?.Name ?? "");
+
             var result = (FieldAttributes)fieldDef.Visibility;
+
+            if (isGlobal)
+            {
+                // always output as public when emitting namespace fields
+                result = FieldAttributes.Public;
+            }
+
             if (fieldDef.IsStatic)
             {
                 result |= FieldAttributes.Static;
@@ -1004,7 +1013,16 @@ namespace Microsoft.Cci
 
         public static MethodAttributes GetMethodAttributes(IMethodDefinition methodDef)
         {
+            var isGlobal = NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName((methodDef.ContainingTypeDefinition as INamedTypeDefinition)?.Name ?? "");
+
             var result = (MethodAttributes)methodDef.Visibility;
+
+            if (isGlobal)
+            {
+                // always output as public when emitting namespace fields
+                result = MethodAttributes.Public;
+            }
+
             if (methodDef.IsStatic)
             {
                 result |= MethodAttributes.Static;
