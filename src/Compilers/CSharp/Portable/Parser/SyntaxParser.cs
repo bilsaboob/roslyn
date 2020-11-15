@@ -371,6 +371,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return (currentLineIndent ?? 0) > (otherTokenLineIndent ?? 0);
         }
 
+        protected bool IsTokenLineIndentedRelativeToCurrent(int tokenOffset)
+        {
+            var i = 0;
+
+            // find the closest newline, so we can calculate the "current line indentation level"
+            var currentLineIndent = GetLineIndent(ref i);
+            if (currentLineIndent == null) return false;
+
+            var otherTokenIndex = tokenOffset;
+            i = 0;
+
+            var otherTokenLineIndent = GetLineIndent(ref i, otherTokenIndex);
+            return (otherTokenLineIndent ?? 0) > (currentLineIndent ?? 0);
+        }
+
         private int FindPrevTokenIndex(SyntaxToken token)
         {
             var i = 0;
@@ -385,7 +400,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return i;
         }
 
-        private int? GetLineIndent(ref int i)
+        private int? GetLineIndent(ref int i, int offset = 0)
         {
             int? indent = null;
 
@@ -393,7 +408,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             SyntaxToken token = null;
             while (true)
             {
-                token = PeekPrevToken(i);
+                token = PeekPrevToken(i, offset);
                 if (token == null) break;
                 ++i;
 
@@ -406,7 +421,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 }
 
                 // if we are not, the check if the previous token has newline after
-                prevToken = PeekPrevToken(i);
+                prevToken = PeekPrevToken(i, offset);
                 if (prevToken == null) break;
 
                 var eolTrivia = prevToken.TrailingTrivia.FirstOrDefault(n => n.Kind == SyntaxKind.EndOfLineTrivia);
@@ -564,25 +579,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        protected SyntaxToken PeekPrevToken(int n)
+        protected SyntaxToken PeekPrevToken(int n, int offset = 0)
         {
-            if (n == 0) return CurrentToken;
+            if (n == 0 && offset == 0) return CurrentToken;
+
+            var tokenOffset = _tokenOffset + offset;
 
             Debug.Assert(n >= 0);
-            if (_tokenOffset - n < 0)
+            if (tokenOffset - n < 0)
                 return null;
 
             if (_blendedTokens != null)
             {
-                var token = _blendedTokens[_tokenOffset - n].Token;
+                var token = _blendedTokens[tokenOffset - n].Token;
                 if (token != null) return token;
-                var firstToken = _blendedTokens[_tokenOffset - n].Node.GetFirstToken();
+                var firstToken = _blendedTokens[tokenOffset - n].Node.GetFirstToken();
                 if (firstToken == default) return null;
                 return firstToken.Node as SyntaxToken;
             }
             else
             {
-                return _lexedTokens[_tokenOffset - n];
+                return _lexedTokens[tokenOffset - n];
             }
         }
 
