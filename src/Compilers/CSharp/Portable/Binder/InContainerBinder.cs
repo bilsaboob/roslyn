@@ -59,7 +59,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal override uint LocalScopeDepth
             => Binder_LocalScopeDepth;
 
-        internal override bool IsAccessibleHelper(Symbol symbol, TypeSymbol accessThroughType, out bool failedThroughTypeCheck, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<TypeSymbol> basesBeingResolved)
+        internal override bool IsAccessibleHelper(Symbol symbol, TypeSymbol accessThroughType, out bool failedThroughTypeCheck, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<TypeSymbol> basesBeingResolved, Binder innerBinder = null)
         {
             var evaluated = false;
 
@@ -83,7 +83,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return false;
             }
 
-            return Next.IsAccessibleHelper(symbol, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics, basesBeingResolved);  // delegate to containing Binder, eventually checking assembly.
+            return Next.IsAccessibleHelper(symbol, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics, basesBeingResolved, innerBinder);  // delegate to containing Binder, eventually checking assembly.
         }
     }
 
@@ -93,7 +93,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// </summary>
     internal class InContainerBinder : Binder
     {
-        protected readonly NamespaceOrTypeSymbol _container;
+        protected internal readonly NamespaceOrTypeSymbol _container;
         private readonly Func<ConsList<TypeSymbol>, Imports> _computeImports;
         private Imports _lazyImports;
         private ImportChain _lazyImportChain;
@@ -283,17 +283,42 @@ namespace Microsoft.CodeAnalysis.CSharp
             get { return (_container?.Kind == SymbolKind.NamedType) && ((NamedTypeSymbol)_container).IsScriptClass; }
         }
 
-        internal override bool IsAccessibleHelper(Symbol symbol, TypeSymbol accessThroughType, out bool failedThroughTypeCheck, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<TypeSymbol> basesBeingResolved)
+        internal override bool IsAccessibleHelper(Symbol symbol, TypeSymbol accessThroughType, out bool failedThroughTypeCheck, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<TypeSymbol> basesBeingResolved, Binder innerBinder = null)
         {
+            // make sure we have the inner most binder
+            innerBinder ??= this;
+
+            var isAccessible = false;
             var type = _container as NamedTypeSymbol;
             if ((object)type != null)
             {
-                return this.IsSymbolAccessibleConditional(symbol, type, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics);
+                isAccessible = this.IsSymbolAccessibleConditional(symbol, type, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics);
             }
             else
             {
-                return Next.IsAccessibleHelper(symbol, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics, basesBeingResolved);  // delegate to containing Binder, eventually checking assembly.
+                isAccessible = Next.IsAccessibleHelper(symbol, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics, basesBeingResolved, innerBinder);  // delegate to containing Binder, eventually checking assembly.
             }
+
+            if (isAccessible) return true;
+
+            if (innerBinder != this) return false;
+
+            // if we are checking from the "inner binder" we check for global namespace access
+            if (NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(symbol?.ContainingSymbol?.Name ?? ""))
+            {
+                failedThroughTypeCheck = false;
+
+                // we are trying to access a namespace member ... which has other access rules than "normal type members"            
+                var fromNamespace =
+                    (innerBinder as InContainerBinder)?._container as NamespaceSymbol ?? // try the inner binder as container
+                    innerBinder.ContainingMemberOrLambda?.ContainingSymbol as NamespaceSymbol ?? // try the inner lambda containing symbol
+                    innerBinder.ContainingType?.ContainingNamespace; // finally try the containing type
+
+                if (NamespaceSymbol.IsGlobalSymbolAccessible(symbol, fromNamespace))
+                    return true;
+            }
+
+            return false;
         }
 
         internal override bool SupportsExtensionMethods
