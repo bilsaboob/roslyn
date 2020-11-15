@@ -276,10 +276,26 @@ namespace Microsoft.CodeAnalysis.Indentation
 
             internal bool IsIndentedToken(SyntaxToken token, SyntaxToken? other)
             {
+                return IsIndentedToken(token, other, out var isBefore, out var isAfter);
+            }
+
+            internal bool IsIndentedToken(SyntaxToken token, SyntaxToken? other, out bool isBefore, out bool isAfter)
+            {
+                isBefore = false;
+                isAfter = false;
                 if (other == null || other.Value.IsNull || token != other) return false;
 
                 // must be the line that is being targeted to be true
-                return LineToBeIndented.Span.OverlapsWith(token.Span);
+                var overlaps = LineToBeIndented.Span.OverlapsWith(token.Span);
+                if (overlaps) return true;
+
+                // isBefore = indented line is before the target token
+                isBefore = LineToBeIndented.Span.End < token.SpanStart;
+
+                // isAfter = indented line is after the target token
+                isAfter = LineToBeIndented.Span.Start > token.Span.End;
+
+                return false;
             }
         }
     }

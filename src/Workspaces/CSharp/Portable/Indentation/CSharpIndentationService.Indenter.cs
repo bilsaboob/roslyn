@@ -449,7 +449,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
 
                     // try keyword
                     if (indenter.IsIndentedToken(token, tryStat.TryKeyword))
-                        return GetIndentationFromNodeLine(indenter, tryStat, tryStat.TryKeyword, 0);
+                        return GetIndentationFromNodeLine(indenter, tryStat, tryStat.TryKeyword);
 
                     // try indentation on any of the try statement blocks
                     result = GetIndentationFromBlockNode(indenter, tryStat.Block, token);
@@ -967,10 +967,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                         return GetIndentationFromTokenLine(indenter, nodeStartToken, 0);
                     }
 
-                    if (indenter.IsIndentedToken(token, closeBrace))
+                    if (indenter.IsIndentedToken(token, closeBrace, out _, out var isAfterClosingBrace))
                     {
                         // if the token being indented is the }, we don't add any additional indentation level - and use indentation of the opening {
                         return GetIndentationFromTokenLine(indenter, openBrace, 0);
+                    }
+                    else if (isAfterClosingBrace)
+                    {
+                        // return indentation relative the start of block but without indentation
+                        return GetIndentationFromTokenLine(indenter, nodeStartToken, 0);
                     }
 
                     // we should indent relative to the opening brace for the block!
@@ -1008,10 +1013,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                     return GetIndentationFromTokenLine(indenter, indentStartToken, 0);
                 }
 
-                if (indenter.IsIndentedToken(token, blockBody.CloseBraceToken))
+                if (indenter.IsIndentedToken(token, blockBody.CloseBraceToken, out _, out var isAfterClosingBrace))
                 {
                     // if the token being indented is the }, we don't add any additional indentation level - and use indentation of the opening {
                     return GetIndentationFromTokenLine(indenter, blockBody.OpenBraceToken, 0);
+                }
+                else if (isAfterClosingBrace)
+                {
+                    // return indentation relative the start of block but without indentation
+                    return GetIndentationFromTokenLine(indenter, indentStartToken, 0);
                 }
 
                 // we should indent relative to the opening brace for the block!
@@ -1668,7 +1678,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
 
         private static IndentationResult GetIndentationFromNodeLine(Indenter indenter, CSharpSyntaxNode node, SyntaxToken token, int? additionalSpace = null, bool includeSelf = false)
         {
+            // we indent relative the previous token... will be the indentation of that line + additional space
             var relToken = node.GetFirstTokenOrFirstPrevious(token, includeSelf: includeSelf);
+
+            // if the last token of that line was "{" or "=>" then we should make sure there is additional space! - otherwise no additional indentation!
+            if (relToken.Line != token.Line && additionalSpace == null)
+            {
+                additionalSpace = 0;
+
+                // indent if the last token of that line was "{" or "=>"
+                var lastToken = relToken.FindLastTokenOnLine();
+                if (lastToken?.IsKind(SyntaxKind.OpenBraceToken, SyntaxKind.EqualsGreaterThanToken) == true)
+                    additionalSpace = 4;
+            }
+
             return GetIndentationFromTokenLine(indenter, relToken, additionalSpace: additionalSpace);
         }
 
