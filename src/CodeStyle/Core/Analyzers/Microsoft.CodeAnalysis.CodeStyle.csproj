@@ -32,6 +32,9 @@
     <Compile Include="..\..\..\Workspaces\Core\Portable\Editing\DeclarationModifiers.cs" Link="Editing\DeclarationModifiers.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Compilers\Core\Portable\Microsoft.CodeAnalysis.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Update="CodeStyleResources.resx" GenerateSource="true" />
   </ItemGroup>
   <ItemGroup>

@@ -1247,6 +1247,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             return GetTypeInfoForNode(lowestBoundNode, highestBoundNode, boundParent);
         }
 
+        internal CSharpTypeInfo GetTypeInfoWithNode(CSharpSyntaxNode node, out BoundNode boundNode, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            CSharpSyntaxNode bindableNode;
+            BoundNode lowestBoundNode;
+            BoundNode boundParent;
+            GetBoundNodes(node, out bindableNode, out lowestBoundNode, out boundNode, out boundParent);
+
+            return GetTypeInfoForNode(lowestBoundNode, boundNode, boundParent);
+        }
+
         internal override ImmutableArray<Symbol> GetMemberGroupWorker(CSharpSyntaxNode node, SymbolInfoOptions options, CancellationToken cancellationToken = default(CancellationToken))
         {
             CSharpSyntaxNode bindableNode;
@@ -1256,7 +1266,41 @@ namespace Microsoft.CodeAnalysis.CSharp
             GetBoundNodes(node, out bindableNode, out lowestBoundNode, out highestBoundNode, out boundParent);
 
             Debug.Assert(IsInTree(node), "Since the node is in the tree, we can always recompute the binder later");
-            return base.GetMemberGroupForNode(options, lowestBoundNode, boundParent, binderOpt: null);
+            var symbols = base.GetMemberGroupForNode(options, lowestBoundNode, boundParent, binderOpt: null);
+
+            // only allow member symbols that have the correct receiver
+            if (bindableNode is MemberAccessExpressionSyntax memberAccess)
+            {
+                var memberType = GetTypeInfoWithNode(memberAccess.Expression, out var boundeMemberExpr, cancellationToken).Type;
+                if (!(memberType is null))
+                {
+                    var expectStatic = false;
+
+                    // if the lhs is a type expression, then we can include "static members too" ... but no "extension methods"
+                    if (boundeMemberExpr is BoundTypeExpression)
+                        expectStatic = true;
+
+                    // filter the symbols!
+                    symbols = symbols.Where(s => {
+                        if (expectStatic)
+                        {
+                            if (!s.IsStatic) return false;
+                            return true;
+                        }
+                        else
+                        {
+                            if (!s.IsStatic) return true;
+
+                            if (s is IMethodSymbol ms && ms.IsExtensionMethod)
+                                return true;
+
+                            return false;
+                        }
+                    }).ToImmutableArray();
+                }
+            }
+
+            return symbols;
         }
 
         internal override ImmutableArray<IPropertySymbol> GetIndexerGroupWorker(CSharpSyntaxNode node, SymbolInfoOptions options, CancellationToken cancellationToken = default(CancellationToken))

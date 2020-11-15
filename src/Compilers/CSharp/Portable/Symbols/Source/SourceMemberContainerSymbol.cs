@@ -1972,7 +1972,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     {
                         if (member.Kind != SymbolKind.Method || ((MethodSymbol)member).MethodKind != MethodKind.Destructor)
                         {
-                            diagnostics.Add(ErrorCode.ERR_ProtectedInStatic, member.Locations[0], member);
+                            // cannot have protected in static class, unless it's a namespace type
+                            if (!NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(member.ContainingType?.Name ?? ""))
+                                diagnostics.Add(ErrorCode.ERR_ProtectedInStatic, member.Locations[0], member);
                         }
                     }
                 }

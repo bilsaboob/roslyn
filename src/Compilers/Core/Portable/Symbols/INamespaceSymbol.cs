@@ -60,5 +60,7 @@ namespace Microsoft.CodeAnalysis
         /// an array containing only this namespace.
         /// </summary>
         ImmutableArray<INamespaceSymbol> ConstituentNamespaces { get; }
+
+        ITypeSymbol GlobalMembersContainerType { get; }
     }
 }

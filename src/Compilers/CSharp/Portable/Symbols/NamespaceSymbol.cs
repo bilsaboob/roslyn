@@ -11,6 +11,48 @@ using Microsoft.CodeAnalysis.Symbols;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
+    internal partial class NamespaceSymbol
+    {
+        public static bool IsGlobalSymbolAccessible(Symbol symbol, NamespaceSymbol fromNamespace)
+        {
+            if (symbol?.ContainingType is null || fromNamespace == null) return false;
+
+            if (!NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(symbol.ContainingType.Name ?? ""))
+                return false;
+
+            var symbolNamespace = symbol.ContainingType.ContainingNamespace;
+            var access = symbol.DeclaredAccessibility;
+
+            if (access.HasFlag(Accessibility.Public))
+            {
+                // is accessible from everywhere
+                return true;
+            }
+
+            if (access.HasFlag(Accessibility.Protected))
+            {
+                // is accessible only from "same namespace" or "sub namespaces"
+                if (fromNamespace.QualifiedName.StartsWith(symbolNamespace.QualifiedName))
+                    return true;
+                return false;
+            }
+
+            if (access.HasFlag(Accessibility.Internal))
+            {
+                // is accessible from everywhere... within the same assembly
+                if (symbolNamespace.ContainingAssembly == fromNamespace.ContainingAssembly)
+                    return true;
+                return false;
+            }
+
+            // otherwise it must be "private" ... either if it has explicitly or no accessibility is set
+            if (fromNamespace.QualifiedName == symbolNamespace.QualifiedName)
+                return true;
+
+            return false;
+        }
+    }
+
     /// <summary>
     /// Represents a namespace.
     /// </summary>
@@ -223,10 +265,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get
             {
                 var types = this.GetTypeMembers(TypeSymbol.ImplicitTypeName);
-                if (types.Length == 0)
-                {
-                    return null;
-                }
+                if (types.Length == 0) return null;
+
+                Debug.Assert(types.Length == 1);
+                return types[0];
+            }
+        }
+
+        public NamedTypeSymbol GlobalMembersContainerType
+        {
+            get
+            {
+                var fullName = (this.QualifiedName ?? this.Name).Trim();
+                var name = NamespaceSymbolHelpers.GetNamespaceMembersContainerClassName(fullName);
+                var types = this.GetTypeMembers(name);
+                if (types.Length == 0) return null;
 
                 Debug.Assert(types.Length == 1);
                 return types[0];

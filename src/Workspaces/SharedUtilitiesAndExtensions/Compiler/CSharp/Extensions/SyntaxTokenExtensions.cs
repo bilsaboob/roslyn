@@ -141,7 +141,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         public static SyntaxToken? FindFirstTokenOnLine(this SyntaxToken token, SourceText? text = null)
         {
             text ??= token.Parent?.SyntaxTree?.GetText();
+            if (token.IsFirstTokenOnLine(text)) return token;
             return token.FindPreviousToken(t => t.IsFirstTokenOnLine(text));
+        }
+
+        public static SyntaxToken? FindLastTokenOnLine(this SyntaxToken token, SourceText? text = null)
+        {
+            text ??= token.Parent?.SyntaxTree?.GetText();
+            if (token.IsLastTokenOnLine(text)) return token;
+            return token.FindNextToken(t => t.IsLastTokenOnLine(text));
         }
 
         public static SyntaxToken? FindPreviousToken(this SyntaxToken token, Func<SyntaxToken, bool> predicate, bool includeZeroWidth = false, bool includeSkipped = false, bool includeDirectives = false, bool includeDocumentationComments = false)

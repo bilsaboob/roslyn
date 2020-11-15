@@ -106,10 +106,32 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var memberNames = GetNonTypeMemberNames(internalMembers, ref declFlags, skipGlobalStatements: acceptSimpleProgram);
                 var container = _syntaxTree.GetReference(node);
 
-                childrenBuilder.Add(CreateImplicitClass(memberNames, container, declFlags));
+                if (node is NamespaceDeclarationSyntax nsDecl)
+                {
+                    childrenBuilder.Add(CreateNamespaceMembersContainerClass(memberNames, nsDecl, container, declFlags));
+                }
+                else
+                {
+                    childrenBuilder.Add(CreateImplicitClass(memberNames, container, declFlags));
+                }
             }
 
             return childrenBuilder.ToImmutableAndFree();
+        }
+
+        private static SingleNamespaceOrTypeDeclaration CreateNamespaceMembersContainerClass(ImmutableHashSet<string> memberNames, NamespaceDeclarationSyntax nsDecl, SyntaxReference container, SingleTypeDeclaration.TypeDeclarationFlags declFlags)
+        {
+            return new SingleTypeDeclaration(
+                kind: DeclarationKind.Class,
+                name: NamespaceSymbolHelpers.GetNamespaceMembersContainerClassName(nsDecl.Name.ToString().Trim()),
+                arity: 0,
+                modifiers: DeclarationModifiers.Public | DeclarationModifiers.Partial | DeclarationModifiers.Static,
+                declFlags: declFlags,
+                syntaxReference: container,
+                nameLocation: new SourceLocation(container),
+                memberNames: memberNames,
+                children: ImmutableArray<SingleTypeDeclaration>.Empty,
+                diagnostics: ImmutableArray<Diagnostic>.Empty);
         }
 
         private static SingleNamespaceOrTypeDeclaration CreateImplicitClass(ImmutableHashSet<string> memberNames, SyntaxReference container, SingleTypeDeclaration.TypeDeclarationFlags declFlags)

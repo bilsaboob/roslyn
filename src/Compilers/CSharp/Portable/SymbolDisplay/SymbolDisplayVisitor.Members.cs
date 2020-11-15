@@ -24,6 +24,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override void VisitField(IFieldSymbol symbol)
         {
+            var isGlobalNamespaceMember = NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(symbol.ContainingType?.Name ?? "");
+
             AddAccessibilityIfRequired(symbol);
             AddMemberModifiersIfRequired(symbol);
             AddFieldModifiersIfRequired(symbol);
@@ -41,8 +43,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (format.MemberOptions.IncludesOption(SymbolDisplayMemberOptions.IncludeContainingType) &&
                 IncludeNamedType(symbol.ContainingType))
             {
-                symbol.ContainingType.Accept(this.NotFirstVisitor);
-                AddPunctuation(SyntaxKind.DotToken);
+                if (isGlobalNamespaceMember)
+                {
+                    var containingNamespace = symbol.ContainingType?.ContainingNamespace;
+                    if (containingNamespace != null && !containingNamespace.IsGlobalNamespace)
+                    {
+                        containingNamespace.Accept(this.NotFirstVisitor);
+                        AddPunctuation(SyntaxKind.DotToken);
+                    }
+                }
+                else
+                {
+                    symbol.ContainingType.Accept(this.NotFirstVisitor);
+                    AddPunctuation(SyntaxKind.DotToken);
+                }
             }
 
             if (symbol.ContainingType.TypeKind == TypeKind.Enum)
@@ -119,6 +133,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override void VisitProperty(IPropertySymbol symbol)
         {
+            var isGlobalNamespaceMember = NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(symbol.ContainingType?.Name ?? "");
+
             AddAccessibilityIfRequired(symbol);
             AddMemberModifiersIfRequired(symbol);
 
@@ -149,8 +165,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (format.MemberOptions.IncludesOption(SymbolDisplayMemberOptions.IncludeContainingType) &&
                 IncludeNamedType(symbol.ContainingType))
             {
-                symbol.ContainingType.Accept(this.NotFirstVisitor);
-                AddPunctuation(SyntaxKind.DotToken);
+                if (isGlobalNamespaceMember)
+                {
+                    var containingNamespace = symbol.ContainingType?.ContainingNamespace;
+                    if (containingNamespace != null && !containingNamespace.IsGlobalNamespace)
+                    {
+                        containingNamespace.Accept(this.NotFirstVisitor);
+                        AddPunctuation(SyntaxKind.DotToken);
+                    }
+                }
+                else
+                {
+                    symbol.ContainingType.Accept(this.NotFirstVisitor);
+                    AddPunctuation(SyntaxKind.DotToken);
+                }
             }
 
             AddPropertyNameAndParameters(symbol);
@@ -255,6 +283,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override void VisitMethod(IMethodSymbol symbol)
         {
+            var isGlobalNamespaceMember = NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(symbol.ContainingType?.Name ?? "");
+
             if (symbol.MethodKind == MethodKind.AnonymousFunction)
             {
                 // TODO(cyrusn): Why is this a literal?  Why don't we give the appropriate signature
@@ -416,8 +446,20 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     if (includeType)
                     {
-                        containingType.Accept(this.NotFirstVisitor);
-                        AddPunctuation(SyntaxKind.DotToken);
+                        if (isGlobalNamespaceMember)
+                        {
+                            var containingNamespace = containingType?.ContainingNamespace;
+                            if (containingNamespace != null && !containingNamespace.IsGlobalNamespace)
+                            {
+                                containingNamespace.Accept(this.NotFirstVisitor);
+                                AddPunctuation(SyntaxKind.DotToken);
+                            }
+                        }
+                        else
+                        {
+                            containingType.Accept(this.NotFirstVisitor);
+                            AddPunctuation(SyntaxKind.DotToken);
+                        }
                     }
                 }
             }
@@ -721,6 +763,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             INamedTypeSymbol containingType = symbol.ContainingType;
 
+            var isGlobalNamespaceMember = NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(containingType?.Name ?? "");
+
             // all members (that end up here) must have a containing type or a containing symbol should be a TypeSymbol.
             Debug.Assert(containingType != null || (symbol.ContainingSymbol is ITypeSymbol));
 
@@ -729,7 +773,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                  (containingType.TypeKind != TypeKind.Interface && !IsEnumMember(symbol) && !IsLocalFunction(symbol))))
             {
                 var isConst = symbol is IFieldSymbol && ((IFieldSymbol)symbol).IsConst;
-                if (symbol.IsStatic && !isConst)
+                if (symbol.IsStatic && !isConst && !isGlobalNamespaceMember)
                 {
                     AddKeyword(SyntaxKind.StaticKeyword);
                     AddSpace();

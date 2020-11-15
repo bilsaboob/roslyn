@@ -1216,6 +1216,23 @@ symIsHidden:;
 
         internal static ImmutableArray<Symbol> GetCandidateMembers(NamespaceOrTypeSymbol nsOrType, string name, LookupOptions options, Binder originalBinder)
         {
+            var results = GetCandidateMembers_(nsOrType, name, options, originalBinder);
+
+            if (nsOrType is NamespaceSymbol nsSymbol)
+            {
+                var globalMembersType = nsSymbol.GlobalMembersContainerType;
+                if (!(globalMembersType is null))
+                {
+                    var globalsResults = GetCandidateMembers_(globalMembersType, name, options, originalBinder);
+                    results = results.AddRange(globalsResults);
+                }
+            }
+
+            return results;
+        }
+
+        internal static ImmutableArray<Symbol> GetCandidateMembers_(NamespaceOrTypeSymbol nsOrType, string name, LookupOptions options, Binder originalBinder)
+        {
             if ((options & LookupOptions.NamespacesOrTypesOnly) != 0 && nsOrType is TypeSymbol)
             {
                 return nsOrType.GetTypeMembers(name).Cast<NamedTypeSymbol, Symbol>();
@@ -1235,6 +1252,23 @@ symIsHidden:;
         }
 
         internal static ImmutableArray<Symbol> GetCandidateMembers(NamespaceOrTypeSymbol nsOrType, LookupOptions options, Binder originalBinder)
+        {
+            var results = GetCandidateMembers_(nsOrType, options, originalBinder);
+
+            if (nsOrType is NamespaceSymbol nsSymbol)
+            {
+                var globalMembersType = nsSymbol.GlobalMembersContainerType;
+                if (!(globalMembersType is null))
+                {
+                    var globalsResults = GetCandidateMembers_(globalMembersType, options, originalBinder);
+                    results = results.AddRange(globalsResults);
+                }
+            }
+
+            return results;
+        }
+
+        internal static ImmutableArray<Symbol> GetCandidateMembers_(NamespaceOrTypeSymbol nsOrType, LookupOptions options, Binder originalBinder)
         {
             if ((options & LookupOptions.NamespacesOrTypesOnly) != 0 && nsOrType is TypeSymbol)
             {
@@ -1549,10 +1583,10 @@ symIsHidden:;
         /// Should only be called by <see cref="IsAccessible(Symbol, TypeSymbol, out bool, ref HashSet{DiagnosticInfo}, ConsList{TypeSymbol})"/>,
         /// which will already have checked for <see cref="BinderFlags.IgnoreAccessibility"/>.
         /// </remarks>
-        internal virtual bool IsAccessibleHelper(Symbol symbol, TypeSymbol accessThroughType, out bool failedThroughTypeCheck, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<TypeSymbol> basesBeingResolved)
+        internal virtual bool IsAccessibleHelper(Symbol symbol, TypeSymbol accessThroughType, out bool failedThroughTypeCheck, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<TypeSymbol> basesBeingResolved, Binder innerBinder = null)
         {
             // By default, just delegate to containing binder.
-            return Next.IsAccessibleHelper(symbol, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics, basesBeingResolved);
+            return Next.IsAccessibleHelper(symbol, accessThroughType, out failedThroughTypeCheck, ref useSiteDiagnostics, basesBeingResolved, innerBinder);
         }
 
         internal bool IsNonInvocableMember(Symbol symbol)

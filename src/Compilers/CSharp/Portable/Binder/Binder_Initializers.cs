@@ -145,8 +145,12 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal Binder GetFieldInitializerBinder(FieldSymbol fieldSymbol, bool suppressBinderFlagsFieldInitializer = false)
         {
-            Debug.Assert((ContainingMemberOrLambda is TypeSymbol containing && TypeSymbol.Equals(containing, fieldSymbol.ContainingType, TypeCompareKind.ConsiderEverything2)) || //should be the binder for the type
-                    fieldSymbol.ContainingType.IsImplicitClass); //however, we also allow fields in namespaces to help support script scenarios
+            // containing member should either be a type or a namespace
+            var containingType = ContainingMemberOrLambda as TypeSymbol ?? (ContainingMemberOrLambda as NamespaceSymbol)?.GlobalMembersContainerType;
+            Debug.Assert(
+                (TypeSymbol.Equals(containingType, fieldSymbol.ContainingType, TypeCompareKind.ConsiderEverything2)) || //should be the binder for the type
+                fieldSymbol.ContainingType.IsImplicitClass //however, we also allow fields in namespaces to help support script scenarios
+            );
 
             Binder binder = this;
 

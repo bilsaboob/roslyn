@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.DocumentationComments;
 using Microsoft.CodeAnalysis.LanguageServices;
+using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using Microsoft.CodeAnalysis.Shared.Utilities;
 using Microsoft.CodeAnalysis.Symbols;
@@ -166,7 +167,31 @@ namespace Microsoft.CodeAnalysis.QuickInfo
             var groups = await descriptionService.ToDescriptionGroupsAsync(workspace, semanticModel, token.SpanStart, tokenInformation.Symbols, cancellationToken).ConfigureAwait(false);
 
             bool TryGetGroupText(SymbolDescriptionGroups group, out ImmutableArray<TaggedText> taggedParts)
-                => groups.TryGetValue(group, out taggedParts) && !taggedParts.IsDefaultOrEmpty;
+            {
+                if (!groups.TryGetValue(group, out taggedParts) || taggedParts.IsDefaultOrEmpty) return false;
+
+                // filter "global namespace type names"
+                var filteredTaggetParts = ArrayBuilder<TaggedText>.GetInstance();
+
+                for (var i = 0; i < taggedParts.Length; ++i)
+                {
+                    var part = taggedParts[i];
+                    if (NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(part.Text))
+                    {
+                        // skip the "namespace type" if any such
+                        if (++i >= taggedParts.Length) break;
+
+                        // skip following "." if any such
+                        part = taggedParts[i];
+                        if (part.Text == ".") continue;
+                    }
+
+                    filteredTaggetParts.Add(part);
+                }
+
+                taggedParts = filteredTaggetParts.ToImmutableAndFree();
+                return true;
+            }
 
             var sections = ImmutableArray.CreateBuilder<QuickInfoSection>(initialCapacity: groups.Count);
 

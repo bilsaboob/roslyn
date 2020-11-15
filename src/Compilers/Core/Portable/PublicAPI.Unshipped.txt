@@ -9,9 +9,11 @@ Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalysisResultAsy
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalysisResultAsync(Microsoft.CodeAnalysis.AdditionalText file, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.CodeAnalysis.Diagnostics.AnalysisResult>
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.get -> int
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.set -> void
+Microsoft.CodeAnalysis.INamespaceSymbol.GlobalMembersContainerType.get -> Microsoft.CodeAnalysis.ITypeSymbol
 Microsoft.CodeAnalysis.IParameterSymbol.IsSpread.get -> bool
 Microsoft.CodeAnalysis.ISymbolWithOriginLocation
 Microsoft.CodeAnalysis.ISymbolWithOriginLocation.OriginalLocations.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.Location>
+Microsoft.CodeAnalysis.NamespaceSymbolHelpers
 Microsoft.CodeAnalysis.SymbolInfo.IsSpreadParam.get -> bool
 Microsoft.CodeAnalysis.SymbolInfo.IsSpreadParam.set -> void
 Microsoft.CodeAnalysis.SymbolKind.Wrapped = 21 -> Microsoft.CodeAnalysis.SymbolKind
@@ -81,6 +83,9 @@ Microsoft.CodeAnalysis.CompilationOptions.SyntaxTreeOptionsProvider.get -> Micro
 Microsoft.CodeAnalysis.CompilationOptions.WithSyntaxTreeOptionsProvider(Microsoft.CodeAnalysis.SyntaxTreeOptionsProvider provider) -> Microsoft.CodeAnalysis.CompilationOptions
 Microsoft.CodeAnalysis.Operations.IPatternOperation.NarrowedType.get -> Microsoft.CodeAnalysis.ITypeSymbol
 override Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol.Kind.get -> Microsoft.CodeAnalysis.SymbolKind
+static Microsoft.CodeAnalysis.NamespaceSymbolHelpers.GetNamespaceMembersContainerClassName(string namespaceName) -> string
+static Microsoft.CodeAnalysis.NamespaceSymbolHelpers.IsGlobalSymbolAccessible(Microsoft.CodeAnalysis.ISymbol symbol, Microsoft.CodeAnalysis.INamespaceSymbol fromNamespace) -> bool
+static Microsoft.CodeAnalysis.NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(string name) -> bool
 virtual Microsoft.CodeAnalysis.Diagnostics.AnalysisContext.RegisterAdditionalFileAction(System.Action<Microsoft.CodeAnalysis.Diagnostics.AdditionalFileAnalysisContext> action) -> void
 virtual Microsoft.CodeAnalysis.Diagnostics.CompilationStartAnalysisContext.RegisterAdditionalFileAction(System.Action<Microsoft.CodeAnalysis.Diagnostics.AdditionalFileAnalysisContext> action) -> void
 virtual Microsoft.CodeAnalysis.WrappedSymbol.Kind.get -> Microsoft.CodeAnalysis.SymbolKind

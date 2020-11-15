@@ -239,6 +239,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             DiagnosticBag diagnostics,
             out bool modifierErrors)
         {
+            // make sure we have "static" modifier for members in a namespace container class
+            if (NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(containingType.Name))
+            {
+                // we are in a namespace class - so the modifiers must have static!
+                if (!modifiers.Any(t => t.IsKind(SyntaxKind.StaticKeyword)))
+                    modifiers = modifiers.Add(SyntaxFactory.FakeToken(SyntaxKind.StaticKeyword));
+            }
+
             bool isInterface = containingType.IsInterface;
             var defaultAccess = isInterface && !isExplicitInterfaceImplementation ? DeclarationModifiers.Public : DeclarationModifiers.Private;
 

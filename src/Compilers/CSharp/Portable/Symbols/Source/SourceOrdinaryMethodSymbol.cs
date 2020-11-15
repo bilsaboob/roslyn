@@ -521,7 +521,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         protected override DeclarationModifiers MakeDeclarationModifiers(DeclarationModifiers allowedModifiers, DiagnosticBag diagnostics)
         {
             var syntax = GetSyntax();
-            return ModifierUtils.MakeAndCheckNontypeMemberModifiers(syntax.Modifiers, defaultAccess: DeclarationModifiers.None, allowedModifiers, Locations[0], diagnostics, out _);
+
+            // make sure we have "static" modifier for members in a namespace container class
+            var containingType = ContainingType;
+            var modifiers = syntax.Modifiers;
+            if (NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(containingType.Name))
+            {
+                // we are in a namespace class - so the modifiers must have static!
+                if (!modifiers.Any(t => t.IsKind(SyntaxKind.StaticKeyword)))
+                    modifiers = modifiers.Add(SyntaxFactory.FakeToken(SyntaxKind.StaticKeyword));
+            }
+
+            return ModifierUtils.MakeAndCheckNontypeMemberModifiers(modifiers, defaultAccess: DeclarationModifiers.None, allowedModifiers, Locations[0], diagnostics, out _);
         }
 
         private ImmutableArray<TypeParameterSymbol> MakeTypeParameters(MethodDeclarationSyntax syntax, DiagnosticBag diagnostics)

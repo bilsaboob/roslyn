@@ -28,7 +28,8 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
         public static TSymbol? GetEnclosingSymbol<TSymbol>(this SemanticModel semanticModel, int position, CancellationToken cancellationToken)
             where TSymbol : class, ISymbol
         {
-            for (var symbol = semanticModel.GetEnclosingSymbol(position, cancellationToken);
+            var enclosingSymbol = semanticModel.GetEnclosingSymbol(position, cancellationToken);
+            for (var symbol = enclosingSymbol;
                  symbol != null;
                  symbol = symbol.ContainingSymbol)
             {
@@ -36,6 +37,36 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
                 {
                     return tSymbol;
                 }
+            }
+
+            if (typeof(INamedTypeSymbol).IsAssignableFrom(typeof(TSymbol)))
+                return GetEnclosingGlbalNamespaceMembersTypeSymbol<TSymbol>(semanticModel, position, enclosingSymbol, cancellationToken);
+
+            return null;
+        }
+
+        public static TSymbol? GetEnclosingGlbalNamespaceMembersTypeSymbol<TSymbol>(this SemanticModel semanticModel, int position, ISymbol enclosingSymbol, CancellationToken cancellationToken)
+            where TSymbol : class, ISymbol
+        {
+            if (enclosingSymbol == null)
+                enclosingSymbol = semanticModel.GetEnclosingSymbol(position, cancellationToken);
+
+            // get the top enclosing non type / namespace symbol
+            var symbol = enclosingSymbol;
+            for (; symbol != null; symbol = symbol.ContainingSymbol)
+            {
+                // only continue if we are in method symbol
+                if (!(symbol is IMethodSymbol)) break;
+            }
+
+            // the enclosing symbol should be a namespace in order for us to return the "global namespace type"
+            if (symbol is INamespaceSymbol nsSymbol)
+            {
+                var globalMembersContainingSymbol = nsSymbol.GlobalMembersContainerType;
+                if (globalMembersContainingSymbol is null) return null;
+
+                if (globalMembersContainingSymbol is TSymbol tSymbol)
+                    return tSymbol;
             }
 
             return null;

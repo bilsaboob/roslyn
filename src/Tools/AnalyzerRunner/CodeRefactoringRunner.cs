@@ -83,35 +83,42 @@ namespace AnalyzerRunner
 
                 foreach (var refactoringProvider in _refactorings[document.Project.Language])
                 {
-                    var codeActions = new List<CodeAction>();
-                    var context = new CodeRefactoringContext(document, new TextSpan(node.SpanStart, 0), codeActions.Add, cancellationToken);
-                    await refactoringProvider.ComputeRefactoringsAsync(context).ConfigureAwait(false);
-
-                    foreach (var codeAction in codeActions)
+                    try
                     {
-                        var operations = await codeAction.GetOperationsAsync(cancellationToken).ConfigureAwait(false);
-                        foreach (var operation in operations)
+                        var codeActions = new List<CodeAction>();
+                        var context = new CodeRefactoringContext(document, new TextSpan(node.SpanStart, 0), codeActions.Add, cancellationToken);
+                        await refactoringProvider.ComputeRefactoringsAsync(context).ConfigureAwait(false);
+
+                        foreach (var codeAction in codeActions)
                         {
-                            if (!(operation is ApplyChangesOperation applyChangesOperation))
+                            var operations = await codeAction.GetOperationsAsync(cancellationToken).ConfigureAwait(false);
+                            foreach (var operation in operations)
                             {
-                                continue;
-                            }
+                                if (!(operation is ApplyChangesOperation applyChangesOperation))
+                                {
+                                    continue;
+                                }
 
-                            var changes = applyChangesOperation.ChangedSolution.GetChanges(document.Project.Solution);
-                            var projectChanges = changes.GetProjectChanges().ToArray();
-                            if (projectChanges.Length != 1 || projectChanges[0].ProjectId != document.Project.Id)
-                            {
-                                continue;
-                            }
+                                var changes = applyChangesOperation.ChangedSolution.GetChanges(document.Project.Solution);
+                                var projectChanges = changes.GetProjectChanges().ToArray();
+                                if (projectChanges.Length != 1 || projectChanges[0].ProjectId != document.Project.Id)
+                                {
+                                    continue;
+                                }
 
-                            var documentChanges = projectChanges[0].GetChangedDocuments().ToArray();
-                            if (documentChanges.Length != 1 || documentChanges[0] != document.Id)
-                            {
-                                continue;
-                            }
+                                var documentChanges = projectChanges[0].GetChangedDocuments().ToArray();
+                                if (documentChanges.Length != 1 || documentChanges[0] != document.Id)
+                                {
+                                    continue;
+                                }
 
-                            return projectChanges[0].NewProject.GetDocument(document.Id);
+                                return projectChanges[0].NewProject.GetDocument(document.Id);
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        // don't crash ... ignore this code refactoring provider
                     }
                 }
             }
