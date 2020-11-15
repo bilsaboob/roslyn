@@ -464,8 +464,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
 
                 // If the thing on the left is a this parameter (e.g. this or base) and we're in a static context,
                 // we shouldn't show anything
-                if (symbol.IsThisParameter() &&
-                    expression.IsInStaticContext())
+                // NOTE: also check the name, because we can be in "this context" ... however, not necessarily it's the "this." syntax ...
+                var isThis = symbol.IsThisParameter() && (symbol.Name == "this" || symbol.Name == "@this");
+                if (isThis && expression.IsInStaticContext())
                 {
                     return ImmutableArray<ISymbol>.Empty;
                 }
@@ -493,7 +494,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
 
                         // case:
                         //    base.|
-                        if (parameter.IsThis && !object.Equals(parameter.Type, container))
+                        if (isThis && !object.Equals(parameter.Type, container))
                         {
                             useBaseReferenceAccessibility = true;
                         }
