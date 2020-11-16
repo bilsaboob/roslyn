@@ -369,10 +369,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         protected sealed override void MethodChecks(DiagnosticBag diagnostics)
         {
+
             // These values may not be final, but we need to have something set here in the
             // event that we need to find the overridden accessor.
             _lazyParameters = ComputeParameters(diagnostics);
             _lazyReturnType = ComputeReturnType(diagnostics);
+
+            // create an error type if no type was computed
+            if (_lazyReturnType.Type is null)
+                _lazyReturnType = TypeWithAnnotations.Create(GetBinder().CreateErrorType());
+
             _lazyRefCustomModifiers = ImmutableArray<CustomModifier>.Empty;
 
             if (_explicitInterfaceImplementations.Length > 0)
