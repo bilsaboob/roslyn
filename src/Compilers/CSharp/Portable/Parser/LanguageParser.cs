@@ -1529,8 +1529,6 @@ tryAgain:
             var baseList = this.ParseBaseList(keyword, paramList is object);
             _termState = saveTerm;
 
-            var isInterface = keyword.Kind == SyntaxKind.InterfaceKeyword;
-
             // Parse class body
             bool parseMembers = true;
             SyntaxListBuilder<MemberDeclarationSyntax> members = default(SyntaxListBuilder<MemberDeclarationSyntax>);
@@ -1577,28 +1575,26 @@ tryAgain:
                                 var member = this.ParseMemberDeclaration(parentKind: keyword.Kind, parentName: name);
                                 if (member != null)
                                 {
-                                    if (isInterface)
+                                    switch (keyword.Kind)
                                     {
-                                        // convert fields into properties with auto getter / setter syntax
-                                        if (member is FieldDeclarationSyntax fieldMember && fieldMember.Declaration.Variables.Count == 1)
-                                        {
-                                            // we don't support initializers on interface
-                                            var variable = fieldMember.Declaration.Variables[0];
-                                            var propMember = SyntaxFactory.PropertyDeclaration(
-                                                attributeLists: fieldMember.AttributeLists,
-                                                modifiers: fieldMember.Modifiers,
-                                                explicitInterfaceSpecifier: null,
-                                                identifier: variable.Identifier,
-                                                type: variable.Type,
-                                                accessorList: SyntaxFactory.FakeAccessorList(),
-                                                expressionBody: null,
-                                                initializer: variable.initializer,
-                                                fieldMember.SemicolonToken
-                                            );
+                                        case SyntaxKind.InterfaceKeyword:
+                                            {
+                                                // for interfaces we always convert field like declarations into properties
+                                                if (TryGetSimpleFieldDeclarationWithVariable(member, out var fieldDecl, out var varDecl))
+                                                    member = ConvertFieldToProperty(fieldDecl, varDecl);
+                                                break;
+                                            }
+                                        case SyntaxKind.ClassKeyword:
+                                            {
+                                                // for classes we convert field like declarations into properties only if the name starts with "upper case"
+                                                if (TryGetSimpleFieldDeclarationWithVariable(member, out var fieldDecl, out var varDecl) &&
+                                                    varDecl.Identifier?.Text != null && char.IsUpper(varDecl.Identifier.Text[0]))
+                                                {
+                                                    member = ConvertFieldToProperty(fieldDecl, varDecl);
+                                                }
 
-                                            // replace the field with the property
-                                            member = propMember;
-                                        }
+                                                break;
+                                            }
                                     }
 
                                     // statements are accepted here, a semantic error will be reported later
@@ -1730,6 +1726,37 @@ tryAgain:
                     _pool.Free(constraints);
                 }
             }
+        }
+
+        private bool TryGetSimpleFieldDeclarationWithVariable(MemberDeclarationSyntax member, out FieldDeclarationSyntax fieldDecl, out VariableDeclaratorSyntax varDecl)
+        {
+            fieldDecl = null;
+            varDecl = null;
+
+            if (member is FieldDeclarationSyntax fieldMember && fieldMember.Declaration.Variables.Count == 1)
+            {
+                fieldDecl = fieldMember;
+                varDecl = fieldMember.Declaration.Variables[0];
+                return true;
+            }
+
+            return false;
+        }
+
+        private PropertyDeclarationSyntax ConvertFieldToProperty(FieldDeclarationSyntax fieldDecl, VariableDeclaratorSyntax varDecl)
+        {
+            // we don't support initializers on interface
+            return SyntaxFactory.PropertyDeclaration(
+                attributeLists: fieldDecl.AttributeLists,
+                modifiers: fieldDecl.Modifiers,
+                explicitInterfaceSpecifier: null,
+                identifier: varDecl.Identifier,
+                type: varDecl.Type,
+                accessorList: SyntaxFactory.FakeAccessorList(),
+                expressionBody: null,
+                initializer: varDecl.initializer,
+                fieldDecl.SemicolonToken
+            );
         }
 
 #nullable restore
