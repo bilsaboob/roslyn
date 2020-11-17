@@ -1587,8 +1587,7 @@ tryAgain:
                                         case SyntaxKind.ClassKeyword:
                                             {
                                                 // for classes we convert field like declarations into properties only if the name starts with "upper case"
-                                                if (TryGetSimpleFieldDeclarationWithVariable(member, out var fieldDecl, out var varDecl) &&
-                                                    varDecl.Identifier?.Text != null && char.IsUpper(varDecl.Identifier.Text[0]))
+                                                if (TryGetSimpleFieldDeclarationWithVariable(member, out var fieldDecl, out var varDecl) && CanConvertFieldToClassProperty(fieldDecl, varDecl))
                                                 {
                                                     member = ConvertFieldToProperty(fieldDecl, varDecl);
                                                 }
@@ -1726,6 +1725,20 @@ tryAgain:
                     _pool.Free(constraints);
                 }
             }
+        }
+
+        private bool CanConvertFieldToClassProperty(FieldDeclarationSyntax fieldDecl, VariableDeclaratorSyntax varDecl)
+        {
+            // cannot convert const to property
+            if (fieldDecl.Modifiers.Any((int)SyntaxKind.ConstKeyword)) return false;
+
+            if (string.IsNullOrEmpty(varDecl.Identifier?.Text)) return false;
+
+            var ch = varDecl.Identifier.Text[0];
+
+            if (!char.IsLetter(ch) || !char.IsUpper(ch)) return false;
+
+            return true;
         }
 
         private bool TryGetSimpleFieldDeclarationWithVariable(MemberDeclarationSyntax member, out FieldDeclarationSyntax fieldDecl, out VariableDeclaratorSyntax varDecl)
