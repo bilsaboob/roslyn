@@ -581,8 +581,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                             goto default;
 
                         default:
-                            var memberOrStatement = this.ParseMemberDeclaration(parentKind);
-                            if (memberOrStatement == null)
+                            var member = this.ParseMemberDeclaration(parentKind);
+
+                            if (member != null)
+                            {
+                                // for namespaces we convert field like declarations into properties only if the name starts with "upper case"
+                                if (TryGetSimpleFieldDeclarationWithVariable(member, out var fieldDecl, out var varDecl) && CanConvertFieldToClassProperty(fieldDecl, varDecl))
+                                {
+                                    member = ConvertFieldToProperty(fieldDecl, varDecl);
+                                }
+
+                                // make the member public if name starts with upper case
+                                member = MakePublicMemberByNameConvention(member);
+                            }
+
+                            if (member == null)
                             {
                                 // incomplete members must be processed before we add any nodes to the body:
                                 ReduceIncompleteMembers(ref pendingIncompleteMembers, ref openBrace, ref body, ref initialBadNodes);
@@ -600,9 +613,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
                                 this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, skippedToken);
                             }
-                            else if (memberOrStatement.Kind == SyntaxKind.IncompleteMember && seen < NamespaceParts.MembersAndStatements)
+                            else if (member.Kind == SyntaxKind.IncompleteMember && seen < NamespaceParts.MembersAndStatements)
                             {
-                                pendingIncompleteMembers.Add(memberOrStatement);
+                                pendingIncompleteMembers.Add(member);
                                 reportUnexpectedToken = true;
                             }
                             else
@@ -610,7 +623,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                                 // incomplete members must be processed before we add any nodes to the body:
                                 AddIncompleteMembers(ref pendingIncompleteMembers, ref body);
 
-                                body.Members.Add(adjustStateAndReportStatementOutOfOrder(ref seen, memberOrStatement));
+                                body.Members.Add(adjustStateAndReportStatementOutOfOrder(ref seen, member));
                                 reportUnexpectedToken = true;
                             }
                             break;
@@ -1575,6 +1588,7 @@ tryAgain:
                                 var member = this.ParseMemberDeclaration(parentKind: keyword.Kind, parentName: name);
                                 if (member != null)
                                 {
+                                    // convert field to property in certain scenarios
                                     switch (keyword.Kind)
                                     {
                                         case SyntaxKind.InterfaceKeyword:
@@ -1591,6 +1605,8 @@ tryAgain:
                                                 {
                                                     member = ConvertFieldToProperty(fieldDecl, varDecl);
                                                 }
+
+                                                member = MakePublicMemberByNameConvention(member);
 
                                                 break;
                                             }
@@ -1727,26 +1743,168 @@ tryAgain:
             }
         }
 
-        private bool CanConvertFieldToClassProperty(FieldDeclarationSyntax fieldDecl, VariableDeclaratorSyntax varDecl)
+        #region Conversion to public member
+
+        private bool HasAnyAccessibilityModifier(SyntaxList<SyntaxToken> modifiers)
         {
-            // cannot convert const to property
-            if (fieldDecl.Modifiers.Any((int)SyntaxKind.ConstKeyword)) return false;
+            if (modifiers.Count == 0) return false;
 
-            if (string.IsNullOrEmpty(varDecl.Identifier?.Text)) return false;
+            for (var i = 0; i < modifiers.Count; ++i)
+            {
+                var mod = modifiers[i];
+                if (SyntaxFacts.IsAccessibilityModifier(mod.Kind)) return true;
+            }
 
-            var ch = varDecl.Identifier.Text[0];
+            return false;
+        }
+
+        private SyntaxList<SyntaxToken> MakePublicModifiers(SyntaxList<SyntaxToken> modifiers)
+        {
+            var newModifiers = _pool.Allocate<SyntaxToken>();
+
+            // add the public keyword
+            newModifiers.Add(SyntaxFactory.FakeToken(SyntaxKind.PublicKeyword));
+
+            // add the existing modifiers
+            for (var i = 0; i < modifiers.Count; ++i)
+                newModifiers.Add(modifiers[i]);
+
+            return _pool.ToListAndFree(newModifiers);
+        }
+
+        private MemberDeclarationSyntax MakePublicMemberByNameConvention(MemberDeclarationSyntax member)
+        {
+            // only if not explicitly set
+            if (HasAnyAccessibilityModifier(member.Modifiers))
+                return member;
+
+            if (member is FieldDeclarationSyntax fieldDecl)
+            {
+                if (!TryGetSimpleFieldDeclarationWithVariable(fieldDecl, out _, out var varDecl))
+                    return member;
+
+                // must be public name
+                if (!IsNameClassifiedAsPublic(varDecl.Identifier))
+                    return member;
+
+                return fieldDecl.Update(
+                    attributeLists: fieldDecl.AttributeLists,
+                    modifiers: MakePublicModifiers(fieldDecl.Modifiers),
+                    declaration: fieldDecl.Declaration,
+                    semicolonToken: fieldDecl.SemicolonToken
+                );
+            }
+
+            if (member is EventFieldDeclarationSyntax eventFieldDecl)
+            {
+                if (!TryGetSimpleFieldDeclarationWithVariable(eventFieldDecl, out _, out var varDecl))
+                    return member;
+
+                // must be public name
+                if (!IsNameClassifiedAsPublic(varDecl.Identifier))
+                    return member;
+
+                return eventFieldDecl.Update(
+                    attributeLists: eventFieldDecl.AttributeLists,
+                    modifiers: MakePublicModifiers(eventFieldDecl.Modifiers),
+                    eventKeyword: eventFieldDecl.EventKeyword,
+                    declaration: eventFieldDecl.Declaration,
+                    semicolonToken: eventFieldDecl.SemicolonToken
+                );
+            }
+
+            if (member is MethodDeclarationSyntax methodDecl)
+            {
+                // must be public name
+                if (!IsNameClassifiedAsPublic(methodDecl.Identifier))
+                    return member;
+
+                return methodDecl.Update(
+                    attributeLists: methodDecl.AttributeLists,
+                    modifiers: MakePublicModifiers(methodDecl.Modifiers),
+                    explicitInterfaceSpecifier: methodDecl.ExplicitInterfaceSpecifier,
+                    identifier: methodDecl.Identifier,
+                    typeParameterList: methodDecl.TypeParameterList,
+                    parameterList: methodDecl.ParameterList,
+                    returnType: methodDecl.ReturnType,
+                    constraintClauses: methodDecl.ConstraintClauses,
+                    body: methodDecl.Body,
+                    expressionBody: methodDecl.ExpressionBody,
+                    semicolonToken: methodDecl.SemicolonToken
+                );
+            }
+
+            if (member is PropertyDeclarationSyntax propDecl)
+            {
+                // must be public name
+                if (!IsNameClassifiedAsPublic(propDecl.Identifier))
+                    return member;
+
+                return propDecl.Update(
+                    attributeLists: propDecl.AttributeLists,
+                    modifiers: MakePublicModifiers(propDecl.Modifiers),
+                    explicitInterfaceSpecifier: propDecl.ExplicitInterfaceSpecifier,
+                    identifier: propDecl.Identifier,
+                    type: propDecl.Type,
+                    accessorList: propDecl.AccessorList,
+                    expressionBody: propDecl.ExpressionBody,
+                    initializer: propDecl.Initializer,
+                    semicolonToken: propDecl.SemicolonToken
+                );
+            }
+
+            if (member is EventDeclarationSyntax eventPropDecl)
+            {
+                // must be public name
+                if (!IsNameClassifiedAsPublic(eventPropDecl.Identifier))
+                    return member;
+
+                return eventPropDecl.Update(
+                    attributeLists: eventPropDecl.AttributeLists,
+                    modifiers: MakePublicModifiers(eventPropDecl.Modifiers),
+                    eventKeyword: eventPropDecl.EventKeyword,
+                    explicitInterfaceSpecifier: eventPropDecl.ExplicitInterfaceSpecifier,
+                    identifier: eventPropDecl.Identifier,
+                    type: eventPropDecl.Type,
+                    accessorList: eventPropDecl.AccessorList,
+                    semicolonToken: eventPropDecl.SemicolonToken
+                );
+            }
+
+            return member;
+        }
+
+        #endregion
+
+        #region Field to Property conversion
+
+        private bool IsNameClassifiedAsPublic(SyntaxToken name)
+        {
+            if (string.IsNullOrEmpty(name?.Text)) return false;
+
+            var ch = name.Text[0];
 
             if (!char.IsLetter(ch) || !char.IsUpper(ch)) return false;
 
             return true;
         }
 
-        private bool TryGetSimpleFieldDeclarationWithVariable(MemberDeclarationSyntax member, out FieldDeclarationSyntax fieldDecl, out VariableDeclaratorSyntax varDecl)
+        private bool CanConvertFieldToClassProperty(BaseFieldDeclarationSyntax fieldDecl, VariableDeclaratorSyntax varDecl)
+        {
+            // cannot convert const to property
+            if (fieldDecl.Modifiers.Any((int)SyntaxKind.ConstKeyword)) return false;
+
+            if (!IsNameClassifiedAsPublic(varDecl.Identifier)) return false;
+
+            return true;
+        }
+
+        private bool TryGetSimpleFieldDeclarationWithVariable(MemberDeclarationSyntax member, out BaseFieldDeclarationSyntax fieldDecl, out VariableDeclaratorSyntax varDecl)
         {
             fieldDecl = null;
             varDecl = null;
 
-            if (member is FieldDeclarationSyntax fieldMember && fieldMember.Declaration.Variables.Count == 1)
+            if (member is BaseFieldDeclarationSyntax fieldMember && fieldMember.Declaration.Variables.Count == 1)
             {
                 fieldDecl = fieldMember;
                 varDecl = fieldMember.Declaration.Variables[0];
@@ -1756,7 +1914,7 @@ tryAgain:
             return false;
         }
 
-        private PropertyDeclarationSyntax ConvertFieldToProperty(FieldDeclarationSyntax fieldDecl, VariableDeclaratorSyntax varDecl)
+        private PropertyDeclarationSyntax ConvertFieldToProperty(BaseFieldDeclarationSyntax fieldDecl, VariableDeclaratorSyntax varDecl)
         {
             // we don't support initializers on interface
             return SyntaxFactory.PropertyDeclaration(
@@ -1771,6 +1929,8 @@ tryAgain:
                 fieldDecl.SemicolonToken
             );
         }
+
+        #endregion
 
 #nullable restore
 
