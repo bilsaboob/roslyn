@@ -301,6 +301,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                     case SyntaxKind.RecordDeclaration:
                     // methods & members
                     case SyntaxKind.MethodDeclaration:
+                    case SyntaxKind.ConstructorDeclaration:
                     case SyntaxKind.LocalFunctionStatement:
                     case SyntaxKind.PropertyDeclaration:
                     case SyntaxKind.GetAccessorDeclaration:
@@ -379,6 +380,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                     if (result != null) return result;
 
                     result = GetIndentationFromBodyNode(indenter, methodDecl, token);
+                    if (result != null) return result;
+                }
+                else if (containerSyntax is ConstructorDeclarationSyntax ctorDecl)
+                {
+                    result = GetIndentationFromMemberModifiers(indenter, ctorDecl, token);
+                    if (result != null) return result;
+
+                    result = GetIndentationFromBodyNode(indenter, ctorDecl, token);
                     if (result != null) return result;
                 }
                 else if (containerSyntax is ParameterSyntax param)
