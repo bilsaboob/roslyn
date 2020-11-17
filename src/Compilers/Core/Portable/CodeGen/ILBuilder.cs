@@ -1001,6 +1001,9 @@ tryAgain:
         /// </summary>
         internal void DefineSequencePoint(SyntaxTree syntaxTree, TextSpan span)
         {
+            // no need to define any sequence point for 0 lenght syntax constructs / spans
+            if (span.Length == 0) return;
+
             var curBlock = GetCurrentBlock();
             _lastSeqPointTree = syntaxTree;
 
