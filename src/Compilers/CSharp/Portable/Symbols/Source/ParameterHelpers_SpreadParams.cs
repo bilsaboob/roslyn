@@ -225,7 +225,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         internal static bool IsValidSpreadArgType(TypeSymbol type)
         {
             // must have a default constructor
-            var defaultConstructor = (type as NamedTypeSymbol)?.InstanceConstructors.FirstOrDefault(ctor => ctor.ParameterCount == 0);
+            var namedType = type as NamedTypeSymbol;
+            if (namedType is null) return false;
+
+            // if it's an interface, then we will generate a default type for it, so it's fine!
+            if (namedType.IsInterface) return true;
+
+            // other types must have a default constructor
+            var defaultConstructor = namedType.InstanceConstructors.FirstOrDefault(ctor => ctor.ParameterCount == 0);
             return defaultConstructor != null;
         }
 

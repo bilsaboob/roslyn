@@ -3566,12 +3566,33 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var parameters = symbol.GetParameters();
             var spreadParam = parameters[spreadArgAnalysis.ParameterIndex];
-            var spreadTypeMembers = SpreadParamHelpers.GetPossibleSpreadParamMembers(spreadParam.Type);
 
+            var spreadParamType = spreadParam.Type;
+
+            // if the spread param type is an interface, we actually need to use the generated default type instead
+            var interfaceType = spreadParamType as NamedTypeSymbol;
+            if (interfaceType?.IsInterfaceType() == true)
+            {
+                var diagnostics = DiagnosticBag.GetInstance();
+                try
+                {
+                    var defaultImplType = DefaultInterfaceImplTypeGenerator.GetOrGenerate(Compilation, interfaceType, diagnostics);
+                    spreadParamType = defaultImplType;
+                    if (useSiteDiagnostics == null)
+                        useSiteDiagnostics = new HashSet<DiagnosticInfo>();
+                    useSiteDiagnostics.AddAll(diagnostics.AsEnumerable().Cast<DiagnosticWithInfo>().Select(d => d.Info));
+                }
+                finally
+                {
+                    diagnostics.Free();
+                }
+            }
+
+            var spreadTypeMembers = SpreadParamHelpers.GetPossibleSpreadParamMembers(spreadParamType);
             var initExpressions = ArrayBuilder<BoundExpression>.GetInstance();
 
             // we need the implicit reciever
-            var implicitReceiver = new BoundObjectOrCollectionValuePlaceholder(SyntaxFactory.IdentifierName(spreadParam.Type.Name), spreadParam.Type) { WasCompilerGenerated = true };
+            var implicitReceiver = new BoundObjectOrCollectionValuePlaceholder(SyntaxFactory.IdentifierName(spreadParamType.Name), spreadParamType) { WasCompilerGenerated = true };
 
             // build the member initializer expressions
             for (var i = 0; i < spreadArgAnalysis.Arguments.Count; ++i)
@@ -3612,8 +3633,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             // new instance of the parameter type with an object initializer
-            var initializer = nodeFactory.ObjectInitializer(implicitReceiver, spreadParam.Type, initExpressions.ToImmutableAndFree(), arguments.Argument(0).Syntax.Parent);
-            return nodeFactory.TryNew((NamedTypeSymbol)spreadParam.Type)?.UpdateInitializer(initializer) ?? nodeFactory.Null(spreadParam.Type);
+            var initializer = nodeFactory.ObjectInitializer(implicitReceiver, spreadParamType, initExpressions.ToImmutableAndFree(), arguments.Argument(0).Syntax.Parent);
+            return nodeFactory.TryNew((NamedTypeSymbol)spreadParamType)?.UpdateInitializer(initializer) ?? nodeFactory.Null(spreadParamType);
         }
 
         private MemberResolutionResult<TMember> IsMemberApplicableInExpandedForm<TMember>(
