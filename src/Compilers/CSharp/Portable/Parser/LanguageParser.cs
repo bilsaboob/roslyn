@@ -3304,11 +3304,18 @@ parse_member_name:;
         }
 
         private ConstructorDeclarationSyntax ParseConstructorDeclaration(
-            SyntaxList<AttributeListSyntax> attributes, SyntaxListBuilder modifiers)
+            SyntaxList<AttributeListSyntax> attributes, SyntaxListBuilder modifiersBuilder)
         {
             SyntaxToken name = TryEatToken(SyntaxKind.ThisKeyword) ?? this.ParseIdentifierToken();
             var saveTerm = _termState;
             _termState |= TerminatorState.IsEndOfMethodSignature;
+
+            var modifiers = modifiersBuilder.ToList();
+
+            // make constructors public per default
+            if (!HasAnyAccessibilityModifier(modifiers))
+                modifiers = MakePublicModifiers(modifiers);
+
             try
             {
                 var paramList = this.ParseParenthesizedParameterList();
@@ -3321,7 +3328,7 @@ parse_member_name:;
                     out BlockSyntax body, out ArrowExpressionClauseSyntax expressionBody, out SyntaxToken semicolon,
                     requestedExpressionBodyFeature: MessageID.IDS_FeatureExpressionBodiedDeOrConstructor);
 
-                return _syntaxFactory.ConstructorDeclaration(attributes, modifiers.ToList(), name, paramList, initializer, body, expressionBody, semicolon);
+                return _syntaxFactory.ConstructorDeclaration(attributes, modifiers, name, paramList, initializer, body, expressionBody, semicolon);
             }
             finally
             {
