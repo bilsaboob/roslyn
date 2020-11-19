@@ -142,6 +142,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return node != null ? node.Parent : null;
         }
 
+        private enum NamespaceBodyBuilderElemKind
+        {
+            None,
+            Extern,
+            Using,
+            Attribute,
+            Member
+        }
+
         private struct NamespaceBodyBuilder
         {
             public SyntaxListBuilder<ExternAliasDirectiveSyntax> Externs;
@@ -155,6 +164,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 Usings = pool.Allocate<UsingDirectiveSyntax>();
                 Attributes = pool.Allocate<AttributeListSyntax>();
                 Members = pool.Allocate<MemberDeclarationSyntax>();
+                LastAddedKind = NamespaceBodyBuilderElemKind.None;
+            }
+
+            public NamespaceBodyBuilderElemKind LastAddedKind;
+
+            internal void AddExtern(ExternAliasDirectiveSyntax @extern)
+            {
+                Externs.Add(@extern);
+                LastAddedKind = NamespaceBodyBuilderElemKind.Extern;
+            }
+
+            internal void AddUsing(UsingDirectiveSyntax @using)
+            {
+                Usings.Add(@using);
+                LastAddedKind = NamespaceBodyBuilderElemKind.Using;
+            }
+
+            internal void AddAttribute(AttributeListSyntax attribute)
+            {
+                Attributes.Add(attribute);
+                LastAddedKind = NamespaceBodyBuilderElemKind.Attribute;
+            }
+
+            internal void AddMember(MemberDeclarationSyntax member)
+            {
+                Members.Add(member);
+                LastAddedKind = NamespaceBodyBuilderElemKind.Member;
             }
 
             internal void Free(SyntaxListPool pool)
@@ -180,21 +216,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         internal CompilationUnitSyntax ParseCompilationUnitCore()
         {
-            SyntaxToken tmp = null;
-            SyntaxListBuilder initialBadNodes = null;
+            SyntaxToken tmpNamespace = null;
+            NameSyntax tmpName = null;
+            SyntaxToken tmpOpenBrace = null;
+            SyntaxListBuilder pendingSkippedSyntaxList = null;
             var body = new NamespaceBodyBuilder(_pool);
             try
             {
-                this.ParseNamespaceBody(ref tmp, ref body, ref initialBadNodes, SyntaxKind.CompilationUnit);
+                this.ParseNamespaceBody(ref tmpNamespace, ref tmpName, ref tmpOpenBrace, ref body, ref pendingSkippedSyntaxList, SyntaxKind.CompilationUnit);
 
                 var eof = this.EatToken(SyntaxKind.EndOfFileToken);
                 var result = _syntaxFactory.CompilationUnit(body.Externs, body.Usings, body.Attributes, body.Members, eof);
 
-                if (initialBadNodes != null)
+                if (pendingSkippedSyntaxList != null)
                 {
                     // attach initial bad nodes as leading trivia on first token
-                    result = AddLeadingSkippedSyntax(result, initialBadNodes.ToListNode());
-                    _pool.Free(initialBadNodes);
+                    if (pendingSkippedSyntaxList.Count > 0)
+                    {
+                        result = AddLeadingSkippedSyntax(result, pendingSkippedSyntaxList.ToListNode());
+                    }
+
+                    _pool.Free(pendingSkippedSyntaxList);
                 }
 
                 return result;
@@ -308,7 +350,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             SyntaxListBuilder initialBadNodes = null;
             try
             {
-                this.ParseNamespaceBody(ref openBrace, ref body, ref initialBadNodes, SyntaxKind.NamespaceDeclaration, allowNestedNamespace: !(isFlatNamespace || maybeFlatNamespace), isCompilationUnit: false);
+                this.ParseNamespaceBody(ref namespaceToken, ref name, ref openBrace, ref body, ref initialBadNodes, SyntaxKind.NamespaceDeclaration, allowNestedNamespace: !(isFlatNamespace || maybeFlatNamespace), isCompilationUnit: false);
 
                 // we may be expecting a close brace - if not a flat namespace
                 closeBrace = this.TryEatToken(SyntaxKind.CloseBraceToken);
@@ -343,7 +385,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     semicolon = AddError(semicolon, ErrorCode.ERR_UnexpectedToken);
                 }
 
-                Debug.Assert(initialBadNodes == null); // init bad nodes should have been attached to open brace...
+                Debug.Assert(initialBadNodes == null || initialBadNodes.Count == 0); // init bad nodes should have been attached to open brace...
                 return _syntaxFactory.NamespaceDeclaration(
                     attributeLists,
                     modifiers.ToList(),
@@ -389,37 +431,75 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
 
         private void AddSkippedNamespaceText(
+            ref SyntaxToken namespaceToken,
+            ref NameSyntax name,
             ref SyntaxToken openBrace,
+            ref CSharpSyntaxNode node,
             ref NamespaceBodyBuilder body,
             ref SyntaxListBuilder initialBadNodes,
             GreenNode skippedSyntax)
         {
             var hasHandledSkippedSyntax = false;
 
-            if (!hasHandledSkippedSyntax && body.Members.Count > 0)
-                hasHandledSkippedSyntax = AddTrailingSkippedSyntax(body.Members, skippedSyntax);
+            if (node != null)
+            {
+                node = AddTrailingSkippedSyntax(node, skippedSyntax);
+                hasHandledSkippedSyntax = true;
+            }
 
-            if (!hasHandledSkippedSyntax && body.Attributes.Count > 0)
-                hasHandledSkippedSyntax = AddTrailingSkippedSyntax(body.Attributes, skippedSyntax);
-
-            if (!hasHandledSkippedSyntax && body.Usings.Count > 0)
-                hasHandledSkippedSyntax = AddTrailingSkippedSyntax(body.Usings, skippedSyntax);
-
-            if (!hasHandledSkippedSyntax && body.Externs.Count > 0)
-                hasHandledSkippedSyntax = AddTrailingSkippedSyntax(body.Externs, skippedSyntax);
+            switch (body.LastAddedKind)
+            {
+                case NamespaceBodyBuilderElemKind.Extern:
+                    {
+                        body.Externs[body.Externs.Count - 1] = AddTrailingSkippedSyntax(body.Externs[body.Externs.Count - 1], skippedSyntax);
+                        hasHandledSkippedSyntax = true;
+                        break;
+                    }
+                case NamespaceBodyBuilderElemKind.Using:
+                    {
+                        body.Usings[body.Usings.Count - 1] = AddTrailingSkippedSyntax(body.Usings[body.Usings.Count - 1], skippedSyntax);
+                        hasHandledSkippedSyntax = true;
+                        break;
+                    }
+                case NamespaceBodyBuilderElemKind.Attribute:
+                    {
+                        body.Attributes[body.Attributes.Count - 1] = AddTrailingSkippedSyntax(body.Attributes[body.Attributes.Count - 1], skippedSyntax);
+                        hasHandledSkippedSyntax = true;
+                        break;
+                    }
+                case NamespaceBodyBuilderElemKind.Member:
+                    {
+                        body.Members[body.Members.Count - 1] = AddTrailingSkippedSyntax(body.Members[body.Members.Count - 1], skippedSyntax);
+                        hasHandledSkippedSyntax = true;
+                        break;
+                    }
+            }
 
             if (!hasHandledSkippedSyntax && openBrace != null)
             {
                 openBrace = AddTrailingSkippedSyntax(openBrace, skippedSyntax);
+                hasHandledSkippedSyntax = true;
             }
-            else if(!hasHandledSkippedSyntax)
+
+            if (!hasHandledSkippedSyntax && name != null)
+            {
+                name = AddTrailingSkippedSyntax(name, skippedSyntax);
+                hasHandledSkippedSyntax = true;
+            }
+
+            if (!hasHandledSkippedSyntax && namespaceToken != null)
+            {
+                namespaceToken = AddTrailingSkippedSyntax(namespaceToken, skippedSyntax);
+                hasHandledSkippedSyntax = true;
+            }
+
+            if (!hasHandledSkippedSyntax)
             {
                 if (initialBadNodes == null)
-                {
                     initialBadNodes = _pool.Allocate();
-                }
 
                 initialBadNodes.AddRange(skippedSyntax);
+                hasHandledSkippedSyntax = true;
             }
         }
 
@@ -435,7 +515,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             TopLevelStatementsAfterTypesAndNamespaces = 6,
         }
 
-        private void ParseNamespaceBody(ref SyntaxToken openBrace, ref NamespaceBodyBuilder body, ref SyntaxListBuilder initialBadNodes, SyntaxKind parentKind, bool allowNestedNamespace = true, bool? isCompilationUnit = null)
+        private void ParseNamespaceBody(ref SyntaxToken namespaceToken, ref NameSyntax name, ref SyntaxToken openBrace, ref NamespaceBodyBuilder body, ref SyntaxListBuilder initialBadNodes, SyntaxKind parentKind, bool allowNestedNamespace = true, bool? isCompilationUnit = null)
         {
             // "top-level" expressions and statements should never occur inside an asynchronous context
             Debug.Assert(!IsInAsync);
@@ -445,8 +525,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var saveTerm = _termState;
             _termState |= TerminatorState.IsNamespaceMemberStartOrStop;
             NamespaceParts seen = NamespaceParts.None;
-            var pendingIncompleteMembers = _pool.Allocate<MemberDeclarationSyntax>();
-            bool reportUnexpectedToken = true;
+            CSharpSyntaxNode dummyNode = null;
+
+            var incompleteMembers = _pool.Allocate<MemberDeclarationSyntax>();
 
             try
             {
@@ -458,17 +539,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                             if (!allowNestedNamespace) return;
 
                             // incomplete members must be processed before we add any nodes to the body:
-                            AddIncompleteMembers(ref pendingIncompleteMembers, ref body);
+                            AddIncompleteMembers(ref incompleteMembers, ref body);
 
                             var attributeLists = _pool.Allocate<AttributeListSyntax>();
                             var modifiers = _pool.Allocate();
 
-                            body.Members.Add(adjustStateAndReportStatementOutOfOrder(ref seen, this.ParseNamespaceDeclaration(attributeLists, modifiers)));
+                            body.AddMember(adjustStateAndReportStatementOutOfOrder(ref seen, this.ParseNamespaceDeclaration(attributeLists, modifiers)));
 
                             _pool.Free(attributeLists);
                             _pool.Free(modifiers);
 
-                            reportUnexpectedToken = true;
                             break;
 
                         case SyntaxKind.CloseBraceToken:
@@ -481,14 +561,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                             if (isGlobal)
                             {
                                 // incomplete members must be processed before we add any nodes to the body:
-                                ReduceIncompleteMembers(ref pendingIncompleteMembers, ref openBrace, ref body, ref initialBadNodes);
+                                ReduceIncompleteMembers(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, ref incompleteMembers);
 
+                                // create error token
                                 var token = this.EatToken();
-                                token = this.AddError(token,
-                                    IsScript ? ErrorCode.ERR_GlobalDefinitionOrStatementExpected : ErrorCode.ERR_EOFExpected);
+                                token = this.AddError(token, IsScript ? ErrorCode.ERR_GlobalDefinitionOrStatementExpected : ErrorCode.ERR_EOFExpected);
 
-                                this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, token);
-                                reportUnexpectedToken = true;
+                                // add error token as skipped
+                                this.AddSkippedNamespaceText(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, token);
                                 break;
                             }
                             else
@@ -510,21 +590,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                             else
                             {
                                 // incomplete members must be processed before we add any nodes to the body:
-                                ReduceIncompleteMembers(ref pendingIncompleteMembers, ref openBrace, ref body, ref initialBadNodes);
+                                ReduceIncompleteMembers(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, ref incompleteMembers);
 
                                 var @extern = ParseExternAliasDirective();
                                 if (seen > NamespaceParts.ExternAliases)
                                 {
                                     @extern = this.AddErrorToFirstToken(@extern, ErrorCode.ERR_ExternAfterElements);
-                                    this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, @extern);
+                                    this.AddSkippedNamespaceText(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, @extern);
                                 }
                                 else
                                 {
-                                    body.Externs.Add(@extern);
+                                    body.AddExtern(@extern);
                                     seen = NamespaceParts.ExternAliases;
                                 }
 
-                                reportUnexpectedToken = true;
                                 break;
                             }
 
@@ -539,42 +618,40 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                             }
 
                             // incomplete members must be processed before we add any nodes to the body:
-                            ReduceIncompleteMembers(ref pendingIncompleteMembers, ref openBrace, ref body, ref initialBadNodes);
+                            ReduceIncompleteMembers(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, ref incompleteMembers);
 
                             var @using = this.ParseUsingDirective();
                             if (seen > NamespaceParts.Usings)
                             {
                                 @using = this.AddError(@using, ErrorCode.ERR_UsingAfterElements);
-                                this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, @using);
+                                this.AddSkippedNamespaceText(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, @using);
                             }
                             else
                             {
-                                body.Usings.Add(@using);
+                                body.AddUsing(@using);
                                 seen = NamespaceParts.Usings;
                             }
 
-                            reportUnexpectedToken = true;
                             break;
 
                         case SyntaxKind.OpenBracketToken:
                             if (this.IsPossibleGlobalAttributeDeclaration())
                             {
                                 // incomplete members must be processed before we add any nodes to the body:
-                                ReduceIncompleteMembers(ref pendingIncompleteMembers, ref openBrace, ref body, ref initialBadNodes);
+                                ReduceIncompleteMembers(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, ref incompleteMembers);
 
                                 var attribute = this.ParseAttributeDeclaration();
                                 if (!isGlobal || seen > NamespaceParts.GlobalAttributes)
                                 {
                                     attribute = this.AddError(attribute, attribute.Target.Identifier, ErrorCode.ERR_GlobalAttributesNotFirst);
-                                    this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, attribute);
+                                    this.AddSkippedNamespaceText(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, attribute);
                                 }
                                 else
                                 {
-                                    body.Attributes.Add(attribute);
+                                    body.AddAttribute(attribute);
                                     seen = NamespaceParts.GlobalAttributes;
                                 }
 
-                                reportUnexpectedToken = true;
                                 break;
                             }
 
@@ -598,30 +675,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                             if (member == null)
                             {
                                 // incomplete members must be processed before we add any nodes to the body:
-                                ReduceIncompleteMembers(ref pendingIncompleteMembers, ref openBrace, ref body, ref initialBadNodes);
+                                ReduceIncompleteMembers(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, ref incompleteMembers);
 
                                 this.SkipBadMemberListTokens_(null, out var skippedSyntax, inNamespace: true);
                                 if (skippedSyntax != null)
                                 {
-                                    this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, skippedSyntax);
+                                    this.AddSkippedNamespaceText(ref namespaceToken, ref name, ref openBrace, ref dummyNode, ref body, ref initialBadNodes, skippedSyntax);
                                 }
-
-                                reportUnexpectedToken = true;
                             }
                             else if (member.Kind == SyntaxKind.IncompleteMember && seen < NamespaceParts.MembersAndStatements)
                             {
                                 // skip to the next possible start token on a newline
                                 member = (MemberDeclarationSyntax)this.SkipBadMemberListTokens_(member, inNamespace: true);
-                                pendingIncompleteMembers.Add(member);
-                                reportUnexpectedToken = true;
+                                incompleteMembers.Add(member);
                             }
                             else
                             {
                                 // incomplete members must be processed before we add any nodes to the body:
-                                AddIncompleteMembers(ref pendingIncompleteMembers, ref body);
+                                AddIncompleteMembers(ref incompleteMembers, ref body);
 
-                                body.Members.Add(adjustStateAndReportStatementOutOfOrder(ref seen, member));
-                                reportUnexpectedToken = true;
+                                body.AddMember(adjustStateAndReportStatementOutOfOrder(ref seen, member));
                             }
                             break;
                     }
@@ -632,8 +705,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 _termState = saveTerm;
 
                 // adds pending incomplete nodes:
-                AddIncompleteMembers(ref pendingIncompleteMembers, ref body);
-                _pool.Free(pendingIncompleteMembers);
+                AddIncompleteMembers(ref incompleteMembers, ref body);
+                _pool.Free(incompleteMembers);
             }
 
             MemberDeclarationSyntax adjustStateAndReportStatementOutOfOrder(ref NamespaceParts seen, MemberDeclarationSyntax memberOrStatement)
@@ -692,17 +765,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             if (incompleteMembers.Count > 0)
             {
-                body.Members.AddRange(incompleteMembers);
+                for (var i = 0; i < incompleteMembers.Count; ++i)
+                    body.AddMember(incompleteMembers[i]);
                 incompleteMembers.Clear();
             }
         }
 
-        private void ReduceIncompleteMembers(ref SyntaxListBuilder<MemberDeclarationSyntax> incompleteMembers,
-            ref SyntaxToken openBrace, ref NamespaceBodyBuilder body, ref SyntaxListBuilder initialBadNodes)
+        private void ReduceIncompleteMembers(
+            ref SyntaxToken namespaceToken,
+            ref NameSyntax name,
+            ref SyntaxToken openBrace,
+            ref CSharpSyntaxNode node,
+            ref NamespaceBodyBuilder body,
+            ref SyntaxListBuilder initialBadNodes,
+            ref SyntaxListBuilder<MemberDeclarationSyntax> incompleteMembers)
         {
             for (int i = 0; i < incompleteMembers.Count; i++)
             {
-                this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, incompleteMembers[i]);
+                this.AddSkippedNamespaceText(ref namespaceToken, ref name, ref openBrace, ref node, ref body, ref initialBadNodes, incompleteMembers[i]);
             }
             incompleteMembers.Clear();
         }
@@ -835,6 +915,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 //NB: there's no way this could be true for a set of tokens that form a valid 
                 //using directive, so there's no danger in checking the error case first.
 
+                name = WithAdditionalDiagnostics(CreateMissingIdentifierName(), GetExpectedTokenError(SyntaxKind.IdentifierToken, this.CurrentToken.Kind));
+            }
+            else if (IsCurrentTokenOnNewline)
+            {
+                // there is still a risk that this is actually not an import, which should be on the same line as the "import / using" keyword
                 name = WithAdditionalDiagnostics(CreateMissingIdentifierName(), GetExpectedTokenError(SyntaxKind.IdentifierToken, this.CurrentToken.Kind));
             }
             else
@@ -1516,6 +1601,11 @@ tryAgain:
                 this.CurrentToken.Kind == SyntaxKind.InterfaceKeyword ||
                 CurrentToken.ContextualKind == SyntaxKind.RecordKeyword);
 
+            SyntaxToken name = null;
+            TypeParameterListSyntax typeParameters = null;
+            ParameterListSyntax paramList = null;
+            BaseListSyntax baseList = null;
+
             // "top-level" expressions and statements should never occur inside an asynchronous context
             Debug.Assert(!IsInAsync);
 
@@ -1530,13 +1620,30 @@ tryAgain:
             var saveTerm = _termState;
             _termState |= TerminatorState.IsPossibleAggregateClauseStartOrStop;
 
-            var name = this.ParseIdentifierToken();
-            var typeParameters = this.ParseTypeParameterList();
+            var canContinueParsing = true;
 
-            var paramList = keyword.Kind == SyntaxKind.RecordKeyword && CurrentToken.Kind == SyntaxKind.OpenParenToken
-                ? ParseParenthesizedParameterList() : null;
+            // name must be on same line as the keyword
+            if (!IsCurrentTokenOnNewline)
+            {
+                name = this.ParseIdentifierToken();
+            }
+            else
+            {
+                // name on new line is not allowed
+                name = AddError(CreateMissingIdentifierToken(), ErrorCode.ERR_IdentifierExpected);
+                canContinueParsing = false;
+            }
 
-            var baseList = this.ParseBaseList(keyword, paramList is object);
+            if (canContinueParsing)
+                typeParameters = this.ParseTypeParameterList();
+
+            if (canContinueParsing)
+                paramList = keyword.Kind == SyntaxKind.RecordKeyword && CurrentToken.Kind == SyntaxKind.OpenParenToken ? 
+                    ParseParenthesizedParameterList() : null;
+
+            if (canContinueParsing)
+                baseList = this.ParseBaseList(keyword, paramList is object);
+
             _termState = saveTerm;
 
             // Parse class body
@@ -1545,121 +1652,127 @@ tryAgain:
             var constraints = default(SyntaxListBuilder<TypeParameterConstraintClauseSyntax>);
             try
             {
-                if (this.CurrentToken.ContextualKind == SyntaxKind.WhereKeyword)
+                SyntaxToken? semicolon = null;
+                SyntaxToken? openBrace = null;
+                SyntaxToken? closeBrace = null;
+
+                if (canContinueParsing)
                 {
-                    constraints = _pool.Allocate<TypeParameterConstraintClauseSyntax>();
-                    this.ParseTypeParameterConstraintClauses(constraints);
-                }
-
-                _termState = outerSaveTerm;
-
-                SyntaxToken semicolon;
-                SyntaxToken? openBrace;
-                SyntaxToken? closeBrace;
-                if (!(keyword.Kind == SyntaxKind.RecordKeyword) || CurrentToken.Kind != SyntaxKind.SemicolonToken)
-                {
-                    openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
-
-                    // ignore members if missing type name or missing open curly
-                    if (name.IsMissing || openBrace.IsMissing)
+                    if (this.CurrentToken.ContextualKind == SyntaxKind.WhereKeyword)
                     {
-                        parseMembers = false;
+                        constraints = _pool.Allocate<TypeParameterConstraintClauseSyntax>();
+                        this.ParseTypeParameterConstraintClauses(constraints);
                     }
 
-                    // even if we saw a { or think we should parse members bail out early since
-                    // we know namespaces can't be nested inside types
-                    if (parseMembers)
+                    _termState = outerSaveTerm;
+
+                    if (!(keyword.Kind == SyntaxKind.RecordKeyword) || CurrentToken.Kind != SyntaxKind.SemicolonToken)
                     {
-                        members = _pool.Allocate<MemberDeclarationSyntax>();
+                        openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
 
-                        while (true)
+                        // ignore members if missing type name or missing open curly
+                        if (name.IsMissing || openBrace.IsMissing)
                         {
-                            SyntaxKind kind = this.CurrentToken.Kind;
+                            parseMembers = false;
+                        }
 
-                            if (CanStartMember(kind))
+                        // even if we saw a { or think we should parse members bail out early since
+                        // we know namespaces can't be nested inside types
+                        if (parseMembers && canContinueParsing)
+                        {
+                            members = _pool.Allocate<MemberDeclarationSyntax>();
+
+                            while (true)
                             {
-                                // This token can start a member -- go parse it
-                                var saveTerm2 = _termState;
-                                _termState |= TerminatorState.IsPossibleMemberStartOrStop;
+                                SyntaxKind kind = this.CurrentToken.Kind;
 
-                                var member = this.ParseMemberDeclaration(parentKind: keyword.Kind, parentName: name);
-                                if (member != null)
+                                if (CanStartMember(kind))
                                 {
-                                    // convert field to property in certain scenarios
-                                    switch (keyword.Kind)
+                                    // This token can start a member -- go parse it
+                                    var saveTerm2 = _termState;
+                                    _termState |= TerminatorState.IsPossibleMemberStartOrStop;
+
+                                    var member = this.ParseMemberDeclaration(parentKind: keyword.Kind, parentName: name);
+                                    if (member != null)
                                     {
-                                        case SyntaxKind.InterfaceKeyword:
-                                            {
-                                                // for interfaces we always convert field like declarations into properties
-                                                if (TryGetSimpleFieldDeclarationWithVariable(member, out var fieldDecl, out var varDecl))
-                                                    member = ConvertFieldToProperty(fieldDecl, varDecl);
-                                                break;
-                                            }
-                                        case SyntaxKind.ClassKeyword:
-                                            {
-                                                // for classes we convert field like declarations into properties only if the name starts with "upper case"
-                                                if (TryGetSimpleFieldDeclarationWithVariable(member, out var fieldDecl, out var varDecl) && CanConvertFieldToClassProperty(fieldDecl, varDecl))
+                                        // convert field to property in certain scenarios
+                                        switch (keyword.Kind)
+                                        {
+                                            case SyntaxKind.InterfaceKeyword:
                                                 {
-                                                    member = ConvertFieldToProperty(fieldDecl, varDecl);
+                                                    // for interfaces we always convert field like declarations into properties
+                                                    if (TryGetSimpleFieldDeclarationWithVariable(member, out var fieldDecl, out var varDecl))
+                                                        member = ConvertFieldToProperty(fieldDecl, varDecl);
+                                                    break;
                                                 }
+                                            case SyntaxKind.ClassKeyword:
+                                                {
+                                                    // for classes we convert field like declarations into properties only if the name starts with "upper case"
+                                                    if (TryGetSimpleFieldDeclarationWithVariable(member, out var fieldDecl, out var varDecl) && CanConvertFieldToClassProperty(fieldDecl, varDecl))
+                                                    {
+                                                        member = ConvertFieldToProperty(fieldDecl, varDecl);
+                                                    }
 
-                                                member = MakePublicMemberByNameConvention(member);
+                                                    member = MakePublicMemberByNameConvention(member);
 
-                                                break;
-                                            }
+                                                    break;
+                                                }
+                                        }
+
+                                        // statements are accepted here, a semantic error will be reported later
+                                        members.Add(member);
+                                    }
+                                    else
+                                    {
+                                        // we get here if we couldn't parse the lookahead as a statement or a declaration (we haven't consumed any tokens):
+                                        this.SkipBadMemberListTokens(ref openBrace, members);
                                     }
 
-                                    // statements are accepted here, a semantic error will be reported later
-                                    members.Add(member);
+                                    _termState = saveTerm2;
+                                }
+                                else if (kind == SyntaxKind.CloseBraceToken || kind == SyntaxKind.EndOfFileToken || this.IsTerminator())
+                                {
+                                    // This marks the end of members of this class
+                                    break;
                                 }
                                 else
                                 {
-                                    // we get here if we couldn't parse the lookahead as a statement or a declaration (we haven't consumed any tokens):
+                                    // Error -- try to sync up with intended reality
                                     this.SkipBadMemberListTokens(ref openBrace, members);
                                 }
-
-                                _termState = saveTerm2;
-                            }
-                            else if (kind == SyntaxKind.CloseBraceToken || kind == SyntaxKind.EndOfFileToken || this.IsTerminator())
-                            {
-                                // This marks the end of members of this class
-                                break;
-                            }
-                            else
-                            {
-                                // Error -- try to sync up with intended reality
-                                this.SkipBadMemberListTokens(ref openBrace, members);
                             }
                         }
-                    }
 
-                    if (openBrace.IsMissing)
-                    {
-                        closeBrace = SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken);
-                        closeBrace = WithAdditionalDiagnostics(closeBrace, this.GetExpectedTokenError(SyntaxKind.CloseBraceToken, this.CurrentToken.Kind));
+                        if (openBrace.IsMissing)
+                        {
+                            closeBrace = SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken);
+                            closeBrace = WithAdditionalDiagnostics(closeBrace, this.GetExpectedTokenError(SyntaxKind.CloseBraceToken, this.CurrentToken.Kind));
+                        }
+                        else
+                        {
+                            closeBrace = this.EatToken(SyntaxKind.CloseBraceToken);
+                        }
+                        semicolon = TryEatToken(SyntaxKind.SemicolonToken);
                     }
                     else
                     {
-                        closeBrace = this.EatToken(SyntaxKind.CloseBraceToken);
+                        semicolon = CheckFeatureAvailability(EatToken(SyntaxKind.SemicolonToken), MessageID.IDS_FeatureRecords);
+                        openBrace = null;
+                        closeBrace = null;
                     }
-                    semicolon = TryEatToken(SyntaxKind.SemicolonToken);
-                }
-                else
-                {
-                    semicolon = CheckFeatureAvailability(EatToken(SyntaxKind.SemicolonToken), MessageID.IDS_FeatureRecords);
-                    openBrace = null;
-                    closeBrace = null;
                 }
 
                 var modifiersList = (SyntaxList<SyntaxToken>)modifiers.ToList();
                 var membersList = (SyntaxList<MemberDeclarationSyntax>)members;
                 var constraintsList = (SyntaxList<TypeParameterConstraintClauseSyntax>)constraints;
+
+                openBrace ??= SyntaxFactory.FakeToken(SyntaxKind.OpenBraceToken);
+                closeBrace ??= SyntaxFactory.FakeToken(SyntaxKind.CloseBraceToken);
+                semicolon ??= SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken);
+
                 switch (keyword.Kind)
                 {
                     case SyntaxKind.ClassKeyword:
-                        RoslynDebug.Assert(paramList is null);
-                        RoslynDebug.Assert(openBrace != null);
-                        RoslynDebug.Assert(closeBrace != null);
                         return _syntaxFactory.ClassDeclaration(
                             attributes,
                             modifiersList,
@@ -1674,9 +1787,6 @@ tryAgain:
                             semicolon);
 
                     case SyntaxKind.StructKeyword:
-                        RoslynDebug.Assert(paramList is null);
-                        RoslynDebug.Assert(openBrace != null);
-                        RoslynDebug.Assert(closeBrace != null);
                         return _syntaxFactory.StructDeclaration(
                             attributes,
                             modifiersList,
@@ -1691,9 +1801,6 @@ tryAgain:
                             semicolon);
 
                     case SyntaxKind.InterfaceKeyword:
-                        RoslynDebug.Assert(paramList is null);
-                        RoslynDebug.Assert(openBrace != null);
-                        RoslynDebug.Assert(closeBrace != null);
                         return _syntaxFactory.InterfaceDeclaration(
                             attributes,
                             modifiersList,
@@ -2008,7 +2115,7 @@ tryAgain:
                     if (inNamespace)
                     {
                         // in namespace we can at earliest recover a
-                        if (!IsCurrentTokenOnNewline)
+                        if (!IsCurrentTokenOnNewline || curlyCount > 0)
                             evalCanStartMember = false;
                     }
 
