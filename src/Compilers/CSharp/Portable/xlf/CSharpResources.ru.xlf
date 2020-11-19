@@ -6190,7 +6190,7 @@ A catch() block after a catch (System.Exception e) block can catch non-CLS excep
         <note />
       </trans-unit>
       <trans-unit id="ERR_InvalidMemberDecl">
-        <source>Invalid token '{0}' in class, record, struct, or interface member declaration</source>
+        <source>Invalid token '{0}' in class, record, struct, interface or namespace member declaration</source>
         <target state="needs-review-translation">Недопустимый токен "{0}" в объявлении класса, структуры или члена интерфейса.</target>
         <note />
       </trans-unit>

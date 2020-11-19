@@ -6190,7 +6190,7 @@ Blok catch() po bloku catch (System.Exception e) może przechwytywać wyjątki n
         <note />
       </trans-unit>
       <trans-unit id="ERR_InvalidMemberDecl">
-        <source>Invalid token '{0}' in class, record, struct, or interface member declaration</source>
+        <source>Invalid token '{0}' in class, record, struct, interface or namespace member declaration</source>
         <target state="needs-review-translation">Nieprawidłowy token „{0}” w deklaracji składowej klasy, struktury lub interfejsu</target>
         <note />
       </trans-unit>

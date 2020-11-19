@@ -2163,7 +2163,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), VisitToken(node.Identifier), VisitToken(node.Spread), (TypeSyntax?)Visit(node.Type), (EqualsValueClauseSyntax?)Visit(node.Default));
 
         public override SyntaxNode? VisitIncompleteMember(IncompleteMemberSyntax node)
-            => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), (TypeSyntax?)Visit(node.Type));
+            => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), (ExplicitInterfaceSpecifierSyntax?)Visit(node.ExplicitInterfaceSpecifier), VisitToken(node.Identifier), (TypeParameterListSyntax?)Visit(node.TypeParameterList), (TypeSyntax?)Visit(node.Type));
 
         public override SyntaxNode? VisitSkippedTokensTrivia(SkippedTokensTriviaSyntax node)
             => node.Update(VisitList(node.Tokens));
@@ -5709,16 +5709,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             => SyntaxFactory.Parameter(default, default(SyntaxTokenList), identifier, default, default, default);
 
         /// <summary>Creates a new IncompleteMemberSyntax instance.</summary>
-        public static IncompleteMemberSyntax IncompleteMember(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, TypeSyntax? type)
+        public static IncompleteMemberSyntax IncompleteMember(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier, SyntaxToken identifier, TypeParameterListSyntax? typeParameterList, TypeSyntax? type)
         {
-            return (IncompleteMemberSyntax)Syntax.InternalSyntax.SyntaxFactory.IncompleteMember(attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), modifiers.Node.ToGreenList<Syntax.InternalSyntax.SyntaxToken>(), type == null ? null : (Syntax.InternalSyntax.TypeSyntax)type.Green).CreateRed();
+            switch (identifier.Kind())
+            {
+                case SyntaxKind.IdentifierToken:
+                case SyntaxKind.ThisKeyword:
+                case SyntaxKind.None: break;
+                default: throw new ArgumentException(nameof(identifier));
+            }
+            return (IncompleteMemberSyntax)Syntax.InternalSyntax.SyntaxFactory.IncompleteMember(attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), modifiers.Node.ToGreenList<Syntax.InternalSyntax.SyntaxToken>(), explicitInterfaceSpecifier == null ? null : (Syntax.InternalSyntax.ExplicitInterfaceSpecifierSyntax)explicitInterfaceSpecifier.Green, (Syntax.InternalSyntax.SyntaxToken?)identifier.Node, typeParameterList == null ? null : (Syntax.InternalSyntax.TypeParameterListSyntax)typeParameterList.Green, type == null ? null : (Syntax.InternalSyntax.TypeSyntax)type.Green).CreateRed();
         }
 
-#pragma warning disable RS0027
         /// <summary>Creates a new IncompleteMemberSyntax instance.</summary>
-        public static IncompleteMemberSyntax IncompleteMember(TypeSyntax? type = default)
-            => SyntaxFactory.IncompleteMember(default, default(SyntaxTokenList), type);
-#pragma warning restore RS0027
+        public static IncompleteMemberSyntax IncompleteMember()
+            => SyntaxFactory.IncompleteMember(default, default(SyntaxTokenList), default, default, default, default);
 
         /// <summary>Creates a new SkippedTokensTriviaSyntax instance.</summary>
         public static SkippedTokensTriviaSyntax SkippedTokensTrivia(SyntaxTokenList tokens)

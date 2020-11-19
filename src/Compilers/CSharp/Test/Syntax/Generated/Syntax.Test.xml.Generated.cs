@@ -563,7 +563,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => InternalSyntaxFactory.Parameter(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.AttributeListSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.SyntaxToken>(), InternalSyntaxFactory.Identifier("Identifier"), null, null, null);
 
         private static Syntax.InternalSyntax.IncompleteMemberSyntax GenerateIncompleteMember()
-            => InternalSyntaxFactory.IncompleteMember(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.AttributeListSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.SyntaxToken>(), null);
+            => InternalSyntaxFactory.IncompleteMember(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.AttributeListSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.SyntaxToken>(), null, null, null, null);
 
         private static Syntax.InternalSyntax.SkippedTokensTriviaSyntax GenerateSkippedTokensTrivia()
             => InternalSyntaxFactory.SkippedTokensTrivia(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.SyntaxToken>());
@@ -3067,6 +3067,9 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
             Assert.Equal(default, node.AttributeLists);
             Assert.Equal(default, node.Modifiers);
+            Assert.Null(node.ExplicitInterfaceSpecifier);
+            Assert.Null(node.Identifier);
+            Assert.Null(node.TypeParameterList);
             Assert.Null(node.Type);
 
             AttachAndCheckDiagnostics(node);
@@ -10076,7 +10079,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             => SyntaxFactory.Parameter(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), SyntaxFactory.Identifier("Identifier"), default(SyntaxToken), default(TypeSyntax), default(EqualsValueClauseSyntax));
 
         private static IncompleteMemberSyntax GenerateIncompleteMember()
-            => SyntaxFactory.IncompleteMember(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), default(TypeSyntax));
+            => SyntaxFactory.IncompleteMember(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), default(ExplicitInterfaceSpecifierSyntax), default(SyntaxToken), default(TypeParameterListSyntax), default(TypeSyntax));
 
         private static SkippedTokensTriviaSyntax GenerateSkippedTokensTrivia()
             => SyntaxFactory.SkippedTokensTrivia(new SyntaxTokenList());
@@ -12580,8 +12583,11 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
             Assert.Equal(default, node.AttributeLists);
             Assert.Equal(default, node.Modifiers);
+            Assert.Null(node.ExplicitInterfaceSpecifier);
+            Assert.Equal(SyntaxKind.None, node.Identifier.Kind());
+            Assert.Null(node.TypeParameterList);
             Assert.Null(node.Type);
-            var newNode = node.WithAttributeLists(node.AttributeLists).WithModifiers(node.Modifiers).WithType(node.Type);
+            var newNode = node.WithAttributeLists(node.AttributeLists).WithModifiers(node.Modifiers).WithExplicitInterfaceSpecifier(node.ExplicitInterfaceSpecifier).WithIdentifier(node.Identifier).WithTypeParameterList(node.TypeParameterList).WithType(node.Type);
             Assert.Equal(node, newNode);
         }
 

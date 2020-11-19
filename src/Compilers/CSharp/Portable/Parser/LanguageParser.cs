@@ -392,7 +392,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             ref SyntaxToken openBrace,
             ref NamespaceBodyBuilder body,
             ref SyntaxListBuilder initialBadNodes,
-            CSharpSyntaxNode skippedSyntax)
+            GreenNode skippedSyntax)
         {
             var hasHandledSkippedSyntax = false;
 
@@ -600,21 +600,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                                 // incomplete members must be processed before we add any nodes to the body:
                                 ReduceIncompleteMembers(ref pendingIncompleteMembers, ref openBrace, ref body, ref initialBadNodes);
 
-                                // eat one token and try to parse declaration or statement again:
-                                var skippedToken = EatToken();
-                                if (reportUnexpectedToken && !skippedToken.ContainsDiagnostics)
+                                this.SkipBadMemberListTokens_(null, out var skippedSyntax, inNamespace: true);
+                                if (skippedSyntax != null)
                                 {
-                                    skippedToken = this.AddError(skippedToken,
-                                        IsScript ? ErrorCode.ERR_GlobalDefinitionOrStatementExpected : ErrorCode.ERR_EOFExpected);
-
-                                    // do not report the error multiple times for subsequent tokens:
-                                    reportUnexpectedToken = false;
+                                    this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, skippedSyntax);
                                 }
 
-                                this.AddSkippedNamespaceText(ref openBrace, ref body, ref initialBadNodes, skippedToken);
+                                reportUnexpectedToken = true;
                             }
                             else if (member.Kind == SyntaxKind.IncompleteMember && seen < NamespaceParts.MembersAndStatements)
                             {
+                                // skip to the next possible start token on a newline
+                                member = (MemberDeclarationSyntax)this.SkipBadMemberListTokens_(member, inNamespace: true);
                                 pendingIncompleteMembers.Add(member);
                                 reportUnexpectedToken = true;
                             }
@@ -1950,9 +1947,44 @@ tryAgain:
             }
         }
 
-        private void SkipBadMemberListTokens(ref GreenNode previousNode)
+        private void SkipBadMemberListTokens(ref GreenNode previousNode, bool inNamespace = false)
         {
+            previousNode = SkipBadMemberListTokens_((CSharpSyntaxNode)previousNode, inNamespace);
+        }
+
+        private CSharpSyntaxNode SkipBadMemberListTokens_(CSharpSyntaxNode previousNode, bool inNamespace = false)
+        {
+            return SkipBadMemberListTokens_(previousNode, out _, inNamespace);
+        }
+
+        private CSharpSyntaxNode SkipBadMemberListTokens_(CSharpSyntaxNode previousNode, out GreenNode skippedSyntax, bool inNamespace = false)
+        {
+            skippedSyntax = null;
+
+            // we may be at a valid token if in namespace
+            if (inNamespace)
+            {
+                switch (CurrentKind)
+                {
+                    case SyntaxKind.OpenBracketToken:
+                    case SyntaxKind.UsingKeyword:
+                    case SyntaxKind.ImportKeyword:
+                    case SyntaxKind.ExternKeyword:
+                    case SyntaxKind.CloseBraceToken:
+                    case SyntaxKind.NamespaceKeyword:
+                        {
+                            return previousNode;
+                        }
+                    case SyntaxKind.IdentifierToken:
+                        {
+                            if (IsCurrentTokenOnNewline) return previousNode;
+                            break;
+                        }
+                }
+            }
+
             int curlyCount = 0;
+            var tokensOnLineCount = 0;
             var tokens = _pool.Allocate();
             try
             {
@@ -1967,13 +1999,49 @@ tryAgain:
                 {
                     SyntaxKind kind = this.CurrentToken.Kind;
 
+                    if (IsCurrentTokenOnNewline)
+                        tokensOnLineCount = 1;
+                    else
+                        ++tokensOnLineCount;
+
+                    var evalCanStartMember = true;
+                    if (inNamespace)
+                    {
+                        // in namespace we can at earliest recover a
+                        if (!IsCurrentTokenOnNewline)
+                            evalCanStartMember = false;
+                    }
+
                     // If this token can start a member, we're done
-                    if (CanStartMember(kind) &&
+                    if (evalCanStartMember && CanStartMember(kind) &&
                         !(kind == SyntaxKind.DelegateKeyword && (this.PeekToken(1).Kind == SyntaxKind.OpenBraceToken || this.PeekToken(1).Kind == SyntaxKind.OpenParenToken)))
                     {
                         done = true;
                         continue;
                     }
+
+                    if (inNamespace)
+                    {
+                        switch (kind)
+                        {
+                            case SyntaxKind.OpenBracketToken:
+                            case SyntaxKind.UsingKeyword:
+                            case SyntaxKind.ImportKeyword:
+                            case SyntaxKind.ExternKeyword:
+                            case SyntaxKind.NamespaceKeyword:
+                                {
+                                    // if there are many other tokens on the line... then it's probably not what we think...
+                                    if (tokensOnLineCount <= 2)
+                                    {
+                                        done = true;
+                                        continue;
+                                    }
+
+                                    break;
+                                }
+                        }
+                    }
+
 
                     // <UNDONE>  UNDONE: Seems like this makes sense, 
                     // but if this token can start a namespace element, but not a member, then
@@ -1989,8 +2057,11 @@ tryAgain:
                         case SyntaxKind.CloseBraceToken:
                             if (curlyCount-- == 0)
                             {
-                                done = true;
-                                continue;
+                                if (!inNamespace)
+                                {
+                                    done = true;
+                                    continue;
+                                }
                             }
 
                             break;
@@ -2006,7 +2077,16 @@ tryAgain:
                     tokens.Add(this.EatToken());
                 }
 
-                previousNode = AddTrailingSkippedSyntax((CSharpSyntaxNode)previousNode, tokens.ToListNode());
+                if (tokens.Count == 0) return previousNode;
+
+                skippedSyntax = tokens.ToListNode();
+
+                if(previousNode != null)
+                {
+                    return AddTrailingSkippedSyntax(previousNode, skippedSyntax);
+                }
+
+                return null;
             }
             finally
             {
@@ -2369,8 +2449,11 @@ tryAgain:
                 return _syntaxFactory.IncompleteMember(
                     new SyntaxList<AttributeListSyntax>(),
                     new SyntaxList<SyntaxToken>(),
-                    CreateMissingIdentifierName()
-                    );
+                    null,
+                    CreateMissingIdentifierToken(),
+                    null,
+                    null
+                );
             }
         }
 
@@ -2819,7 +2902,14 @@ parse_member_name:;
                     ErrorCode.ERR_BadModifierLocation,
                     misplacedModifier.Text);
 
-                result = _syntaxFactory.IncompleteMember(attributes, modifiers.ToList(), type);
+                result = _syntaxFactory.IncompleteMember(
+                    attributeLists: attributes,
+                    modifiers: modifiers.ToList(),
+                    explicitInterfaceSpecifier: null,
+                    identifier: null,
+                    typeParameterList: null,
+                    type: type.IsMissing ? null : type
+                );
                 return true;
             }
 
@@ -2840,7 +2930,14 @@ parse_member_name:;
                     return true;
                 }
 
-                var incompleteMember = _syntaxFactory.IncompleteMember(attributes, modifiers.ToList(), type.IsMissing ? null : type);
+                var incompleteMember = _syntaxFactory.IncompleteMember(
+                    attributeLists: attributes,
+                    modifiers: modifiers.ToList(),
+                    explicitInterfaceSpecifier: null,
+                    identifier: null,
+                    typeParameterList: null,
+                    type: type.IsMissing ? null : type
+                );
                 if (incompleteMember.ContainsDiagnostics)
                 {
                     result = incompleteMember;
@@ -2866,6 +2963,42 @@ parse_member_name:;
 
             result = null;
             return false;
+        }
+
+        private MemberDeclarationSyntax IncompleteMember(SyntaxKind parentKind,
+            SyntaxList<AttributeListSyntax> attributes, SyntaxListBuilder modifiers, TypeSyntax type,
+            ExplicitInterfaceSpecifierSyntax explicitInterfaceOpt, SyntaxToken identifierOrThisOpt, TypeParameterListSyntax typeParameterListOpt)
+        {
+            MemberDeclarationSyntax result = null;
+            var incompleteMember = _syntaxFactory.IncompleteMember(
+                attributeLists: attributes,
+                modifiers: modifiers.ToList(),
+                explicitInterfaceSpecifier: explicitInterfaceOpt,
+                identifier: identifierOrThisOpt,
+                typeParameterList: typeParameterListOpt,
+                type: type.IsMissing ? null : type
+            );
+
+            if (incompleteMember.ContainsDiagnostics)
+            {
+                result = incompleteMember;
+            }
+            else if (parentKind == SyntaxKind.CompilationUnit && !IsScript)
+            {
+                result = this.AddErrorToLastToken(incompleteMember, ErrorCode.ERR_NamespaceUnexpected);
+            }
+            else
+            {
+                //the error position should indicate CurrentToken
+                result = this.AddError(
+                    incompleteMember,
+                    incompleteMember.FullWidth + this.CurrentToken.GetLeadingTriviaWidth(),
+                    this.CurrentToken.Width,
+                    ErrorCode.ERR_InvalidMemberDecl,
+                    this.CurrentToken.Text);
+            }
+
+            return result;
         }
 
         private bool ReconsideredTypeAsAsyncModifier(ref SyntaxListBuilder modifiers, ref TypeSyntax type, ref ResetPoint afterTypeResetPoint,
@@ -3102,7 +3235,7 @@ parse_member_name:;
                 // indexers, and non-conversion operators -- starts with a type 
                 // (possibly void).
                 TypeSyntax type = SyntaxFactory.FakeTypeIdentifier(_syntaxFactory);
-                var afterTypeResetPoint = this.GetResetPoint();
+                var resetPoint = this.GetResetPoint();
 
                 try
                 {
@@ -3154,7 +3287,7 @@ parse_member_name:;
                     // For example, if we get
                     //     async Task<
                     // then we want async to be a modifier and Task<MISSING> to be a type.
-                    if (ReconsideredTypeAsAsyncModifier(ref modifiers, ref type, ref afterTypeResetPoint, ref explicitInterfaceOpt, ref identifierOrThisOpt, ref typeParameterListOpt))
+                    if (ReconsideredTypeAsAsyncModifier(ref modifiers, ref type, ref resetPoint, ref explicitInterfaceOpt, ref identifierOrThisOpt, ref typeParameterListOpt))
                     {
                         goto parse_member_name;
                     }
@@ -3170,11 +3303,16 @@ parse_member_name:;
                     }
 
                     // treat anything else as a method.
+                    if (!IsPossibleMethodDeclarationStart(checkAtIdentifier: false))
+                    {
+                        return IncompleteMember(parentKind, attributes, modifiers, type, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt);
+                    }
+
                     return this.ParseMethodDeclaration(attributes, modifiers, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt);
                 }
                 finally
                 {
-                    this.Release(ref afterTypeResetPoint);
+                    this.Release(ref resetPoint);
                 }
             }
             finally
@@ -3241,14 +3379,18 @@ parse_member_name:;
                 // skip the name
                 this.EatToken();
 
+                // type following the name cannot be on a newline
+                if (IsCurrentTokenOnNewline) return false;
+
                 // try parsing type
                 var type = TryParseType();
                 if (type != null)
                 {
-                    // check if it looks like a property
+                    // check if it looks like a property or method
                     switch (this.CurrentToken.Kind)
                     {
                         case SyntaxKind.EqualsGreaterThanToken:
+                        case SyntaxKind.OpenParenToken:
                         case SyntaxKind.OpenBraceToken:
                             return false;
                     }
@@ -4880,12 +5022,25 @@ tryAgain:
                             if (!this.IsTrueIdentifier()) return false;
 
                             var isValid = false;
-
                             var nextToken = PeekToken(tokenIndex + 1);
+
+                            // token folllowing identifier must be after whitespace for certain tokens
                             switch (nextToken.Kind)
                             {
                                 case SyntaxKind.OpenParenToken:
-                                case SyntaxKind.OpenBracketToken: // attribute
+                                case SyntaxKind.DotDotDotToken:
+                                    {
+                                        if (!token.IsContextKind(SyntaxKind.FnKeyword) &&
+                                            !IsTokenAfterWhitespace(nextToken, token)) 
+                                            return false;
+                                        break;
+                                    }
+                            }
+
+                            switch (nextToken.Kind)
+                            {
+                                case SyntaxKind.OpenParenToken:
+                                case SyntaxKind.OpenBracketToken: // attribute                                    
                                 case SyntaxKind.ArgListKeyword:
                                 case SyntaxKind.DelegateKeyword when IsFunctionPointerStart(): // Function pointer type
                                 case SyntaxKind.DotDotDotToken:
@@ -4918,7 +5073,7 @@ tryAgain:
                                     }
                             }
 
-                            if(!isValid)
+                            if (!isValid)
                             {
                                 if (IsParameterModifier(nextToken.Kind))
                                 {

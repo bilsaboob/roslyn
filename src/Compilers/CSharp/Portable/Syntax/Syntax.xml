@@ -4113,6 +4113,15 @@
     <Kind Name="IncompleteMember"/>n
     <Field Name="AttributeLists" Type="SyntaxList&lt;AttributeListSyntax&gt;" Override="true"/>
     <Field Name="Modifiers" Type="SyntaxList&lt;SyntaxToken&gt;" Override="true"/>
+    <Field Name="ExplicitInterfaceSpecifier" Type="ExplicitInterfaceSpecifierSyntax" Optional="true"/>
+    <Field Name="Identifier" Type="SyntaxToken" Optional="true">
+      <PropertyComment>
+        <summary>Gets the identifier.</summary>
+      </PropertyComment>
+      <Kind Name="IdentifierToken"/>
+      <Kind Name="ThisKeyword"/>
+    </Field>
+    <Field Name="TypeParameterList" Type="TypeParameterListSyntax" Optional="true"/>
     <Field Name="Type" Type="TypeSyntax" Optional="true"/>
   </Node>
   <Node Name="SkippedTokensTriviaSyntax" Base="StructuredTriviaSyntax">

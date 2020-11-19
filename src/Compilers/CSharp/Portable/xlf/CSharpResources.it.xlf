@@ -6190,7 +6190,7 @@ Un blocco catch() dopo un blocco catch (System.Exception e) può rilevare eccezi
         <note />
       </trans-unit>
       <trans-unit id="ERR_InvalidMemberDecl">
-        <source>Invalid token '{0}' in class, record, struct, or interface member declaration</source>
+        <source>Invalid token '{0}' in class, record, struct, interface or namespace member declaration</source>
         <target state="needs-review-translation">Il token '{0}' nella dichiarazione del membro di classe, struttura o interfaccia non è valido</target>
         <note />
       </trans-unit>

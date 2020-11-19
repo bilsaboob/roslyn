@@ -330,7 +330,7 @@ global_statement
   ;
 
 incomplete_member
-  : attribute_list* modifier* type?
+  : attribute_list* modifier* explicit_interface_specifier? (identifier_token | 'this')? type_parameter_list? type?
   ;
 
 namespace_declaration

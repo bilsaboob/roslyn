@@ -27169,12 +27169,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
     {
         internal readonly GreenNode? attributeLists;
         internal readonly GreenNode? modifiers;
+        internal readonly ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier;
+        internal readonly SyntaxToken? identifier;
+        internal readonly TypeParameterListSyntax? typeParameterList;
         internal readonly TypeSyntax? type;
 
-        internal IncompleteMemberSyntax(SyntaxKind kind, GreenNode? attributeLists, GreenNode? modifiers, TypeSyntax? type, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+        internal IncompleteMemberSyntax(SyntaxKind kind, GreenNode? attributeLists, GreenNode? modifiers, ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier, SyntaxToken? identifier, TypeParameterListSyntax? typeParameterList, TypeSyntax? type, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
           : base(kind, diagnostics, annotations)
         {
-            this.SlotCount = 3;
+            this.SlotCount = 6;
             if (attributeLists != null)
             {
                 this.AdjustFlagsAndWidth(attributeLists);
@@ -27185,6 +27188,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 this.AdjustFlagsAndWidth(modifiers);
                 this.modifiers = modifiers;
             }
+            if (explicitInterfaceSpecifier != null)
+            {
+                this.AdjustFlagsAndWidth(explicitInterfaceSpecifier);
+                this.explicitInterfaceSpecifier = explicitInterfaceSpecifier;
+            }
+            if (identifier != null)
+            {
+                this.AdjustFlagsAndWidth(identifier);
+                this.identifier = identifier;
+            }
+            if (typeParameterList != null)
+            {
+                this.AdjustFlagsAndWidth(typeParameterList);
+                this.typeParameterList = typeParameterList;
+            }
             if (type != null)
             {
                 this.AdjustFlagsAndWidth(type);
@@ -27192,11 +27210,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        internal IncompleteMemberSyntax(SyntaxKind kind, GreenNode? attributeLists, GreenNode? modifiers, TypeSyntax? type, SyntaxFactoryContext context)
+        internal IncompleteMemberSyntax(SyntaxKind kind, GreenNode? attributeLists, GreenNode? modifiers, ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier, SyntaxToken? identifier, TypeParameterListSyntax? typeParameterList, TypeSyntax? type, SyntaxFactoryContext context)
           : base(kind)
         {
             this.SetFactoryContext(context);
-            this.SlotCount = 3;
+            this.SlotCount = 6;
             if (attributeLists != null)
             {
                 this.AdjustFlagsAndWidth(attributeLists);
@@ -27206,6 +27224,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 this.AdjustFlagsAndWidth(modifiers);
                 this.modifiers = modifiers;
+            }
+            if (explicitInterfaceSpecifier != null)
+            {
+                this.AdjustFlagsAndWidth(explicitInterfaceSpecifier);
+                this.explicitInterfaceSpecifier = explicitInterfaceSpecifier;
+            }
+            if (identifier != null)
+            {
+                this.AdjustFlagsAndWidth(identifier);
+                this.identifier = identifier;
+            }
+            if (typeParameterList != null)
+            {
+                this.AdjustFlagsAndWidth(typeParameterList);
+                this.typeParameterList = typeParameterList;
             }
             if (type != null)
             {
@@ -27214,10 +27247,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        internal IncompleteMemberSyntax(SyntaxKind kind, GreenNode? attributeLists, GreenNode? modifiers, TypeSyntax? type)
+        internal IncompleteMemberSyntax(SyntaxKind kind, GreenNode? attributeLists, GreenNode? modifiers, ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier, SyntaxToken? identifier, TypeParameterListSyntax? typeParameterList, TypeSyntax? type)
           : base(kind)
         {
-            this.SlotCount = 3;
+            this.SlotCount = 6;
             if (attributeLists != null)
             {
                 this.AdjustFlagsAndWidth(attributeLists);
@@ -27227,6 +27260,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 this.AdjustFlagsAndWidth(modifiers);
                 this.modifiers = modifiers;
+            }
+            if (explicitInterfaceSpecifier != null)
+            {
+                this.AdjustFlagsAndWidth(explicitInterfaceSpecifier);
+                this.explicitInterfaceSpecifier = explicitInterfaceSpecifier;
+            }
+            if (identifier != null)
+            {
+                this.AdjustFlagsAndWidth(identifier);
+                this.identifier = identifier;
+            }
+            if (typeParameterList != null)
+            {
+                this.AdjustFlagsAndWidth(typeParameterList);
+                this.typeParameterList = typeParameterList;
             }
             if (type != null)
             {
@@ -27237,6 +27285,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         public override Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> AttributeLists => new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax>(this.attributeLists);
         public override Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> Modifiers => new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken>(this.modifiers);
+        public ExplicitInterfaceSpecifierSyntax? ExplicitInterfaceSpecifier => this.explicitInterfaceSpecifier;
+        /// <summary>Gets the identifier.</summary>
+        public SyntaxToken? Identifier => this.identifier;
+        public TypeParameterListSyntax? TypeParameterList => this.typeParameterList;
         public TypeSyntax? Type => this.type;
 
         internal override GreenNode? GetSlot(int index)
@@ -27244,7 +27296,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 0 => this.attributeLists,
                 1 => this.modifiers,
-                2 => this.type,
+                2 => this.explicitInterfaceSpecifier,
+                3 => this.identifier,
+                4 => this.typeParameterList,
+                5 => this.type,
                 _ => null,
             };
 
@@ -27253,11 +27308,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitIncompleteMember(this);
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitIncompleteMember(this);
 
-        public IncompleteMemberSyntax Update(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> modifiers, TypeSyntax type)
+        public IncompleteMemberSyntax Update(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> modifiers, ExplicitInterfaceSpecifierSyntax explicitInterfaceSpecifier, SyntaxToken identifier, TypeParameterListSyntax typeParameterList, TypeSyntax type)
         {
-            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || type != this.Type)
+            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || explicitInterfaceSpecifier != this.ExplicitInterfaceSpecifier || identifier != this.Identifier || typeParameterList != this.TypeParameterList || type != this.Type)
             {
-                var newNode = SyntaxFactory.IncompleteMember(attributeLists, modifiers, type);
+                var newNode = SyntaxFactory.IncompleteMember(attributeLists, modifiers, explicitInterfaceSpecifier, identifier, typeParameterList, type);
                 var diags = GetDiagnostics();
                 if (diags?.Length > 0)
                     newNode = newNode.WithDiagnosticsGreen(diags);
@@ -27271,15 +27326,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
 
         internal override GreenNode SetDiagnostics(DiagnosticInfo[]? diagnostics)
-            => new IncompleteMemberSyntax(this.Kind, this.attributeLists, this.modifiers, this.type, diagnostics, GetAnnotations());
+            => new IncompleteMemberSyntax(this.Kind, this.attributeLists, this.modifiers, this.explicitInterfaceSpecifier, this.identifier, this.typeParameterList, this.type, diagnostics, GetAnnotations());
 
         internal override GreenNode SetAnnotations(SyntaxAnnotation[]? annotations)
-            => new IncompleteMemberSyntax(this.Kind, this.attributeLists, this.modifiers, this.type, GetDiagnostics(), annotations);
+            => new IncompleteMemberSyntax(this.Kind, this.attributeLists, this.modifiers, this.explicitInterfaceSpecifier, this.identifier, this.typeParameterList, this.type, GetDiagnostics(), annotations);
 
         internal IncompleteMemberSyntax(ObjectReader reader)
           : base(reader)
         {
-            this.SlotCount = 3;
+            this.SlotCount = 6;
             var attributeLists = (GreenNode?)reader.ReadValue();
             if (attributeLists != null)
             {
@@ -27291,6 +27346,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 AdjustFlagsAndWidth(modifiers);
                 this.modifiers = modifiers;
+            }
+            var explicitInterfaceSpecifier = (ExplicitInterfaceSpecifierSyntax?)reader.ReadValue();
+            if (explicitInterfaceSpecifier != null)
+            {
+                AdjustFlagsAndWidth(explicitInterfaceSpecifier);
+                this.explicitInterfaceSpecifier = explicitInterfaceSpecifier;
+            }
+            var identifier = (SyntaxToken?)reader.ReadValue();
+            if (identifier != null)
+            {
+                AdjustFlagsAndWidth(identifier);
+                this.identifier = identifier;
+            }
+            var typeParameterList = (TypeParameterListSyntax?)reader.ReadValue();
+            if (typeParameterList != null)
+            {
+                AdjustFlagsAndWidth(typeParameterList);
+                this.typeParameterList = typeParameterList;
             }
             var type = (TypeSyntax?)reader.ReadValue();
             if (type != null)
@@ -27305,6 +27378,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             base.WriteTo(writer);
             writer.WriteValue(this.attributeLists);
             writer.WriteValue(this.modifiers);
+            writer.WriteValue(this.explicitInterfaceSpecifier);
+            writer.WriteValue(this.identifier);
+            writer.WriteValue(this.typeParameterList);
             writer.WriteValue(this.type);
         }
 
@@ -33907,7 +33983,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), (SyntaxToken)Visit(node.Identifier), (SyntaxToken)Visit(node.Spread), (TypeSyntax)Visit(node.Type), (EqualsValueClauseSyntax)Visit(node.Default));
 
         public override CSharpSyntaxNode VisitIncompleteMember(IncompleteMemberSyntax node)
-            => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), (TypeSyntax)Visit(node.Type));
+            => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), (ExplicitInterfaceSpecifierSyntax)Visit(node.ExplicitInterfaceSpecifier), (SyntaxToken)Visit(node.Identifier), (TypeParameterListSyntax)Visit(node.TypeParameterList), (TypeSyntax)Visit(node.Type));
 
         public override CSharpSyntaxNode VisitSkippedTokensTrivia(SkippedTokensTriviaSyntax node)
             => node.Update(VisitList(node.Tokens));
@@ -38137,12 +38213,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new ParameterSyntax(SyntaxKind.Parameter, attributeLists.Node, modifiers.Node, identifier, spread, type, @default, this.context);
         }
 
-        public IncompleteMemberSyntax IncompleteMember(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> modifiers, TypeSyntax? type)
+        public IncompleteMemberSyntax IncompleteMember(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> modifiers, ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier, SyntaxToken? identifier, TypeParameterListSyntax? typeParameterList, TypeSyntax? type)
         {
 #if DEBUG
+            if (identifier != null)
+            {
+                switch (identifier.Kind)
+                {
+                    case SyntaxKind.IdentifierToken:
+                    case SyntaxKind.ThisKeyword:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(identifier));
+                }
+            }
 #endif
 
-            return new IncompleteMemberSyntax(SyntaxKind.IncompleteMember, attributeLists.Node, modifiers.Node, type, this.context);
+            return new IncompleteMemberSyntax(SyntaxKind.IncompleteMember, attributeLists.Node, modifiers.Node, explicitInterfaceSpecifier, identifier, typeParameterList, type, this.context);
         }
 
         public SkippedTokensTriviaSyntax SkippedTokensTrivia(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> tokens)
@@ -43061,12 +43147,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new ParameterSyntax(SyntaxKind.Parameter, attributeLists.Node, modifiers.Node, identifier, spread, type, @default);
         }
 
-        public static IncompleteMemberSyntax IncompleteMember(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> modifiers, TypeSyntax? type)
+        public static IncompleteMemberSyntax IncompleteMember(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> modifiers, ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier, SyntaxToken? identifier, TypeParameterListSyntax? typeParameterList, TypeSyntax? type)
         {
 #if DEBUG
+            if (identifier != null)
+            {
+                switch (identifier.Kind)
+                {
+                    case SyntaxKind.IdentifierToken:
+                    case SyntaxKind.ThisKeyword:
+                    case SyntaxKind.None: break;
+                    default: throw new ArgumentException(nameof(identifier));
+                }
+            }
 #endif
 
-            return new IncompleteMemberSyntax(SyntaxKind.IncompleteMember, attributeLists.Node, modifiers.Node, type);
+            return new IncompleteMemberSyntax(SyntaxKind.IncompleteMember, attributeLists.Node, modifiers.Node, explicitInterfaceSpecifier, identifier, typeParameterList, type);
         }
 
         public static SkippedTokensTriviaSyntax SkippedTokensTrivia(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> tokens)

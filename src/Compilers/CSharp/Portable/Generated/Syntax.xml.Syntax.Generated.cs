@@ -11845,6 +11845,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     public sealed partial class IncompleteMemberSyntax : MemberDeclarationSyntax
     {
         private SyntaxNode? attributeLists;
+        private ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier;
+        private TypeParameterListSyntax? typeParameterList;
         private TypeSyntax? type;
 
         internal IncompleteMemberSyntax(InternalSyntax.CSharpSyntaxNode green, SyntaxNode? parent, int position)
@@ -11863,13 +11865,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             }
         }
 
-        public TypeSyntax? Type => GetRed(ref this.type, 2);
+        public ExplicitInterfaceSpecifierSyntax? ExplicitInterfaceSpecifier => GetRed(ref this.explicitInterfaceSpecifier, 2);
+
+        /// <summary>Gets the identifier.</summary>
+        public SyntaxToken Identifier
+        {
+            get
+            {
+                var slot = ((Syntax.InternalSyntax.IncompleteMemberSyntax)this.Green).identifier;
+                return slot != null ? new SyntaxToken(this, slot, GetChildPosition(3), GetChildIndex(3)) : default;
+            }
+        }
+
+        public TypeParameterListSyntax? TypeParameterList => GetRed(ref this.typeParameterList, 4);
+
+        public TypeSyntax? Type => GetRed(ref this.type, 5);
 
         internal override SyntaxNode? GetNodeSlot(int index)
             => index switch
             {
                 0 => GetRedAtZero(ref this.attributeLists)!,
-                2 => GetRed(ref this.type, 2),
+                2 => GetRed(ref this.explicitInterfaceSpecifier, 2),
+                4 => GetRed(ref this.typeParameterList, 4),
+                5 => GetRed(ref this.type, 5),
                 _ => null,
             };
 
@@ -11877,7 +11895,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
             => index switch
             {
                 0 => this.attributeLists,
-                2 => this.type,
+                2 => this.explicitInterfaceSpecifier,
+                4 => this.typeParameterList,
+                5 => this.type,
                 _ => null,
             };
 
@@ -11885,11 +11905,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         [return: MaybeNull]
         public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitIncompleteMember(this);
 
-        public IncompleteMemberSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, TypeSyntax? type)
+        public IncompleteMemberSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier, SyntaxToken identifier, TypeParameterListSyntax? typeParameterList, TypeSyntax? type)
         {
-            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || type != this.Type)
+            if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || explicitInterfaceSpecifier != this.ExplicitInterfaceSpecifier || identifier != this.Identifier || typeParameterList != this.TypeParameterList || type != this.Type)
             {
-                var newNode = SyntaxFactory.IncompleteMember(attributeLists, modifiers, type);
+                var newNode = SyntaxFactory.IncompleteMember(attributeLists, modifiers, explicitInterfaceSpecifier, identifier, typeParameterList, type);
                 var annotations = GetAnnotations();
                 return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
             }
@@ -11898,15 +11918,23 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         }
 
         internal override MemberDeclarationSyntax WithAttributeListsCore(SyntaxList<AttributeListSyntax> attributeLists) => WithAttributeLists(attributeLists);
-        public new IncompleteMemberSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.Type);
+        public new IncompleteMemberSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists) => Update(attributeLists, this.Modifiers, this.ExplicitInterfaceSpecifier, this.Identifier, this.TypeParameterList, this.Type);
         internal override MemberDeclarationSyntax WithModifiersCore(SyntaxTokenList modifiers) => WithModifiers(modifiers);
-        public new IncompleteMemberSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.Type);
-        public IncompleteMemberSyntax WithType(TypeSyntax? type) => Update(this.AttributeLists, this.Modifiers, type);
+        public new IncompleteMemberSyntax WithModifiers(SyntaxTokenList modifiers) => Update(this.AttributeLists, modifiers, this.ExplicitInterfaceSpecifier, this.Identifier, this.TypeParameterList, this.Type);
+        public IncompleteMemberSyntax WithExplicitInterfaceSpecifier(ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifier) => Update(this.AttributeLists, this.Modifiers, explicitInterfaceSpecifier, this.Identifier, this.TypeParameterList, this.Type);
+        public IncompleteMemberSyntax WithIdentifier(SyntaxToken identifier) => Update(this.AttributeLists, this.Modifiers, this.ExplicitInterfaceSpecifier, identifier, this.TypeParameterList, this.Type);
+        public IncompleteMemberSyntax WithTypeParameterList(TypeParameterListSyntax? typeParameterList) => Update(this.AttributeLists, this.Modifiers, this.ExplicitInterfaceSpecifier, this.Identifier, typeParameterList, this.Type);
+        public IncompleteMemberSyntax WithType(TypeSyntax? type) => Update(this.AttributeLists, this.Modifiers, this.ExplicitInterfaceSpecifier, this.Identifier, this.TypeParameterList, type);
 
         internal override MemberDeclarationSyntax AddAttributeListsCore(params AttributeListSyntax[] items) => AddAttributeLists(items);
         public new IncompleteMemberSyntax AddAttributeLists(params AttributeListSyntax[] items) => WithAttributeLists(this.AttributeLists.AddRange(items));
         internal override MemberDeclarationSyntax AddModifiersCore(params SyntaxToken[] items) => AddModifiers(items);
         public new IncompleteMemberSyntax AddModifiers(params SyntaxToken[] items) => WithModifiers(this.Modifiers.AddRange(items));
+        public IncompleteMemberSyntax AddTypeParameterListParameters(params TypeParameterSyntax[] items)
+        {
+            var typeParameterList = this.TypeParameterList ?? SyntaxFactory.TypeParameterList();
+            return WithTypeParameterList(typeParameterList.WithParameters(typeParameterList.Parameters.AddRange(items)));
+        }
     }
 
     public sealed partial class SkippedTokensTriviaSyntax : StructuredTriviaSyntax
