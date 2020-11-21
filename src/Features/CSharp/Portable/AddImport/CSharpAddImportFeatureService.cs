@@ -477,15 +477,6 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImport
 
             var usingDirective = SyntaxFactory.UsingDirective(null, nameSyntax).WithAdditionalAnnotations(Formatter.Annotation);
 
-            usingDirective = usingDirective.Update(
-                usingDirective.ImportKeyword,
-                usingDirective.UsingKeyword,
-                usingDirective.StaticKeyword,
-                usingDirective.Alias,
-                usingDirective.Name.WithTrailingTrivia(SyntaxFactory.EndOfLine(Environment.NewLine)),
-                usingDirective.SemicolonToken
-            );
-
             usingDirective = namespaceOrTypeSymbol.IsKind(SymbolKind.Namespace)
                 ? usingDirective
                 : usingDirective.WithStaticKeyword(SyntaxFactory.Token(SyntaxKind.StaticKeyword));

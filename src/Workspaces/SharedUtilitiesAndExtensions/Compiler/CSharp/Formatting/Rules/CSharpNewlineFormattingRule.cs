@@ -120,12 +120,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             if (currentToken == currentDeclFirstToken)
             {
                 linesCount += 1;
+
+                if (currentDecl is UsingDirectiveSyntax && prevDecl is NamespaceDeclarationSyntax)
+                {
+                    // import following a namespace should have 1 additional line space
+                    linesCount += 1;
+                }
+                else if (
+                    (currentDecl is MethodDeclarationSyntax || currentDecl is PropertyDeclarationSyntax || currentDecl is FieldDeclarationSyntax) && // global member
+                    (prevDecl is UsingDirectiveSyntax || prevDecl is NamespaceDeclarationSyntax) // import or namespace
+                    )
+                {
+                    // a "member" that has a namespace or using directive before, should have an additional line
+                    if (lineDiff <= 1)
+                        linesCount += 1;
+                }
             }
 
             // no need to force anything if no expected line count
             if (linesCount <= 0) return null;
 
-            return CreateAdjustNewLinesOperation(linesCount, AdjustNewLinesOption.AddLinesIfLess);
+            return CreateAdjustNewLinesOperation(linesCount, AdjustNewLinesOption.PreserveLines);
         }
 
         private bool IsTopDeclaration(SyntaxNode n)
