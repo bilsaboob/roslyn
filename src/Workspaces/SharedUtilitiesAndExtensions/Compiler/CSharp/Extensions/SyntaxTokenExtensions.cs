@@ -232,6 +232,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
             }
         }
 
+        public static SyntaxToken WithoutLeadingTrivia(this SyntaxToken token)
+        {
+            return token.WithLeadingTrivia((IEnumerable<SyntaxTrivia>?)null);
+        }
+
+        public static SyntaxTriviaList GetLeadingTrivia(this SyntaxToken token)
+        {
+            return token.LeadingTrivia;
+        }
+
         public static bool IsRegularStringLiteral(this SyntaxToken token)
             => token.Kind() == SyntaxKind.StringLiteralToken && !token.IsVerbatimStringLiteral();
 
