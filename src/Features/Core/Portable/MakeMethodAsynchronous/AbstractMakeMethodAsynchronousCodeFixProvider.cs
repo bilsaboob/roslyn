@@ -62,16 +62,6 @@ namespace Microsoft.CodeAnalysis.MakeMethodAsynchronous
                 new MyCodeAction(GetMakeAsyncTaskFunctionResource(), c => FixNodeAsync(
                     context.Document, diagnostic, keepVoid: false, isEntryPoint, cancellationToken: c)),
                 context.Diagnostics);
-
-            // If it's a void returning method (and not an entry point), also offer to keep the void return type
-            var isOrdinaryOrLocalFunction = symbol.IsOrdinaryMethodOrLocalFunction();
-            if (isOrdinaryOrLocalFunction && symbol.ReturnsVoid && !isEntryPoint)
-            {
-                context.RegisterCodeFix(
-                    new MyCodeAction(GetMakeAsyncVoidFunctionResource(), c => FixNodeAsync(
-                        context.Document, diagnostic, keepVoid: true, isEntryPoint: false, cancellationToken: c)),
-                    context.Diagnostics);
-            }
         }
 
         private static bool IsLikelyEntryPointName(string name, Document document)
@@ -100,47 +90,7 @@ namespace Microsoft.CodeAnalysis.MakeMethodAsynchronous
             var compilation = await document.Project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             var knownTypes = new KnownTypes(compilation);
 
-            if (NeedsRename(this, methodSymbolOpt, keepVoid, isEntryPoint, in knownTypes))
-            {
-                return await RenameThenAddAsyncTokenAsync(
-                    keepVoid, document, node, methodSymbolOpt, knownTypes, cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                return await AddAsyncTokenAsync(
-                    keepVoid, document, methodSymbolOpt, knownTypes, node, cancellationToken).ConfigureAwait(false);
-            }
-
-            static bool NeedsRename(AbstractMakeMethodAsynchronousCodeFixProvider @this, IMethodSymbol methodSymbol, bool keepVoid, bool isEntryPoint, in KnownTypes knownTypes)
-            {
-                if (!methodSymbol.IsOrdinaryMethodOrLocalFunction())
-                {
-                    // We don't need to rename methods that don't have a name
-                    return false;
-                }
-
-                if (methodSymbol.Name.EndsWith(AsyncSuffix))
-                {
-                    // We don't need to rename methods that already have an Async suffix
-                    return false;
-                }
-
-                if (isEntryPoint)
-                {
-                    // We don't need to rename entry point methods
-                    return false;
-                }
-
-                // Only rename if the return type will change
-                if (methodSymbol.ReturnsVoid)
-                {
-                    return !keepVoid;
-                }
-                else
-                {
-                    return !@this.IsAsyncReturnType(methodSymbol.ReturnType, knownTypes);
-                }
-            }
+            return await AddAsyncTokenAsync(keepVoid, document, methodSymbolOpt, knownTypes, node, cancellationToken).ConfigureAwait(false);
         }
 
         private SyntaxNode GetContainingFunction(Diagnostic diagnostic, CancellationToken cancellationToken)
