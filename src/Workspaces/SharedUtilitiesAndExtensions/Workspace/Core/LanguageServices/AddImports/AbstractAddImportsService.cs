@@ -161,7 +161,9 @@ namespace Microsoft.CodeAnalysis.AddImports
             // The node we'll add to if we can't find a specific namespace with imports of 
             // the type we're trying to add.  This will be the closest namespace with any
             // imports in it, or the root if there are no such namespaces.
-            var fallbackNode = contextSpine.FirstOrDefault(HasAnyImports) ?? root;
+            
+            // we pick the inner most namespace or the compilation unit as the fallback - never the compilation unit itself unless user has explicitly declared usings in it
+            var fallbackNode = contextSpine.FirstOrDefault(n => n is TNamespaceDeclarationSyntax || n is TCompilationUnitSyntax);
 
             // The specific container to add each type of import to.  We look for a container
             // that already has an import of the same type as the node we want to add to.
