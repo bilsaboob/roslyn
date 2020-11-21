@@ -54,10 +54,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             public override TriviaData WithSpace(int space, FormattingContext context, ChainedFormattingRules formattingRules)
                 => _original.WithSpace(space, context, formattingRules);
 
-            public override TriviaData WithLine(
-                int line, int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken)
+            public override TriviaData WithLine(int line, int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken)
             {
                 return _original.WithLine(line, indentation, context, formattingRules, cancellationToken);
+            }
+
+            public override TriviaData WithLine(
+                int line, int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken, bool forceLines = false)
+            {
+                return _original.WithLine(line, indentation, context, formattingRules, cancellationToken, forceLines);
             }
 
             public override TriviaData WithIndentation(

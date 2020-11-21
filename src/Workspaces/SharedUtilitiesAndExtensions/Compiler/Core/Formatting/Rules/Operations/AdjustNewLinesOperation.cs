@@ -13,17 +13,19 @@ namespace Microsoft.CodeAnalysis.Formatting.Rules
     /// </summary>
     internal sealed class AdjustNewLinesOperation
     {
-        internal AdjustNewLinesOperation(int line, AdjustNewLinesOption option)
+        internal AdjustNewLinesOperation(int line, AdjustNewLinesOption option, int space = 0)
         {
-            Contract.ThrowIfFalse(option != AdjustNewLinesOption.ForceLines || line > 0);
+            /*Contract.ThrowIfFalse(option != AdjustNewLinesOption.ForceLines || line > 0);
             Contract.ThrowIfFalse(option != AdjustNewLinesOption.PreserveLines || line >= 0);
-            Contract.ThrowIfFalse(option != AdjustNewLinesOption.ForceLinesIfOnSingleLine || line > 0);
+            Contract.ThrowIfFalse(option != AdjustNewLinesOption.ForceLinesIfOnSingleLine || line > 0);*/
 
             this.Line = line;
+            this.Space = space;
             this.Option = option;
         }
 
         public int Line { get; }
+        public int Space { get; }
         public AdjustNewLinesOption Option { get; }
     }
 }

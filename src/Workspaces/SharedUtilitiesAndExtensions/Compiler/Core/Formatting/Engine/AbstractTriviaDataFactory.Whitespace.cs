@@ -68,6 +68,16 @@ namespace Microsoft.CodeAnalysis.Formatting
                 return new ModifiedWhitespace(this.Options, this, line, indentation, elastic: false, language: this.Language);
             }
 
+            public override TriviaData WithLine(int line, int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken, bool forceLines)
+            {
+                if (this.LineBreaks == line && this.Spaces == indentation)
+                {
+                    return this;
+                }
+
+                return new ModifiedWhitespace(this.Options, this, line, indentation, elastic: false, language: this.Language);
+            }
+
             public override TriviaData WithIndentation(
                 int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken)
             {

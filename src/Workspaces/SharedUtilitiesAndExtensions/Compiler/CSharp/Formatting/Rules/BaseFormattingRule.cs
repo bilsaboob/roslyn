@@ -154,6 +154,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             list.Add(FormattingOperations.CreateAlignTokensOperation(baseNode, tokens, option));
         }
 
+        protected static AdjustNewLinesOperation CreateAdjustNewLinesOperation(int line, int space, AdjustNewLinesOption option)
+            => FormattingOperations.CreateAdjustNewLinesOperation(line, space, option);
+
         protected static AdjustNewLinesOperation CreateAdjustNewLinesOperation(int line, AdjustNewLinesOption option)
             => FormattingOperations.CreateAdjustNewLinesOperation(line, option);
 

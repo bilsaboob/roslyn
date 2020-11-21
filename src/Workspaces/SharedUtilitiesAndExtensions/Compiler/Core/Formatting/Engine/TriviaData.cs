@@ -47,6 +47,11 @@ namespace Microsoft.CodeAnalysis.Formatting
 
         public abstract TriviaData WithLine(int line, int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken);
 
+        public virtual TriviaData WithLine(int line, int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken, bool forceLines)
+        {
+            return WithLine(line, indentation, context, formattingRules, cancellationToken);
+        }
+
         public abstract TriviaData WithIndentation(int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken);
 
         public abstract void Format(

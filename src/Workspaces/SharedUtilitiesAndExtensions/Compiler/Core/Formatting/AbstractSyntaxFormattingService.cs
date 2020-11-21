@@ -33,7 +33,12 @@ namespace Microsoft.CodeAnalysis.Formatting
 
         protected abstract AbstractFormattingResult Format(SyntaxNode node, AnalyzerConfigOptions options, IEnumerable<AbstractFormattingRule> rules, SyntaxToken token1, SyntaxToken token2, CancellationToken cancellationToken);
 
-        public IFormattingResult Format(SyntaxNode node, IEnumerable<TextSpan> spans, bool shouldUseFormattingSpanCollapse, AnalyzerConfigOptions options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken)
+        protected virtual AbstractFormattingResult Format(SyntaxNode node, AnalyzerConfigOptions options, IEnumerable<AbstractFormattingRule> rules, SyntaxToken token1, SyntaxToken token2, FormattingReason reason, CancellationToken cancellationToken)
+        {
+            return Format(node, options, rules, token1, token2, cancellationToken);
+        }
+
+        public IFormattingResult Format(SyntaxNode node, IEnumerable<TextSpan> spans, bool shouldUseFormattingSpanCollapse, AnalyzerConfigOptions options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
             CheckArguments(node, spans, options, rules);
 
@@ -50,7 +55,7 @@ namespace Microsoft.CodeAnalysis.Formatting
                 return FormatMergedSpan(node, options, rules, spansToFormat, cancellationToken);
             }
 
-            return FormatIndividually(node, options, rules, spansToFormat, cancellationToken);
+            return FormatIndividually(node, options, rules, spansToFormat, reason, cancellationToken);
         }
 
         private IFormattingResult FormatMergedSpan(
@@ -70,7 +75,7 @@ namespace Microsoft.CodeAnalysis.Formatting
         }
 
         private IFormattingResult FormatIndividually(
-            SyntaxNode node, AnalyzerConfigOptions options, IEnumerable<AbstractFormattingRule> rules, IList<TextSpan> spansToFormat, CancellationToken cancellationToken)
+            SyntaxNode node, AnalyzerConfigOptions options, IEnumerable<AbstractFormattingRule> rules, IList<TextSpan> spansToFormat, FormattingReason reason, CancellationToken cancellationToken)
         {
             List<AbstractFormattingResult>? results = null;
             foreach (var pair in node.ConvertToTokenPairs(spansToFormat))
@@ -81,7 +86,7 @@ namespace Microsoft.CodeAnalysis.Formatting
                 }
 
                 results ??= new List<AbstractFormattingResult>();
-                results.Add(Format(node, options, rules, pair.Item1, pair.Item2, cancellationToken));
+                results.Add(Format(node, options, rules, pair.Item1, pair.Item2, reason, cancellationToken));
             }
 
             // quick simple case check

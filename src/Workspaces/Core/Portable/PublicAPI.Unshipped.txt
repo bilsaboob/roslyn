@@ -1,1 +1,3 @@
-
+Microsoft.CodeAnalysis.Formatting.FormattingReason
+Microsoft.CodeAnalysis.Formatting.FormattingReason.CopyPasteAction = 1 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
+Microsoft.CodeAnalysis.Formatting.FormattingReason.DefaultFormatAction = 0 -> Microsoft.CodeAnalysis.Formatting.FormattingReason

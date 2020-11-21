@@ -14,6 +14,12 @@ using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Formatting
 {
+    public enum FormattingReason
+    {
+        DefaultFormatAction,
+        CopyPasteAction,
+    }
+
     internal abstract class AbstractFormattingResult : IFormattingResult
     {
         protected readonly TreeData TreeInfo;

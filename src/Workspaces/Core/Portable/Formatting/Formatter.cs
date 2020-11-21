@@ -227,7 +227,7 @@ namespace Microsoft.CodeAnalysis.Formatting
             return formattingResult == null ? node : formattingResult.GetFormattedRoot(cancellationToken);
         }
 
-        internal static IFormattingResult GetFormattingResult(SyntaxNode node, IEnumerable<TextSpan> spans, Workspace workspace, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken)
+        internal static IFormattingResult GetFormattingResult(SyntaxNode node, IEnumerable<TextSpan> spans, Workspace workspace, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
             if (workspace == null)
             {
@@ -251,7 +251,7 @@ namespace Microsoft.CodeAnalysis.Formatting
             rules ??= GetDefaultFormattingRules(workspace, node.Language);
             spans ??= SpecializedCollections.SingletonEnumerable(node.FullSpan);
             var shouldUseFormattingSpanCollapse = options.GetOption(FormattingOptions.AllowDisjointSpanMerging);
-            return languageFormatter.Format(node, spans, shouldUseFormattingSpanCollapse, options.AsAnalyzerConfigOptions(optionService, node.Language), rules, cancellationToken);
+            return languageFormatter.Format(node, spans, shouldUseFormattingSpanCollapse, options.AsAnalyzerConfigOptions(optionService, node.Language), rules, cancellationToken, reason);
         }
 
         /// <summary>
@@ -289,9 +289,9 @@ namespace Microsoft.CodeAnalysis.Formatting
         public static IList<TextChange> GetFormattedTextChanges(SyntaxNode node, IEnumerable<TextSpan> spans, Workspace workspace, OptionSet options = null, CancellationToken cancellationToken = default)
             => GetFormattedTextChanges(node, spans, workspace, options, rules: null, cancellationToken: cancellationToken);
 
-        internal static IList<TextChange> GetFormattedTextChanges(SyntaxNode node, IEnumerable<TextSpan> spans, Workspace workspace, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken)
+        internal static IList<TextChange> GetFormattedTextChanges(SyntaxNode node, IEnumerable<TextSpan> spans, Workspace workspace, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
-            var formattingResult = GetFormattingResult(node, spans, workspace, options, rules, cancellationToken);
+            var formattingResult = GetFormattingResult(node, spans, workspace, options, rules, cancellationToken, reason);
             return formattingResult == null
                 ? SpecializedCollections.EmptyList<TextChange>()
                 : formattingResult.GetTextChanges(cancellationToken);

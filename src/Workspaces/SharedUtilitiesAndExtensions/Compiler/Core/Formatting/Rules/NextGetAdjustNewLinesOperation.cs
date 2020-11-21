@@ -14,17 +14,21 @@ namespace Microsoft.CodeAnalysis.Formatting.Rules
     {
         private readonly ImmutableArray<AbstractFormattingRule> _formattingRules;
         private readonly int _index;
+        private readonly FormattingReason _reason;
 
         public NextGetAdjustNewLinesOperation(
             ImmutableArray<AbstractFormattingRule> formattingRules,
-            int index)
+            int index,
+            FormattingReason reason = FormattingReason.DefaultFormatAction
+            )
         {
             _formattingRules = formattingRules;
             _index = index;
+            _reason = reason;
         }
 
         private NextGetAdjustNewLinesOperation NextOperation
-            => new NextGetAdjustNewLinesOperation(_formattingRules, _index + 1);
+            => new NextGetAdjustNewLinesOperation(_formattingRules, _index + 1, _reason);
 
         public AdjustNewLinesOperation? Invoke(in SyntaxToken previousToken, in SyntaxToken currentToken)
         {
@@ -36,7 +40,7 @@ namespace Microsoft.CodeAnalysis.Formatting.Rules
             else
             {
                 // Call the handler at the index, passing a continuation that will come back to here with index + 1
-                return _formattingRules[_index].GetAdjustNewLinesOperation(in previousToken, in currentToken, NextOperation);
+                return _formattingRules[_index].GetAdjustNewLinesOperation(in previousToken, in currentToken, NextOperation, _reason);
             }
         }
     }

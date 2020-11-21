@@ -25,5 +25,6 @@ namespace Microsoft.CodeAnalysis.Formatting.Rules
         PreserveLines,
         ForceLines,
         ForceLinesIfOnSingleLine,
+        AddLinesIfLess,
     }
 }

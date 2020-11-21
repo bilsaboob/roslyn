@@ -146,13 +146,19 @@ namespace Microsoft.CodeAnalysis.Formatting
 
             public bool Apply(AdjustNewLinesOperation operation, int pairIndex, CancellationToken cancellationToken)
             {
-                if (operation.Option == AdjustNewLinesOption.PreserveLines)
+                var applied = false;
+
+                if (operation.Option == AdjustNewLinesOption.AddLinesIfLess)
                 {
-                    return ApplyPreserveLinesOperation(operation, pairIndex, cancellationToken);
+                    applied = ApplyAddLinesIfLessOperation(operation, pairIndex, cancellationToken);
+                }
+                else if (operation.Option == AdjustNewLinesOption.PreserveLines)
+                {
+                    applied = ApplyPreserveLinesOperation(operation, pairIndex, cancellationToken);
                 }
                 else if (operation.Option == AdjustNewLinesOption.ForceLines)
                 {
-                    return ApplyForceLinesOperation(operation, pairIndex, cancellationToken);
+                    applied = ApplyForceLinesOperation(operation, pairIndex, cancellationToken);
                 }
                 else
                 {
@@ -165,13 +171,21 @@ namespace Microsoft.CodeAnalysis.Formatting
                     if (_context.TokenStream.TwoTokensOnSameLine(_context.TokenStream.GetToken(pairIndex),
                                                         _context.TokenStream.GetToken(pairIndex + 1)))
                     {
-                        return ApplyForceLinesOperation(operation, pairIndex, cancellationToken);
+                        applied = ApplyForceLinesOperation(operation, pairIndex, cancellationToken);
                     }
                     else
                     {
-                        return false;
+                        applied = false;
                     }
                 }
+
+                if (operation.Space != 0)
+                {
+                    if (ApplyPreserveSpacesOperation(new AdjustSpacesOperation(operation.Space, AdjustSpacesOption.ForceSpaces), pairIndex))
+                        applied = true;
+                }
+
+                return applied;
             }
 
             private bool ApplyForceLinesOperation(AdjustNewLinesOperation operation, int pairIndex, CancellationToken cancellationToken)
@@ -188,9 +202,51 @@ namespace Microsoft.CodeAnalysis.Formatting
 
                 Debug.Assert(!_context.IsFormattingDisabled(pairIndex));
 
+                var updatedTrivia = operation.Line == 0 ?
+                    triviaInfo.WithLine(operation.Line, indentation, _context, _formattingRules, cancellationToken, true)
+                    : triviaInfo.WithLine(operation.Line, indentation, _context, _formattingRules, cancellationToken);
+
                 // well, force it regardless original content
-                _context.TokenStream.ApplyChange(pairIndex, triviaInfo.WithLine(operation.Line, indentation, _context, _formattingRules, cancellationToken));
+                _context.TokenStream.ApplyChange(pairIndex, updatedTrivia);
                 return true;
+            }
+
+            public bool ApplyAddLinesIfLessOperation(AdjustNewLinesOperation operation, int pairIndex, CancellationToken cancellationToken)
+            {
+                var t1Index = pairIndex;
+                var t2Index = t1Index + 1;
+
+                var t1 = _context.TokenStream.GetToken(t1Index);
+                var t2 = _context.TokenStream.GetToken(t2Index);
+
+                var t1Trivia = _context.TokenStream.GetTriviaData(t1Index);
+
+                // okay, check whether there is line between token more than we want
+                // check whether we should force it if it is less than given number
+                var indentation = _context.GetBaseIndentation(t2);
+                if (operation.Line > t1Trivia.LineBreaks)
+                {
+                    Debug.Assert(!_context.IsFormattingDisabled(t1Index));
+
+                    // alright force them
+                    _context.TokenStream.ApplyChange(t1Index, t1Trivia.WithLine(operation.Line, indentation, _context, _formattingRules, cancellationToken));
+                    return true;
+                }
+
+                // lines between tokens are as expected, but indentation is not right
+                if (t1Trivia.SecondTokenIsFirstTokenOnLine && indentation != t1Trivia.Spaces)
+                {
+                    // Formatting can only be disabled for entire lines. This block only modifies the line containing
+                    // the second token of the current pair, so we only need to check for disabled formatting at the
+                    // starting position of the second token of the pair.
+                    Debug.Assert(!_context.IsFormattingDisabled(new TextSpan(t2.SpanStart, 0)));
+
+                    _context.TokenStream.ApplyChange(t1Index, t1Trivia.WithIndentation(indentation, _context, _formattingRules, cancellationToken));
+                    return true;
+                }
+
+                // if PreserveLineOperation's line is set to 0, let space operation to override wrapping operation
+                return operation.Line > 0;
             }
 
             public bool ApplyPreserveLinesOperation(

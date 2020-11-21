@@ -70,9 +70,9 @@ namespace Microsoft.CodeAnalysis.Formatting
             action.Invoke();
         }
 
-        public AdjustNewLinesOperation? GetAdjustNewLinesOperation(SyntaxToken previousToken, SyntaxToken currentToken)
+        public AdjustNewLinesOperation? GetAdjustNewLinesOperation(SyntaxToken previousToken, SyntaxToken currentToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
-            var action = new NextGetAdjustNewLinesOperation(_getAdjustNewLinesOperationRules, index: 0);
+            var action = new NextGetAdjustNewLinesOperation(_getAdjustNewLinesOperationRules, index: 0, reason);
             return action.Invoke(in previousToken, in currentToken);
         }
 

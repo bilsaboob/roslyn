@@ -475,8 +475,16 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImport
                 nameSyntax = RemoveGlobalAliasIfUnnecessary(semanticModel, nameSyntax, namespaceToAddTo);
             }
 
-            var usingDirective = SyntaxFactory.UsingDirective(null, nameSyntax)
-                                              .WithAdditionalAnnotations(Formatter.Annotation);
+            var usingDirective = SyntaxFactory.UsingDirective(null, nameSyntax).WithAdditionalAnnotations(Formatter.Annotation);
+
+            usingDirective = usingDirective.Update(
+                usingDirective.ImportKeyword,
+                usingDirective.UsingKeyword,
+                usingDirective.StaticKeyword,
+                usingDirective.Alias,
+                usingDirective.Name.WithTrailingTrivia(SyntaxFactory.EndOfLine(Environment.NewLine)),
+                usingDirective.SemicolonToken
+            );
 
             usingDirective = namespaceOrTypeSymbol.IsKind(SymbolKind.Namespace)
                 ? usingDirective

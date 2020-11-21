@@ -85,7 +85,7 @@ namespace Microsoft.CodeAnalysis.Formatting
         protected abstract AbstractTriviaDataFactory CreateTriviaFactory();
         protected abstract AbstractFormattingResult CreateFormattingResult(TokenStream tokenStream);
 
-        public AbstractFormattingResult Format(CancellationToken cancellationToken)
+        public AbstractFormattingResult Format(CancellationToken cancellationToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
             using (Logger.LogBlock(FunctionId.Formatting_Format, FormatSummary, cancellationToken))
             {
@@ -93,7 +93,7 @@ namespace Microsoft.CodeAnalysis.Formatting
                 var nodeOperations = CreateNodeOperations(cancellationToken);
 
                 var tokenStream = new TokenStream(this.TreeData, this.Options, this.SpanToFormat, CreateTriviaFactory());
-                var tokenOperation = CreateTokenOperation(tokenStream, cancellationToken);
+                var tokenOperation = CreateTokenOperation(tokenStream, reason, cancellationToken);
 
                 // initialize context
                 var context = CreateFormattingContext(tokenStream, cancellationToken);
@@ -203,7 +203,9 @@ namespace Microsoft.CodeAnalysis.Formatting
 
         private TokenPairWithOperations[] CreateTokenOperation(
             TokenStream tokenStream,
-            CancellationToken cancellationToken)
+            FormattingReason reason,
+            CancellationToken cancellationToken
+            )
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -217,7 +219,7 @@ namespace Microsoft.CodeAnalysis.Formatting
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var spaceOperation = _formattingRules.GetAdjustSpacesOperation(currentToken, nextToken);
-                    var lineOperation = _formattingRules.GetAdjustNewLinesOperation(currentToken, nextToken);
+                    var lineOperation = _formattingRules.GetAdjustNewLinesOperation(currentToken, nextToken, reason);
 
                     list[index] = new TokenPairWithOperations(tokenStream, index, spaceOperation, lineOperation);
                 }

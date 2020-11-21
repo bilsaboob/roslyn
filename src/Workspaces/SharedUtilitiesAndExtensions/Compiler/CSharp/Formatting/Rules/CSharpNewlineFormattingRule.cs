@@ -7,32 +7,40 @@ using Roslyn.Utilities;
 using Microsoft.CodeAnalysis.CSharp.Extensions;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using System;
+using System.Collections.Concurrent;
+using Microsoft.CodeAnalysis.Formatting;
 
 namespace Microsoft.CodeAnalysis.CSharp.Formatting
 {
     internal class CSharpNewlineFormattingRule : BaseFormattingRule
     {
+        private ConcurrentDictionary<SyntaxToken, bool> _executedOperations;
+
         internal CSharpNewlineFormattingRule()
         {
+            _executedOperations = new ConcurrentDictionary<SyntaxToken, bool>();
         }
 
-        public override AdjustNewLinesOperation GetAdjustNewLinesOperation(in SyntaxToken previousToken, in SyntaxToken currentToken, in NextGetAdjustNewLinesOperation nextOperation)
+        public override AdjustNewLinesOperation GetAdjustNewLinesOperation(in SyntaxToken previousToken, in SyntaxToken currentToken, in NextGetAdjustNewLinesOperation nextOperation, FormattingReason reason)
         {
-            var prevToken = currentToken.GetPreviousToken(includeZeroWidth: false, includeSkipped: false);
-            var nextToken = currentToken.GetNextToken(includeZeroWidth: false, includeSkipped: false);
-
-            var op = EvalNewlineForSemantics(prevToken, currentToken, nextToken);
+            var op = EvalNewlineForBraces(currentToken);
             if (op != null) return op;
 
-            op = EvalNewlineForBraces(previousToken, currentToken, nextToken);
+            op = EvalNewlineForSemicolon(previousToken, currentToken, reason);
             if (op != null) return op;
 
-            op = base.GetAdjustNewLinesOperation(previousToken, currentToken, nextOperation);
+            op = EvalNewlineForTopStatements(previousToken, currentToken);
+            if (op != null) return op;
+
+            op = base.GetAdjustNewLinesOperation(previousToken, currentToken, nextOperation, reason);
             return op;
         }
 
-        private AdjustNewLinesOperation EvalNewlineForBraces(SyntaxToken previousToken, SyntaxToken currentToken, SyntaxToken nextToken)
+        private AdjustNewLinesOperation EvalNewlineForBraces(SyntaxToken currentToken)
         {
+            // only consider "real tokens" ... which have some actual length ... otherwise it may be "fake tokens"
+            if (currentToken.Width() == 0) return null;
+
             if (currentToken.IsKind(
                 SyntaxKind.OpenBraceToken, SyntaxKind.CloseBraceToken,
                 SyntaxKind.OpenBracketToken, SyntaxKind.CloseBracketToken,
@@ -41,57 +49,106 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                 ))
             {
                 // don't adjust anything for brace pairs
-                return Newlines(0, AdjustNewLinesOption.PreserveLines);
+                return CreateAdjustNewLinesOperation(0, AdjustNewLinesOption.PreserveLines);
             }
 
             return null;
         }
 
-        private AdjustNewLinesOperation EvalNewlineForSemantics(SyntaxToken prevToken, SyntaxToken currentToken, SyntaxToken nextToken)
+        private AdjustNewLinesOperation EvalNewlineForSemicolon(SyntaxToken previousToken, SyntaxToken currentToken, FormattingReason reason)
         {
-            var currentNode = currentToken.Parent?.FirstAncestorOrSelf(n => n is UsingDirectiveSyntax || n is TypeDeclarationSyntax || n is NamespaceDeclarationSyntax);
+            if (reason != FormattingReason.CopyPasteAction) return null;
 
-            // handle "import import" scenarion - text is injected by the editor right after a previous import at the same line...
-            if (currentToken.IsKind(SyntaxKind.SemicolonToken))
+            var currentDecl = currentToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
+            // we only handle for supported top statements
+            if (currentDecl is null) return null;
+
+            // we only handle special case for copy & paste actions
+            if (previousToken.Width() == 0) previousToken = currentToken.GetPreviousToken();
+            var prevDecl = previousToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
+
+            // calculate the line diff
+            var lineDiff = GetLineDiff(previousToken, currentToken);
+            var onSameLine = lineDiff == 0;
+
+            // if it's a fake semicomma token and it's on a newline... force it back on the previous line so that it stays together with the declaration
+            if (!onSameLine && currentToken.IsKind(SyntaxKind.SemicolonToken) && currentToken.Width() == 0 && prevDecl == currentDecl)
             {
-                // we are at the semicomma
+                // preserve the lines, but decrease with 1
+                var lines = 0;
+                var options = AdjustNewLinesOption.ForceLines;
 
-                // handle the case where an import / namespace was pasted
-                if (nextToken.IsKind(SyntaxKind.ImportKeyword) ||
-                    nextToken.IsKind(SyntaxKind.UsingKeyword) ||
-                    nextToken.IsKind(SyntaxKind.NamespaceKeyword))
+                var nextToken = currentToken.GetNextToken();
+                var nextLineDiff = GetLineDiff(currentToken, nextToken);
+                if (nextLineDiff > 0)
                 {
-                    if (GetLineDiff(currentToken, nextToken) == 0)
-                        return Newlines(1);
-                    return null;
+                    // keep additional lines if the next token isn't on the same line
+                    lines = lineDiff;
+                    options = AdjustNewLinesOption.PreserveLines;
                 }
 
-                // next we do additional checks only if the semicomma is part of a using statement
-                if (currentNode is UsingDirectiveSyntax)
+                // for members / variables, we don't do anything
+                switch (currentDecl)
                 {
-                    // check for following statements of interest
-                    var nextNode = nextToken.Parent?.FirstAncestorOrSelf(n =>
-                        n is TypeDeclarationSyntax ||
-                        n is MethodDeclarationSyntax ||
-                        n is LocalDeclarationStatementSyntax ||
-                        n is StatementSyntax
-                    );
-
-                    if (nextNode != null)
-                    {
-                        // semicomma is followed by a statement ... we add an additional line!
-                        var lineDiff = GetLineDiff(currentToken, nextToken);
-                        if (lineDiff <= 1)
-                            return Newlines(2);
-                        if (lineDiff == 1)
-                            return Newlines(1);
-                        else 
-                            return null;
-                    }
+                    case NamespaceDeclarationSyntax:
+                    case UsingDirectiveSyntax:
+                    case AttributeSyntax:
+                        return CreateAdjustNewLinesOperation(lines, options);
                 }
             }
 
             return null;
+        }
+
+        private AdjustNewLinesOperation EvalNewlineForTopStatements(SyntaxToken previousToken, SyntaxToken currentToken)
+        {
+            var currentDecl = currentToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
+            // we only handle for supported top statements
+            if (currentDecl is null) return null;
+
+            // if we have a "fake token" ... check the previous "visible token" instead
+            if (previousToken.Width() == 0) previousToken = currentToken.GetPreviousToken();
+            var prevDecl = previousToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
+
+            // calculate the line diff
+            var lineDiff = GetLineDiff(previousToken, currentToken);
+            var onSameLine = lineDiff == 0;
+            var linesCount = 0;
+
+            // if the first token of the declaration (any of the ones) is the current token - it should always be on a newline
+            var currentDeclFirstToken = currentDecl?.GetFirstToken();
+            if (currentToken == currentDeclFirstToken)
+            {
+                linesCount += 1;
+            }
+
+            // no need to force anything if no expected line count
+            if (linesCount <= 0) return null;
+
+            return CreateAdjustNewLinesOperation(linesCount, AdjustNewLinesOption.AddLinesIfLess);
+        }
+
+        private bool IsTopDeclaration(SyntaxNode n)
+        {
+            switch(n.Kind())
+            {
+                case SyntaxKind.UsingDirective:
+                case SyntaxKind.NamespaceDeclaration:
+
+                case SyntaxKind.ClassDeclaration:
+                case SyntaxKind.InterfaceDeclaration:
+                case SyntaxKind.StructDeclaration:
+                case SyntaxKind.EnumDeclaration:
+                case SyntaxKind.DelegateDeclaration:
+
+                case SyntaxKind.Attribute:
+                case SyntaxKind.FieldDeclaration:
+                case SyntaxKind.PropertyDeclaration:
+                case SyntaxKind.MethodDeclaration:
+                    return true;
+            }
+
+            return false;
         }
 
         private static int GetLineDiff(SyntaxToken t1, SyntaxToken t2)
@@ -102,8 +159,5 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             var t2StartLine = t2.GetLocation().GetLineSpan().StartLinePosition.Line;
             return Math.Abs(t1StartLine - t2StartLine);
         }
-
-        private static AdjustNewLinesOperation Newlines(int numLines, AdjustNewLinesOption option = AdjustNewLinesOption.ForceLines)
-            => CreateAdjustNewLinesOperation(numLines, option);
     }
 }

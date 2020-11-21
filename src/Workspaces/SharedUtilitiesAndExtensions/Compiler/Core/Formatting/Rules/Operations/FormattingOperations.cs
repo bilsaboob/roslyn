@@ -92,30 +92,37 @@ namespace Microsoft.CodeAnalysis.Formatting.Rules
         /// </summary>
         public static AdjustNewLinesOperation CreateAdjustNewLinesOperation(int line, AdjustNewLinesOption option)
         {
-            if (line == 0)
+            return CreateAdjustNewLinesOperation(line, 0, option);
+        }
+        public static AdjustNewLinesOperation CreateAdjustNewLinesOperation(int line, int space, AdjustNewLinesOption option)
+        {
+            if (space == 0)
             {
-                if (option == AdjustNewLinesOption.PreserveLines)
+                if (line == 0)
                 {
-                    return s_preserveZeroLine;
+                    if (option == AdjustNewLinesOption.PreserveLines)
+                    {
+                        return s_preserveZeroLine;
+                    }
                 }
-            }
-            else if (line == 1)
-            {
-                if (option == AdjustNewLinesOption.PreserveLines)
+                else if (line == 1)
                 {
-                    return s_preserveOneLine;
-                }
-                else if (option == AdjustNewLinesOption.ForceLines)
-                {
-                    return s_forceOneLine;
-                }
-                else if (option == AdjustNewLinesOption.ForceLinesIfOnSingleLine)
-                {
-                    return s_forceIfSameLine;
+                    if (option == AdjustNewLinesOption.PreserveLines)
+                    {
+                        return s_preserveOneLine;
+                    }
+                    else if (option == AdjustNewLinesOption.ForceLines)
+                    {
+                        return s_forceOneLine;
+                    }
+                    else if (option == AdjustNewLinesOption.ForceLinesIfOnSingleLine)
+                    {
+                        return s_forceIfSameLine;
+                    }
                 }
             }
 
-            return new AdjustNewLinesOperation(line, option);
+            return new AdjustNewLinesOperation(line, option, space);
         }
 
         /// <summary>

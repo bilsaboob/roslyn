@@ -76,10 +76,14 @@ namespace Microsoft.CodeAnalysis.Formatting
                 throw ExceptionUtilities.Unreachable;
             }
 
-            public override TriviaData WithLine(
-                int line, int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken)
+            public override TriviaData WithLine(int line, int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken)
             {
-                Contract.ThrowIfFalse(line > 0);
+                return WithLine(line, indentation, context, formattingRules, cancellationToken, false);
+            }
+
+            public override TriviaData WithLine(int line, int indentation, FormattingContext context, ChainedFormattingRules formattingRules, CancellationToken cancellationToken, bool forceLines)
+            {
+                //Contract.ThrowIfFalse(line > 0);
 
                 // if we have elastic trivia, always let it be modified
                 if (this.TreatAsElastic)
@@ -111,7 +115,14 @@ namespace Microsoft.CodeAnalysis.Formatting
                     // sorry, we can't reduce lines if it contains noisy chars
                     if (this.LineBreaks > line)
                     {
-                        return this;
+                        if (!forceLines)
+                        {
+                            return this;
+                        }
+                        else
+                        {
+                            return CreateComplexTrivia(line, indentation);
+                        }
                     }
                 }
 

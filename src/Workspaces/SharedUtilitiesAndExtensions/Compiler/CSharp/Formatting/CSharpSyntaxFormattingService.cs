@@ -61,6 +61,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             => new AggregatedFormattingResult(node, results, formattingSpans);
 
         protected override AbstractFormattingResult Format(SyntaxNode node, AnalyzerConfigOptions options, IEnumerable<AbstractFormattingRule> formattingRules, SyntaxToken token1, SyntaxToken token2, CancellationToken cancellationToken)
-            => new CSharpFormatEngine(node, options, formattingRules, token1, token2).Format(cancellationToken);
+            => new CSharpFormatEngine(node, options, formattingRules, token1, token2).Format(cancellationToken, FormattingReason.DefaultFormatAction);
+
+        protected override AbstractFormattingResult Format(SyntaxNode node, AnalyzerConfigOptions options, IEnumerable<AbstractFormattingRule> formattingRules, SyntaxToken token1, SyntaxToken token2, FormattingReason reason, CancellationToken cancellationToken)
+            => new CSharpFormatEngine(node, options, formattingRules, token1, token2).Format(cancellationToken, reason);
     }
 }
