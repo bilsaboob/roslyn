@@ -322,63 +322,131 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.AsyncComplet
                 return false;
             }
 
+            var isCommitChar = IsCommitCharacter_(item, ch, textTypedSoFar);
+            if (isCommitChar.HasValue) return isCommitChar.Value;
+
+            // Fall back to the default rules for this language's completion service.
+            return completionRules.DefaultCommitCharacters.IndexOf(ch) >= 0;
+        }
+
+        private static bool? IsCommitCharacter_(RoslynCompletionItem item, char ch, string textTypedSoFar)
+        {
             // Handle space as a special commit character which only commits for selected kind of completion items and only in specific "semantic contexts"
-            if (ch == ' ' ||
+            var isHandledChar = (
+                ch == ' ' || ch == '\n' || ch == '\r' ||
                 ch == '(' || ch == ')' || ch == '(' || ch == ')' ||
                 ch == ',' || ch == ':' ||
                 ch == '=' ||
                 ch == '>' || ch == '<' || ch == '|' || ch == '&' ||
-                ch == '+' || ch == '-' || ch == '/')
-            {
-                // * Only allow completion of "symbols" and "type keywords"
-                // * IGNORE commit of snippets and "other stuff" using "space" ... force explicitly using the "enter" key
+                ch == '+' || ch == '-' || ch == '/' ||
+                ch == '.'
+            );
 
-                var textTypedSoFarWithoutSpace = textTypedSoFar?.Length > 1 ? textTypedSoFar.Substring(0, textTypedSoFar.Length - 1) : "";
-                if (string.IsNullOrEmpty(textTypedSoFarWithoutSpace)) return false;
+            bool isEnterCommitChar() => ch == '\n' || ch == '\r';
+            bool isSpaceCommitChar() => ch == ' ';
 
-                if (item.ProviderName.Contains("SymbolCompletionProvider"))
-                {
-                    // only allow committing if the text before is really matching what has been typed so far ... for "fuzzy commits" - force explicitly using the "enter" key
-                    if (item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCultureIgnoreCase) == true)
-                    {
-                        if (IsCommonKeyword(textTypedSoFar))
-                        {
-                            return false;
-                        }
+            if (!isHandledChar) return null;
 
-                        // if what is typed short ... it must match "exactly" including the case!
-                        if (textTypedSoFarWithoutSpace.Length <= 3 && item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCulture) != true)
-                            return false;
+            // * Only allow completion of "symbols" and "type keywords"
+            // * IGNORE commit of snippets and "other stuff" using "space" ... force explicitly using the "enter" key
 
-                        // only if it's not a complete keyword
-                        return true;
-                    }
-                }
-                else if (item.ProviderName.Contains("KeywordCompletionProvider"))
-                {
-                    // only allow "type" keywords
-
-                    if (!IsPredefinedType(item.DisplayText))
-                    {
-                        return false;
-                    }
-
-                    // only allow committing if the text before is really matching what has been typed so far ... for "fuzzy commits" - force explicitly using the "enter" key
-                    if (item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCultureIgnoreCase) == true)
-                    {
-                        // if what is typed short ... it must match "exactly" including the case!
-                        if (textTypedSoFarWithoutSpace.Length <= 3 && item.DisplayText?.StartsWith(textTypedSoFarWithoutSpace, StringComparison.InvariantCulture) != true)
-                            return false;
-
-                        return true;
-                    }
-                }
-
+            // don't allow completion on any characters other than the "space" and the "newline" characters
+            if (!isSpaceCommitChar() && !isEnterCommitChar())
                 return false;
+
+            // must have some actual typed text that is not empty
+            var typedText = textTypedSoFar?.Length > 1 ? textTypedSoFar.Substring(0, textTypedSoFar.Length - 1) : "";
+            if (string.IsNullOrEmpty(typedText)) return false;
+
+            // item text must not be empty
+            var itemText = (item.DisplayText ?? "")?.Trim();
+            if (string.IsNullOrEmpty(itemText)) return false;
+
+            // evaluate based on the item type
+            var requiredLength = 1;
+            var itemType = GetCompletionItemType(item, itemText);
+            switch (itemType)
+            {
+                case CompletionItemType.PredefinedType:
+                    {
+                        requiredLength = 2;
+
+                        // for space we require to match 3 chars
+                        if (isSpaceCommitChar())
+                            requiredLength = 3;
+
+                        // must match exactly on the starting characters
+                        if (!MatchesStart(typedText, itemText, requiredLength)) return false;
+
+                        // ok, make a commit
+                        return true;
+                    }
+                case CompletionItemType.Keyword:
+                    {
+                        requiredLength = 3;
+
+                        // allow the fuzzy commit on space only
+                        if (!isSpaceCommitChar()) return false;
+
+                        // must match exactly on the starting characters
+                        if (!MatchesStart(typedText, itemText, requiredLength)) return false;
+
+                        // ok, allow fuzzy completion
+                        return true;
+                    }
+                case CompletionItemType.Symbol:
+                    {
+                        requiredLength = 3;
+
+                        // allow the fuzzy commit on space only
+                        if (!isSpaceCommitChar()) return false;
+
+                        // must match exactly on the starting characters
+                        if (!MatchesStart(typedText, itemText, requiredLength)) return false;
+
+                        // ok, allow fuzzy completion
+                        return true;
+                    }
             }
 
-            // Fall back to the default rules for this language's completion service.
-            return completionRules.DefaultCommitCharacters.IndexOf(ch) >= 0;
+            // anything else is not allowed as commit
+            return false;
+        }
+
+        private static bool MatchesStart(string typedText, string itemText, int requiredLength)
+        {
+            if (typedText.Length <= requiredLength) return false;
+            var startText = typedText.Substring(0, requiredLength);
+            return itemText.StartsWith(startText, StringComparison.InvariantCulture);
+        }
+
+        enum CompletionItemType
+        {
+            Unknown,
+            Symbol,
+            Keyword,
+            PredefinedType
+        }
+
+        private static CompletionItemType GetCompletionItemType(RoslynCompletionItem item, string itemText)
+        {
+            if (item.ProviderName.Contains("SymbolCompletionProvider"))
+            {
+                if (IsCommonKeyword(itemText))
+                    return CompletionItemType.Keyword;
+
+                return CompletionItemType.Symbol;
+            }
+
+            if (item.ProviderName.Contains("KeywordCompletionProvider"))
+            {
+                if (IsPredefinedType(itemText))
+                    return CompletionItemType.PredefinedType;
+
+                return CompletionItemType.Keyword;
+            }
+
+            return CompletionItemType.Unknown;
         }
 
         private static bool IsCommonKeyword(string text)
