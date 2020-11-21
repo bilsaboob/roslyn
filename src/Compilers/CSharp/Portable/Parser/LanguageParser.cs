@@ -300,80 +300,46 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
 
             var isFlatNamespace = false;
-            var maybeFlatNamespace = false;
             var name = this.ParseQualifiedName();
 
             // if we have a semicolon after the name, then this is defenitely a flat namespace
             var postNameSemicolon = this.TryEatToken(SyntaxKind.SemicolonToken);
             if (postNameSemicolon != null)
-                maybeFlatNamespace = isFlatNamespace = true;
+                isFlatNamespace = true;
 
             SyntaxToken openBrace = null;
             SyntaxToken closeBrace = null;
 
             if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
             {
-                //either we see the brace we expect here or we see something that could come after a brace
-                //so we insert a missing one
+                // if we have an open brace, then we expect a nested namespace declaration
                 openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
-            }
-            else if (IsPossibleNamespaceMemberDeclaration())
-            {
-                // this could potentially be an error ... or just a "flat namespace"
-                if (!IsCurrentTokenOnNewline)
-                {
-                    // it's an error ... but eat the token anyway
-                    openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
-                }
-                else
-                {
-                    // this is expected to be a "flat namespace declaration"
-                    maybeFlatNamespace = true;
-                }
+                isFlatNamespace = false;
             }
             else
             {
-                if (IsCurrentTokenOnNewline || IsCurrentTokenEndOfFile)
-                {
-                    maybeFlatNamespace = true;
-                }
-                else
-                {
-                    //the next character is neither the brace we expect, nor a token that could follow the expected
-                    //brace so we assume it's a mistake and replace it with a missing brace 
-                    openBrace = this.EatTokenWithPrejudice(SyntaxKind.OpenBraceToken);
-                    openBrace = this.ConvertToMissingWithTrailingTrivia(openBrace, SyntaxKind.OpenBraceToken);
-                }
+                isFlatNamespace = true;
             }
 
+            // by now we either have an opening brace or we expect it to be a flat namespace
             var body = new NamespaceBodyBuilder(_pool);
             SyntaxListBuilder initialBadNodes = null;
             try
             {
-                this.ParseNamespaceBody(ref namespaceToken, ref name, ref openBrace, ref body, ref initialBadNodes, SyntaxKind.NamespaceDeclaration, allowNestedNamespace: !(isFlatNamespace || maybeFlatNamespace), isCompilationUnit: false);
+                this.ParseNamespaceBody(ref namespaceToken, ref name, ref openBrace, ref body, ref initialBadNodes, SyntaxKind.NamespaceDeclaration, allowNestedNamespace: !isFlatNamespace, isCompilationUnit: false);
 
                 // we may be expecting a close brace - if not a flat namespace
-                closeBrace = this.TryEatToken(SyntaxKind.CloseBraceToken);
-                if (closeBrace != null)
+                if (this.CurrentToken.Kind == SyntaxKind.CloseBraceToken)
                 {
-                    // there should not be a close brace token... but we allow this never the less...
                     if (isFlatNamespace)
                     {
-                        closeBrace = AddError(closeBrace, ErrorCode.ERR_UnexpectedToken);
+                        // shouldn't have a close brace for flat namespace ... so mark it with an error
+                        closeBrace = AddError(this.EatToken(), ErrorCode.ERR_UnexpectedToken);
                     }
-                    else if (maybeFlatNamespace)
+                    else
                     {
-                        // probably wasn't a flat namespace afterall... mark a missing brace token 
-                        if (openBrace == null)
-                            openBrace = CreateMissingToken(SyntaxKind.OpenBraceToken, SyntaxKind.None, true);
-                    }
-                }
-                else
-                {
-                    if (!isFlatNamespace && openBrace?.IsMissing == false)
-                    {
-                        // we should have had a close brace
-                        closeBrace = CreateMissingToken(SyntaxKind.CloseBraceToken, SyntaxKind.None, true);
+                        // just eat the token
+                        closeBrace = this.EatToken();
                     }
                 }
 
