@@ -63,17 +63,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             Accessibility accessibility,
             ArrayBuilder<SyntaxToken> tokens,
             CodeGenerationOptions options,
-            Accessibility defaultAccessibility,
-            MemberDeclarationSyntax memberSyntax = null)
+            Accessibility defaultAccessibility)
         {
-            // if we have a member syntax - match the accessibility that was explicitly defined there
-            if (memberSyntax != null)
-            {
-                var accessibilityModifiers = memberSyntax.Modifiers.Where(m => SyntaxFacts.IsAccessibilityModifier(m.Kind()));
-                tokens.AddRange(accessibilityModifiers);
-                return;
-            }
-
             options ??= CodeGenerationOptions.Default;
             if (!options.GenerateDefaultAccessibility && accessibility == defaultAccessibility)
             {

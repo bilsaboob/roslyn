@@ -333,23 +333,84 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     if (method.IsOverride && method.GetOverriddenSymbolSyntax<MethodDeclarationSyntax>(out var overriddenMethodSyntax))
                     {
                         // include non fake modifiers and exclude the virtual keyword
-                        var reuseModifiers = overriddenMethodSyntax.Modifiers.Where(m => !m.IsKind(SyntaxKind.VirtualKeyword) && m.Width() > 0);
-                        tokens.AddRange(reuseModifiers);
+                        var overriddenModifiers = overriddenMethodSyntax.Modifiers.Where(m => m.Width() > 0);
 
-                        if (method.IsSealed && !tokens.Any(m => m.IsKind(SyntaxKind.SealedKeyword)))
+                        // check which modifiers already exist
+                        var hasVisibilityModifier = false;
+                        var hasSealedModifier = false;
+                        var hasReadonlyModifier = false;
+                        var hasOverrideModifier = false;
+                        var hasVirtualModifier = false;
+                        foreach (var m in overriddenModifiers)
                         {
+                            if (SyntaxFacts.IsAccessibilityModifier(m.Kind()))
+                            {
+                                hasVisibilityModifier = true;
+                                continue;
+                            }
+
+                            if (m.IsKind(SyntaxKind.SealedKeyword))
+                            {
+                                hasSealedModifier = true;
+                                continue;
+                            }
+
+                            if (m.IsKind(SyntaxKind.ReadOnlyKeyword))
+                            {
+                                hasReadonlyModifier = true;
+                                continue;
+                            }
+
+                            if (m.IsKind(SyntaxKind.VirtualKeyword))
+                            {
+                                hasVirtualModifier = true;
+                                continue;
+                            }
+
+                            if (m.IsKind(SyntaxKind.OverrideKeyword))
+                            {
+                                hasOverrideModifier = true;
+                                continue;
+                            }
+                        }
+
+                        // add sealed before any other modifiers
+                        if (method.IsSealed && !hasSealedModifier)
                             tokens.Add(SyntaxFactory.Token(SyntaxKind.SealedKeyword));
-                        }
 
-                        if (method.IsReadOnly && (method.ContainingSymbol as INamedTypeSymbol)?.IsReadOnly != true && !tokens.Any(m => m.IsKind(SyntaxKind.ReadOnlyKeyword)))
-                        {
+                        // add readonly before any other modifiers
+                        if (method.IsReadOnly && (method.ContainingSymbol as INamedTypeSymbol)?.IsReadOnly != true && !hasReadonlyModifier)
                             tokens.Add(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword));
-                        }
 
                         // add override explicitly if it's an override
-                        if (method.IsOverride && !tokens.Any(m => m.IsKind(SyntaxKind.OverrideKeyword)))
-                        {
+                        if (method.IsOverride && !hasOverrideModifier && !hasVirtualModifier && !hasVisibilityModifier)
                             tokens.Add(SyntaxFactory.Token(SyntaxKind.OverrideKeyword));
+
+                        // add the remaining modifiers in order of declaration
+                        foreach (var m in overriddenModifiers)
+                        {
+                            if (hasVirtualModifier && m.IsKind(SyntaxKind.VirtualKeyword))
+                            {
+                                // skip the virtual modifier and add override keyword at the same location
+                                if (method.IsOverride)
+                                {
+                                    tokens.Add(SyntaxFactory.Token(SyntaxKind.OverrideKeyword));
+                                    continue;
+                                }
+                            }
+
+                            tokens.Add(m);
+
+                            if (hasVisibilityModifier && SyntaxFacts.IsAccessibilityModifier(m.Kind()))
+                            {
+                                // after the visibility we add the override if no explicit virtual / override is defined
+                                if (method.IsOverride && !hasVirtualModifier && !hasOverrideModifier)
+                                {
+                                    tokens.Add(SyntaxFactory.Token(SyntaxKind.OverrideKeyword));
+                                }
+
+                                continue;
+                            }
                         }
                     }
                     else
