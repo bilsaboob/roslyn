@@ -111,21 +111,117 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
             var explicitInterfaceSpecifier = GenerateExplicitInterfaceSpecifier(method.ExplicitInterfaceImplementations);
 
+            var returnTypeSyntax = GenerateReturnType(method, out var isAsync, out var isVoidType).WithTrailingTrivia(SyntaxFactory.Whitespace(" "));
+
             var methodDeclaration = SyntaxFactory.MethodDeclaration(
                 attributeLists: GenerateAttributes(method, options, explicitInterfaceSpecifier != null),
                 modifiers: GenerateModifiers(method, destination, options),
-                returnType: method.GenerateReturnTypeSyntax(),
+                returnType: returnTypeSyntax,
                 explicitInterfaceSpecifier: explicitInterfaceSpecifier,
                 identifier: method.Name.ToIdentifierToken(),
                 typeParameterList: GenerateTypeParameterList(method, options),
                 parameterList: ParameterGenerator.GenerateParameterList(method.Parameters, explicitInterfaceSpecifier != null, options),
                 constraintClauses: GenerateConstraintClauses(method),
-                body: hasNoBody ? null : StatementGenerator.GenerateBlock(method),
+                body: hasNoBody ? null : GenerateBody(method, isAsync, isVoidType),
                 expressionBody: null,
-                semicolonToken: hasNoBody ? SyntaxFactory.Token(SyntaxKind.SemicolonToken) : default);
+                semicolonToken: default);
 
             methodDeclaration = UseExpressionBodyIfDesired(options, methodDeclaration, parseOptions);
             return AddFormatterAndCodeGeneratorAnnotationsTo(methodDeclaration);
+        }
+
+        private static BlockSyntax GenerateBody(IMethodSymbol method, bool isAsync, bool isVoidType)
+        {
+            var methodStatements = CodeGenerationMethodInfo.GetStatements(method);
+
+            var statements = methodStatements.OfType<StatementSyntax>().ToList();
+
+            if (statements?.Count > 0)
+            {
+                if (isAsync)
+                {
+                    // convert the last statement to an "await"
+                    var lastStatement = statements[statements.Count - 1];
+                    if (lastStatement is ReturnStatementSyntax returnStat)
+                    {
+                        if (!isVoidType)
+                        {
+                            statements[statements.Count - 1] = returnStat.WithExpression(SyntaxFactory.AwaitExpression(returnStat.Expression));
+                        }
+                        else
+                        {
+                            statements[statements.Count - 1] = SyntaxFactory.ExpressionStatement(SyntaxFactory.AwaitExpression(returnStat.Expression));
+                        }
+                    }
+                    else if (lastStatement is ExpressionStatementSyntax exprStat)
+                    {
+                        statements[statements.Count - 1] = exprStat.WithExpression(SyntaxFactory.AwaitExpression(exprStat.Expression));
+                    }
+                }
+
+                // trim the semicolons
+                for (var i = 0; i < statements.Count; ++i)
+                {
+                    var stat = statements[i];
+                    if (stat is ReturnStatementSyntax returnStat)
+                    {
+                        statements[i] = returnStat.Update(returnStat.ReturnKeyword, returnStat.Expression.WithTrailingTrivia(SyntaxFactory.Whitespace(" ")), SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken));
+                    }
+                    else if (stat is ExpressionStatementSyntax exprStat)
+                    {
+                        statements[statements.Count - 1] = exprStat.Update(exprStat.Expression.WithTrailingTrivia(SyntaxFactory.Whitespace(" ")), SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken));
+                    }
+                }
+            }
+
+            return SyntaxFactory.Block(statements.ToSyntaxList());
+        }
+
+        private static TypeSyntax GenerateReturnType(IMethodSymbol method, out bool isAsync, out bool isVoidType)
+        {
+            isAsync = method.IsAsync;
+            isVoidType = method.ReturnsVoid;
+
+            if (method.IsOverride && method.GetOverriddenSymbolSyntax<MethodDeclarationSyntax>(out var overriddenMethodSyntax))
+            {
+                isAsync = overriddenMethodSyntax.Modifiers.Any(m => m.IsKind(SyntaxKind.AsyncKeyword));
+
+                // make sure to trim away the explicit Tasks for async methods
+                if (isAsync)
+                {
+                    var returnTypeName = method.ReturnType.ToString();
+                    if (returnTypeName.StartsWith("Task<"))
+                    {
+                        if (!overriddenMethodSyntax.HasExplicitReturnType())
+                            return SyntaxFactory.FakeTypeIdentifier();
+
+                        var name = returnTypeName.Replace("Task<", "");
+                        if (name.EndsWith("<")) name = name.Substring(0, name.Length - 1);
+                        return SyntaxFactory.ParseTypeName(name);
+                    }
+                    else if (returnTypeName.StartsWith("System.Threading.Tasks.Task<"))
+                    {
+                        if (!overriddenMethodSyntax.HasExplicitReturnType())
+                            return SyntaxFactory.FakeTypeIdentifier();
+
+                        var name = returnTypeName.Replace("System.Threading.Tasks.Task<", "");
+                        if (name.EndsWith("<")) name = name.Substring(0, name.Length - 1);
+                        return SyntaxFactory.ParseTypeName(name);
+                    }
+                    else if (returnTypeName == "Task" || returnTypeName == "System.Threading.Tasks.Task")
+                    {
+                        isVoidType = true;
+                        return SyntaxFactory.FakeTypeIdentifier();
+                    }
+                }
+
+                if (!overriddenMethodSyntax.HasExplicitReturnType())
+                {
+                    return SyntaxFactory.FakeTypeIdentifier();
+                }
+            }
+
+            return method.GenerateReturnTypeSyntax();
         }
 
         private static LocalFunctionStatementSyntax GenerateLocalFunctionDeclarationWorker(
@@ -233,38 +329,64 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     destination != CodeGenerationDestination.Namespace &&
                     destination != CodeGenerationDestination.InterfaceType)
                 {
-                    AddAccessibilityModifiers(method.DeclaredAccessibility, tokens, options, Accessibility.Private);
-
-                    if (method.IsAbstract)
+                    // special handling for "overrides"
+                    if (method.IsOverride && method.GetOverriddenSymbolSyntax<MethodDeclarationSyntax>(out var overriddenMethodSyntax))
                     {
-                        tokens.Add(SyntaxFactory.Token(SyntaxKind.AbstractKeyword));
+                        // include non fake modifiers and exclude the virtual keyword
+                        var reuseModifiers = overriddenMethodSyntax.Modifiers.Where(m => !m.IsKind(SyntaxKind.VirtualKeyword) && m.Width() > 0);
+                        tokens.AddRange(reuseModifiers);
+
+                        if (method.IsSealed && !tokens.Any(m => m.IsKind(SyntaxKind.SealedKeyword)))
+                        {
+                            tokens.Add(SyntaxFactory.Token(SyntaxKind.SealedKeyword));
+                        }
+
+                        if (method.IsReadOnly && (method.ContainingSymbol as INamedTypeSymbol)?.IsReadOnly != true && !tokens.Any(m => m.IsKind(SyntaxKind.ReadOnlyKeyword)))
+                        {
+                            tokens.Add(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword));
+                        }
+
+                        // add override explicitly if it's an override
+                        if (method.IsOverride && !tokens.Any(m => m.IsKind(SyntaxKind.OverrideKeyword)))
+                        {
+                            tokens.Add(SyntaxFactory.Token(SyntaxKind.OverrideKeyword));
+                        }
                     }
-
-                    if (method.IsSealed)
+                    else
                     {
-                        tokens.Add(SyntaxFactory.Token(SyntaxKind.SealedKeyword));
-                    }
+                        AddAccessibilityModifiers(method.DeclaredAccessibility, tokens, options, Accessibility.Private);
 
-                    if (method.IsStatic)
-                    {
-                        tokens.Add(SyntaxFactory.Token(SyntaxKind.StaticKeyword));
-                    }
+                        if (method.IsAbstract)
+                        {
+                            tokens.Add(SyntaxFactory.Token(SyntaxKind.AbstractKeyword));
+                        }
 
-                    // Don't show the readonly modifier if the containing type is already readonly
-                    // ContainingSymbol is used to guard against methods which are not members of their ContainingType (e.g. lambdas and local functions)
-                    if (method.IsReadOnly && (method.ContainingSymbol as INamedTypeSymbol)?.IsReadOnly != true)
-                    {
-                        tokens.Add(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword));
-                    }
+                        if (method.IsSealed)
+                        {
+                            tokens.Add(SyntaxFactory.Token(SyntaxKind.SealedKeyword));
+                        }
 
-                    if (method.IsOverride)
-                    {
-                        tokens.Add(SyntaxFactory.Token(SyntaxKind.OverrideKeyword));
-                    }
+                        if (method.IsStatic)
+                        {
+                            tokens.Add(SyntaxFactory.Token(SyntaxKind.StaticKeyword));
+                        }
 
-                    if (method.IsVirtual)
-                    {
-                        tokens.Add(SyntaxFactory.Token(SyntaxKind.VirtualKeyword));
+                        // Don't show the readonly modifier if the containing type is already readonly
+                        // ContainingSymbol is used to guard against methods which are not members of their ContainingType (e.g. lambdas and local functions)
+                        if (method.IsReadOnly && (method.ContainingSymbol as INamedTypeSymbol)?.IsReadOnly != true)
+                        {
+                            tokens.Add(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword));
+                        }
+
+                        if (method.IsOverride)
+                        {
+                            tokens.Add(SyntaxFactory.Token(SyntaxKind.OverrideKeyword));
+                        }
+
+                        if (method.IsVirtual)
+                        {
+                            tokens.Add(SyntaxFactory.Token(SyntaxKind.VirtualKeyword));
+                        }
                     }
 
                     if (CodeGenerationMethodInfo.GetIsPartial(method) && !method.IsAsync)
