@@ -106,6 +106,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             // we only handle for supported top statements
             if (currentDecl is null) return null;
 
+            // don't apply this to "members" that are not directly beneath a namespace
+            if (!(currentDecl.Parent is NamespaceDeclarationSyntax))
+                return null;
+
             // if we have a "fake token" ... check the previous "visible token" instead
             if (previousToken.Width() == 0) previousToken = currentToken.GetPreviousToken();
             var prevDecl = previousToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
@@ -126,14 +130,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                     // import following a namespace should have 1 additional line space
                     linesCount += 1;
                 }
-                else if (
-                    (currentDecl is MethodDeclarationSyntax || currentDecl is PropertyDeclarationSyntax || currentDecl is FieldDeclarationSyntax) && // global member
-                    (prevDecl is UsingDirectiveSyntax || prevDecl is NamespaceDeclarationSyntax) // import or namespace
-                    )
+                else if (IsGlobalMember(currentDecl))
                 {
-                    // a "member" that has a namespace or using directive before, should have an additional line
-                    if (lineDiff <= 1)
-                        linesCount += 1;
+                    // a global member that has a previous neighbour that is a global member ... no space is needed
+                    if (IsGlobalMember(prevDecl)) return null;
+
+                    // previous is import or namespace?
+                    if (IsUsingOrNamespace(prevDecl))
+                    {
+                        // a "member" that has a namespace or using directive before, should have an additional line
+                        if (lineDiff <= 1)
+                            linesCount += 1;
+                    }
                 }
             }
 
@@ -141,6 +149,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             if (linesCount <= 0) return null;
 
             return CreateAdjustNewLinesOperation(linesCount, AdjustNewLinesOption.PreserveLines);
+        }
+
+        private bool IsUsingOrNamespace(SyntaxNode n)
+        {
+            return
+                n is UsingDirectiveSyntax ||
+                n is NamespaceDeclarationSyntax;
+        }
+
+        private bool IsGlobalMember(SyntaxNode n)
+        {
+            return
+                n is MethodDeclarationSyntax ||
+                n is PropertyDeclarationSyntax ||
+                n is FieldDeclarationSyntax;
         }
 
         private bool IsTopDeclaration(SyntaxNode n)
