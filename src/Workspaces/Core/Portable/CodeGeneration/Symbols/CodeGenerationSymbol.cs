@@ -12,12 +12,14 @@ using Microsoft.CodeAnalysis.Shared.Extensions;
 
 namespace Microsoft.CodeAnalysis.CodeGeneration
 {
-    internal abstract class CodeGenerationSymbol : ISymbol
+    public abstract class CodeGenerationSymbol : ISymbol
     {
         protected static ConditionalWeakTable<CodeGenerationSymbol, SyntaxAnnotation[]> annotationsTable =
             new ConditionalWeakTable<CodeGenerationSymbol, SyntaxAnnotation[]>();
 
         private ImmutableArray<AttributeData> _attributes;
+
+        public ISymbol OverriddenSymbol { get; set; }
 
         public Accessibility DeclaredAccessibility { get; }
         protected internal DeclarationModifiers Modifiers { get; }

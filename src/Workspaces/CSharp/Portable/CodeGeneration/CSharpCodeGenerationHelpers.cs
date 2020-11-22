@@ -21,6 +21,35 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 {
     internal static class CSharpCodeGenerationHelpers
     {
+        internal static bool GetOverriddenSymbolSyntax<TSyntax>(this ISymbol? symbol, out TSyntax syntax)
+            where TSyntax : SyntaxNode
+        {
+            syntax = null;
+
+            var overriddenSymbol = symbol.GetOverriddenSymbol();
+            if (overriddenSymbol == null) return false;
+            syntax = overriddenSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as TSyntax;
+
+            if (syntax == null) return false;
+            return true;
+        }
+
+        internal static SyntaxNode? GetOverriddenSymbolSyntax(this ISymbol? symbol)
+        {
+            var overriddenSymbol = symbol.GetOverriddenSymbol();
+            return overriddenSymbol?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();
+        }
+
+        internal static ISymbol? GetOverriddenSymbol(this ISymbol? symbol)
+        {
+            if (symbol is CodeGenerationSymbol codeGenSymbol && codeGenSymbol.OverriddenSymbol != null)
+            {
+                return codeGenSymbol.OverriddenSymbol;
+            }
+
+            return symbol.GetOverriddenMember();
+        }
+
         public static TDeclarationSyntax ConditionallyAddFormattingAnnotationTo<TDeclarationSyntax>(
             TDeclarationSyntax result,
             SyntaxList<MemberDeclarationSyntax> members) where TDeclarationSyntax : MemberDeclarationSyntax

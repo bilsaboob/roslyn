@@ -126,6 +126,8 @@ namespace Microsoft.CodeAnalysis.Completion.Providers
 
             var generatedMember = await GenerateMemberAsync(overriddenMember, containingType, document, completionItem, cancellationToken).ConfigureAwait(false);
             generatedMember = _annotation.AddAnnotationToSymbol(generatedMember);
+            if (generatedMember is CodeGenerationSymbol genSymbol)
+                genSymbol.OverriddenSymbol = overriddenMember;
 
             Document memberContainingDocument = null;
             if (generatedMember.Kind == SymbolKind.Method)

@@ -4050,7 +4050,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var method = node.Method;
             ImmutableArray<RefKind> refKindsOpt = node.ArgumentRefKindsOpt;
-            if (!receiverType.HasNullType)
+            if (!receiverType.HasNullType && receiverType.Type?.IsAsyncTaskType(compilation) != true)
             {
                 // Update method based on inferred receiver type.
                 method = (MethodSymbol)AsMemberOfType(receiverType.Type, method);
