@@ -233,7 +233,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                 var tokenInIndentedLine = token;
 
                 if (tokenInIndentedLine.SpanStart > indenter.LineToBeIndented.Span.End)
-                    tokenInIndentedLine = token.GetPreviousToken(t => t.SpanStart <= indenter.LineToBeIndented.Span.End);
+                    tokenInIndentedLine = token.GetPreviousToken(t => t.Width() > 0 && t.SpanStart <= indenter.LineToBeIndented.Span.End);
 
                 if (!tokenInIndentedLine.IsNull)
                     parent = tokenInIndentedLine.Parent;
@@ -902,7 +902,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
                     case SyntaxKind.StaticKeyword:
                     case SyntaxKind.OverrideKeyword:
                     case SyntaxKind.VirtualKeyword:
+                    // misc
                     case SyntaxKind.NewKeyword:
+                    case SyntaxKind.AsyncKeyword:
                         return true;
                 }
                 return false;
