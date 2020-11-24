@@ -377,7 +377,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             // create an error type if no type was computed
             if (_lazyReturnType.Type is null)
-                _lazyReturnType = TypeWithAnnotations.Create(GetBinder().CreateErrorType());
+                _lazyReturnType = TypeWithAnnotations.CreateError(DeclaringCompilation);
 
             _lazyRefCustomModifiers = ImmutableArray<CustomModifier>.Empty;
 

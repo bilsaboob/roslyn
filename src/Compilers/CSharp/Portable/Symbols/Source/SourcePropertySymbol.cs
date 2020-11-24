@@ -439,6 +439,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 }
             }
 
+            // make sure we always have a return type, even if it's an error type
+            if (type.Type is null)
+            {
+                type = TypeWithAnnotations.CreateError(DeclaringCompilation);
+            }
+
             HashSet<DiagnosticInfo>? useSiteDiagnostics = null;
 
             if (GetExplicitInterfaceSpecifier(syntax) is null && !this.IsNoMoreVisibleThan(type, ref useSiteDiagnostics))

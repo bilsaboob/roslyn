@@ -79,6 +79,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
             miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier | SymbolDisplayMiscellaneousOptions.IncludeNotNullableReferenceTypeModifier);
 
+        internal static TypeWithAnnotations CreateError(CSharpCompilation compilation)
+        {
+            return Create(new ExtendedErrorTypeSymbol(compilation, string.Empty, arity: 0, errorInfo: null));
+        }
+
         internal static TypeWithAnnotations Create(bool isNullableEnabled, TypeSymbol typeSymbol, bool isAnnotated = false)
         {
             if (typeSymbol is null)
