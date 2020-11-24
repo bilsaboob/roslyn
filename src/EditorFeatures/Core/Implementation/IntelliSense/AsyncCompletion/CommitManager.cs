@@ -339,7 +339,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.AsyncComplet
                 ch == '=' ||
                 ch == '>' || ch == '<' || ch == '|' || ch == '&' ||
                 ch == '+' || ch == '-' || ch == '/' ||
-                ch == '.'
+                ch == '.' || ch == '?'
             );
 
             bool isEnterCommitChar() => ch == '\n' || ch == '\r';
