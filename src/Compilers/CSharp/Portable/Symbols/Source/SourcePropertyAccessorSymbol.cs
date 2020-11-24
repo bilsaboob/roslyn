@@ -373,11 +373,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // These values may not be final, but we need to have something set here in the
             // event that we need to find the overridden accessor.
             _lazyParameters = ComputeParameters(diagnostics);
-            _lazyReturnType = ComputeReturnType(diagnostics);
+            _lazyReturnType = ComputeReturnType(diagnostics, out var bodySyntax);
 
             // create an error type if no type was computed
             if (_lazyReturnType.Type is null)
+            {
                 _lazyReturnType = TypeWithAnnotations.CreateError(DeclaringCompilation);
+            }
+            else
+            {
+                // verify converion with the explicit property type
+                var associatedProperty = _property;
+                var propType = associatedProperty.TypeWithAnnotations;
+                if (!(propType.Type is null) && !propType.Type.IsErrorType())
+                {
+                    // finally always set the same type as the property!
+                    _lazyReturnType = propType;
+                }
+            }
 
             _lazyRefCustomModifiers = ImmutableArray<CustomModifier>.Empty;
 
@@ -404,10 +417,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             else if (!_lazyReturnType.IsVoidType())
             {
                 PropertySymbol associatedProperty = _property;
-                var type = associatedProperty.TypeWithAnnotations;
-                _lazyReturnType = _lazyReturnType.WithTypeAndModifiers(
-                    CustomModifierUtils.CopyTypeCustomModifiers(type.Type, _lazyReturnType.Type, this.ContainingAssembly),
-                    type.CustomModifiers);
+                var propType = associatedProperty.TypeWithAnnotations;
+                if (!(propType.Type is null) && !propType.Type.IsErrorType())
+                {
+                    _lazyReturnType = _lazyReturnType.WithTypeAndModifiers(
+                        CustomModifierUtils.CopyTypeCustomModifiers(propType.Type, _lazyReturnType.Type, this.ContainingAssembly),
+                        propType.CustomModifiers);
+                }
                 _lazyRefCustomModifiers = associatedProperty.RefCustomModifiers;
             }
         }
@@ -500,6 +516,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         private TypeWithAnnotations ComputeReturnType(DiagnosticBag diagnostics)
         {
+            return ComputeReturnType(diagnostics, out _);
+        }
+
+        private TypeWithAnnotations ComputeReturnType(DiagnosticBag diagnostics, out SyntaxNode bodySyntax)
+        {
+            bodySyntax = null;
+
             if (this.MethodKind == MethodKind.PropertyGet)
             {
                 TypeWithAnnotations type = default;
@@ -531,9 +554,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                             BoundNode boundBody = null;
                             var bodyDiagnostics = new DiagnosticBag();
                             if (blockBody != null)
+                            {
+                                bodySyntax = blockBody;
                                 boundBody = bodyBinder.BindEmbeddedBlock(blockBody, bodyDiagnostics, bodyBinder);
+                            }
                             else if (arrowBody != null)
+                            {
+                                bodySyntax = arrowBody;
                                 boundBody = bodyBinder.BindExpressionBodyAsBlock(arrowBody, bodyDiagnostics, bodyBinder);
+                            }
                             bodyDiagnostics.Free();
 
                             if (boundBody != null)

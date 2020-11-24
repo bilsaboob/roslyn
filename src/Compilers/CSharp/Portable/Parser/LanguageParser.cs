@@ -3006,12 +3006,13 @@ parse_member_name:;
                                               ExplicitInterfaceSpecifierSyntax explicitInterfaceOpt, SyntaxToken identifierOrThisOpt, TypeParameterListSyntax typeParameterListOpt,
                                               out MemberDeclarationSyntax result)
         {
+            result = null;
+
             if (explicitInterfaceOpt == null && identifierOrThisOpt == null && typeParameterListOpt == null)
             {
                 if (attributes.Count == 0 && modifiers.Count == 0 && type.IsMissing && type.Kind != SyntaxKind.RefType)
                 {
                     // we haven't advanced, the caller needs to consume the tokens ahead
-                    result = null;
                     return true;
                 }
 
@@ -3046,7 +3047,6 @@ parse_member_name:;
                 return true;
             }
 
-            result = null;
             return false;
         }
 
@@ -3164,6 +3164,28 @@ parse_member_name:;
                                         case SyntaxKind.EqualsGreaterThanToken:
                                             result = this.ParsePropertyDeclaration(attributes, modifiers, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt, type: type);
                                             return true;
+                                        default:
+                                            {
+                                                // the final case is that we have an explicit interface implementation of a property without any body - meaning the current token is on a newline
+                                                var isAtTerminatorOrNewline = IsCurrentTokenOnNewline || IsTerminator();
+                                                if (explicitInterfaceOpt != null && isAtTerminatorOrNewline)
+                                                {
+                                                    // MyInterface.ExplicitMember string
+                                                    result = _syntaxFactory.PropertyDeclaration(
+                                                        attributeLists: attributes,
+                                                        modifiers: modifiers.ToList(),
+                                                        explicitInterfaceSpecifier: explicitInterfaceOpt,
+                                                        identifier: identifierOrThisOpt,
+                                                        type: type,
+                                                        accessorList: SyntaxFactory.FakeAccessorList(), // we must have a fake list at least
+                                                        expressionBody: null,
+                                                        initializer: null,
+                                                        semicolonToken: SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken)
+                                                    );
+                                                    return true;
+                                                }
+                                                break;
+                                            }
                                     }
                                 }
 
@@ -3359,6 +3381,7 @@ parse_member_name:;
 
                     // First, check if we got absolutely nothing.  If so, then 
                     // We need to consume a bad member and try again.
+
                     if (IsNoneOrIncompleteMember(parentKind, attributes, modifiers, type, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt, out result))
                     {
                         return result;

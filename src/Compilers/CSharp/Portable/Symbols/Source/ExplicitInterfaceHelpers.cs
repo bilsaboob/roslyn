@@ -151,9 +151,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             TypeSymbol explicitInterfaceType,
             string interfacePropertyName,
             ExplicitInterfaceSpecifierSyntax explicitInterfaceSpecifierSyntax,
-            DiagnosticBag diagnostics)
+            DiagnosticBag diagnostics,
+            bool checkReturnType = true)
         {
-            return (PropertySymbol)FindExplicitlyImplementedMember(implementingProperty, explicitInterfaceType, interfacePropertyName, explicitInterfaceSpecifierSyntax, diagnostics);
+            return (PropertySymbol)FindExplicitlyImplementedMember(implementingProperty, explicitInterfaceType, interfacePropertyName, explicitInterfaceSpecifierSyntax, diagnostics, checkReturnType);
         }
 
         internal static EventSymbol FindExplicitlyImplementedEvent(
@@ -171,7 +172,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             TypeSymbol explicitInterfaceType,
             string interfaceMemberName,
             ExplicitInterfaceSpecifierSyntax explicitInterfaceSpecifierSyntax,
-            DiagnosticBag diagnostics)
+            DiagnosticBag diagnostics,
+            bool checkReturnType = true)
         {
             if ((object)explicitInterfaceType == null)
             {
@@ -252,7 +254,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     continue;
                 }
 
-                if (MemberSignatureComparer.ExplicitImplementationComparer.Equals(implementingMember, interfaceMember))
+                var comparer = checkReturnType ? MemberSignatureComparer.ExplicitImplementationComparer : MemberSignatureComparer.ExplicitImplementationNoReturnTypeComparer;
+
+                if (comparer.Equals(implementingMember, interfaceMember))
                 {
                     foundMatchingMember = true;
                     // Cannot implement accessor directly unless

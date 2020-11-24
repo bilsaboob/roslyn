@@ -401,6 +401,57 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return default;
         }
 
+        private TypeWithAnnotations? TryGetExplicitInterfaceType()
+        {
+            if (IsExplicitInterfaceImplementation)
+            {
+                if (!GetExplicitInterfaceSpecifierSyntaxAndName(out var explicitNameSyntax, out var name))
+                    return null;
+
+                var diagnostics = DiagnosticBag.GetInstance();
+                try
+                {
+                    var explicitProperty = this.FindExplicitlyImplementedProperty(_explicitInterfaceType, name, explicitNameSyntax, diagnostics, checkReturnType: false);
+                    if (explicitProperty == null) return null;
+
+                    var returnType = explicitProperty.GetTypeOrReturnType();
+                    if (!(returnType.Type is null) && !returnType.Type.IsErrorType())
+                        return returnType;
+                }
+                finally
+                {
+                    diagnostics.Free();
+                }
+            }
+
+            return null;
+        }
+
+        private bool GetExplicitInterfaceSpecifierSyntaxAndName(out ExplicitInterfaceSpecifierSyntax explicitSpecifierSyntax, out string name)
+        {
+            explicitSpecifierSyntax = null;
+            name = null;
+
+            var syntax = SyntaxReference.GetSyntax();
+            var propDeclSyntax = syntax as PropertyDeclarationSyntax ?? CSharpSyntaxNode as PropertyDeclarationSyntax;
+            if (propDeclSyntax != null)
+            {
+                explicitSpecifierSyntax = propDeclSyntax.ExplicitInterfaceSpecifier;
+                name = propDeclSyntax.Identifier.Text;
+                return true;
+            }
+
+            var indexerDeclSyntax = syntax as IndexerDeclarationSyntax ?? CSharpSyntaxNode as IndexerDeclarationSyntax;
+            if (indexerDeclSyntax != null)
+            {
+                explicitSpecifierSyntax = indexerDeclSyntax.ExplicitInterfaceSpecifier;
+                name = indexerDeclSyntax.ThisKeyword.Text;
+                return true;
+            }
+
+            return false;
+        }
+
         protected override TypeWithAnnotations ComputeType(Binder? binder, SyntaxNode syntax, DiagnosticBag diagnostics)
         {
             if (_lazyType != null && !(_lazyType.Value.Type is null)) return _lazyType.Value;
@@ -410,6 +461,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             if (propDeclSyntax == null && indexerDeclSyntax == null) return default;
 
             syntax = propDeclSyntax as SyntaxNode ?? indexerDeclSyntax as SyntaxNode;
+
+            var explicitInterfaceType = TryGetExplicitInterfaceType();
 
             TypeWithAnnotations type = default;
             var refKind = RefKind.None;
@@ -425,7 +478,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
             else
             {
-                // try resolving from "=>" body
+                // try resolving from "=>" body if available
                 var getterSymbol = GetMethod as SourcePropertyAccessorSymbol;
                 if (getterSymbol != null)
                 {
@@ -442,7 +495,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // make sure we always have a return type, even if it's an error type
             if (type.Type is null)
             {
-                type = TypeWithAnnotations.CreateError(DeclaringCompilation);
+                if (explicitInterfaceType.HasValue)
+                {
+                    type = explicitInterfaceType.Value;
+                }
+                else
+                {
+                    type = TypeWithAnnotations.CreateError(DeclaringCompilation);
+                }
+            }
+            else if (explicitInterfaceType.HasValue)
+            {
+                // try converting, and add diagnostics otherwise
+                type = explicitInterfaceType.Value;
             }
 
             HashSet<DiagnosticInfo>? useSiteDiagnostics = null;

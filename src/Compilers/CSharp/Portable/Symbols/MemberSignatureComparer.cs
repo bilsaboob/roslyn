@@ -48,6 +48,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             considerCallingConvention: true,
             typeComparison: TypeCompareKind.AllIgnoreOptions);
 
+        public static readonly MemberSignatureComparer ExplicitImplementationNoReturnTypeComparer = new MemberSignatureComparer(
+            considerName: false,
+            considerExplicitlyImplementedInterfaces: false,
+            considerReturnType: false,
+            considerTypeConstraints: false,
+            considerRefKindDifferences: true,
+            considerCallingConvention: true,
+            typeComparison: TypeCompareKind.AllIgnoreOptions);
+
         /// <summary>
         /// This instance is used when trying to determine if one member implicitly implements another,
         /// according to the C# definition.
