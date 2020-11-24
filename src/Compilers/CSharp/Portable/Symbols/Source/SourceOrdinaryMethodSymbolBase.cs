@@ -27,7 +27,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private ImmutableArray<MethodSymbol> _lazyExplicitInterfaceImplementations;
         private ImmutableArray<CustomModifier> _lazyRefCustomModifiers;
         protected ImmutableArray<ParameterSymbol> _lazyParameters;
-        private TypeWithAnnotations _lazyReturnType;
+        protected TypeWithAnnotations _lazyReturnType;
 
         protected SourceOrdinaryMethodSymbolBase(
             NamedTypeSymbol containingType,
@@ -87,6 +87,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         protected override void MethodChecks(DiagnosticBag diagnostics)
+        {
+            MethodChecks_(diagnostics);
+        }
+
+        protected virtual void MethodChecks_(DiagnosticBag diagnostics)
         {
             Debug.Assert(this.MethodKind != MethodKind.UserDefinedOperator, "SourceUserDefinedOperatorSymbolBase overrides this");
 

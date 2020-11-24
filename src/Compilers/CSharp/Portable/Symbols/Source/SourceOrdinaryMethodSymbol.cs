@@ -106,6 +106,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        protected override void MethodChecks(DiagnosticBag diagnostics)
+        {
+            base.MethodChecks(diagnostics);
+
+            if (IsOverride)
+            {
+                var syntax = GetSyntax();
+
+                if (syntax != null && !syntax.HasExplicitReturnType())
+                {
+                    // use the return type from the base instead
+                    var baseType = OverriddenMethod?.ReturnTypeWithAnnotations;
+                    if (!(baseType?.Type is null))
+                    {
+                        // set the return type to match the base symbols return type
+                        _lazyReturnType = baseType.Value;
+                    }
+                }
+            }
+        }
+
         protected override (TypeWithAnnotations ReturnType, ImmutableArray<ParameterSymbol> Parameters, bool IsVararg, ImmutableArray<TypeParameterConstraintClause> DeclaredConstraintsForOverrideOrImplementation) MakeParametersAndBindReturnType(DiagnosticBag diagnostics)
         {
             var syntax = GetSyntax();
