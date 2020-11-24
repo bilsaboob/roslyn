@@ -1889,6 +1889,10 @@ tryAgain:
                 if (!IsNameClassifiedAsPublic(methodDecl.Identifier))
                     return member;
 
+                // cannot make explicit members public
+                if (methodDecl.ExplicitInterfaceSpecifier != null)
+                    return member;
+
                 return methodDecl.Update(
                     attributeLists: methodDecl.AttributeLists,
                     modifiers: MakePublicModifiers(methodDecl.Modifiers),
@@ -1910,6 +1914,10 @@ tryAgain:
                 if (!IsNameClassifiedAsPublic(propDecl.Identifier))
                     return member;
 
+                // cannot make explicit members public
+                if (propDecl.ExplicitInterfaceSpecifier != null)
+                    return member;
+
                 return propDecl.Update(
                     attributeLists: propDecl.AttributeLists,
                     modifiers: MakePublicModifiers(propDecl.Modifiers),
@@ -1927,6 +1935,10 @@ tryAgain:
             {
                 // must be public name
                 if (!IsNameClassifiedAsPublic(eventPropDecl.Identifier))
+                    return member;
+
+                // cannot make explicit members public
+                if (eventPropDecl.ExplicitInterfaceSpecifier != null)
                     return member;
 
                 return eventPropDecl.Update(
