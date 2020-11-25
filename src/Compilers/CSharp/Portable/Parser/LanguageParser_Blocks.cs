@@ -20,23 +20,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         #region Blocks - statements
         private BlockSyntax ParseArrowStatementBlock(SyntaxList<AttributeListSyntax> attributes = default, bool semicolonRequired = false, bool isSimpleExpr = true)
         {
-            var arrowToken = EatToken(SyntaxKind.EqualsGreaterThanToken);
+            var wasInArrowExpressionBlock = IsInArrowExpressionBlock;
+            try
+            {
+                IsInArrowExpressionBlock = true;
 
-            var stat = ParseStatementCore(
-                attributes,
-                semicolonRequired: semicolonRequired,
-                isSimpleExpr: isSimpleExpr
-            );
+                var arrowToken = EatToken(SyntaxKind.EqualsGreaterThanToken);
 
-            // skip the arrow, it's not part of the syntax
-            stat = AddLeadingSkippedSyntax(stat, arrowToken);
+                var stat = ParseStatementCore(
+                    attributes,
+                    semicolonRequired: semicolonRequired,
+                    isSimpleExpr: isSimpleExpr
+                );
 
-            var block = SyntaxFactory.FakeBlock(
-                _syntaxFactory,
-                statements: SyntaxFactory.List<StatementSyntax>(stat)
-            );
+                // skip the arrow, it's not part of the syntax
+                stat = AddLeadingSkippedSyntax(stat, arrowToken);
 
-            return block;
+                var block = SyntaxFactory.FakeBlock(
+                    _syntaxFactory,
+                    statements: SyntaxFactory.List<StatementSyntax>(stat)
+                );
+
+                return block;
+            }
+            finally
+            {
+                IsInArrowExpressionBlock = wasInArrowExpressionBlock;
+            }
         }
 
         private BlockSyntax ParseStatementBlock(SyntaxList<AttributeListSyntax> attributes = default, bool semicolonRequired = false, bool isSimpleExpr = true)
@@ -68,10 +78,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         #region Blocks - expression statements
         private BlockSyntax ParseArrowExprStatementBlock(SyntaxList<AttributeListSyntax> attributes = default, bool semicolonRequired = false, bool simpleExpr = true)
         {
+            var wasInArrowExpressionBlock = IsInArrowExpressionBlock;
             var wasSimpleExpression = IsSimpleExpression;
             IsSimpleExpression = simpleExpr;
             try
             {
+                IsInArrowExpressionBlock = true;
+
                 var arrowToken = EatToken(SyntaxKind.EqualsGreaterThanToken);
 
                 var exprStat = ParseExpressionStatement(attributes, semicolonRequired: semicolonRequired);
@@ -89,6 +102,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             finally
             {
                 IsSimpleExpression = wasSimpleExpression;
+                IsInArrowExpressionBlock = wasInArrowExpressionBlock;
             }
         }
 

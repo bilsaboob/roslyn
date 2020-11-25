@@ -4385,10 +4385,22 @@ parse_member_name:;
             return _syntaxFactory.AccessorList(openBrace, accessors, closeBrace);
         }
 
+        private bool IsInArrowExpressionBlock { get; set; }
+
         private ArrowExpressionClauseSyntax ParseArrowExpressionClause()
         {
-            var arrowToken = this.EatToken(SyntaxKind.EqualsGreaterThanToken);
-            return _syntaxFactory.ArrowExpressionClause(arrowToken, ParsePossibleRefExpression());
+            var wasInArrowExpressionBlock = IsInArrowExpressionBlock;
+            try
+            {
+                IsInArrowExpressionBlock = true;
+
+                var arrowToken = this.EatToken(SyntaxKind.EqualsGreaterThanToken);
+                return _syntaxFactory.ArrowExpressionClause(arrowToken, ParsePossibleRefExpression());
+            }
+            finally
+            {
+                IsInArrowExpressionBlock = wasInArrowExpressionBlock;
+            }
         }
 
         private ExpressionSyntax ParsePossibleRefExpression()
@@ -4808,7 +4820,7 @@ parse_member_name:;
 
                 SyntaxToken open;
                 SyntaxToken close;
-                
+
                 if (!TryParseParameterList(out open, parameters, out close, openKind, closeKind, canFail: true))
                 {
                     Reset(ref resetPoint);
@@ -9729,6 +9741,20 @@ done:;
                 || this.CurrentToken.Kind == SyntaxKind.SemicolonToken;
         }
 
+        private StatementSyntax ParseEmbeddedArrowStatement()
+        {
+            var wasInArrowExpressionBlock = IsInArrowExpressionBlock;
+            try
+            {
+                IsInArrowExpressionBlock = true;
+                return ParseEmbeddedStatement();
+            }
+            finally
+            {
+                IsInArrowExpressionBlock = wasInArrowExpressionBlock;
+            }
+        }
+
         private StatementSyntax ParseEmbeddedStatement()
         {
             // ParseEmbeddedStatement is called through many recursive statement parsing cases. We
@@ -10923,8 +10949,17 @@ tryAgain:
                 }
 
                 // parse the statement if we don't have any
-                if(statement == null)
-                    statement = this.ParseEmbeddedStatement();
+                if (statement == null)
+                {
+                    if (arrowToken != null)
+                    {
+                        statement = ParseEmbeddedArrowStatement();
+                    }
+                    else
+                    {
+                        statement = ParseEmbeddedStatement();
+                    }
+                }
             }
 
             if (identifier != null)
@@ -13740,9 +13775,15 @@ tryAgain:
             ParenthesizedLambdaExpressionSyntax? trailingBlockArg = null;
 
             // only allow trailing block if there is at least 1 argument
-            if (allowTrailingBlockArg && this.CurrentToken.Kind == SyntaxKind.OpenBraceToken && arguments.Count > 0)
+            if (allowTrailingBlockArg && this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
             {
-                trailingBlockArg = ParseLambdaExpression() as ParenthesizedLambdaExpressionSyntax;
+                // Trailing lambda blocks are possible either if we have at least one argument or if it's in a "=>" block:
+                // test(1) {} // trailing lambda in any type of block statements
+                // => test() {} // without parameters is only supported in arrow expressions
+                if (arguments.Count > 0 || IsInArrowExpressionBlock)
+                {
+                    trailingBlockArg = ParseLambdaExpression() as ParenthesizedLambdaExpressionSyntax;
+                }
             }
 
             return _syntaxFactory.ArgumentList(openToken, arguments, closeToken, trailingBlockArg);
