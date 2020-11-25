@@ -437,6 +437,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             if (propDeclSyntax != null)
             {
                 explicitSpecifierSyntax = propDeclSyntax.ExplicitInterfaceSpecifier;
+                if (explicitSpecifierSyntax == null) return false;
+
                 name = propDeclSyntax.Identifier.Text;
                 return true;
             }
@@ -445,6 +447,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             if (indexerDeclSyntax != null)
             {
                 explicitSpecifierSyntax = indexerDeclSyntax.ExplicitInterfaceSpecifier;
+                if (explicitSpecifierSyntax == null) return false;
+
                 name = indexerDeclSyntax.ThisKeyword.Text;
                 return true;
             }

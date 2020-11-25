@@ -141,9 +141,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             TypeSymbol explicitInterfaceType,
             string interfaceMethodName,
             ExplicitInterfaceSpecifierSyntax explicitInterfaceSpecifierSyntax,
-            DiagnosticBag diagnostics)
+            DiagnosticBag diagnostics,
+            bool checkReturnType = true
+            )
         {
-            return (MethodSymbol)FindExplicitlyImplementedMember(implementingMethod, explicitInterfaceType, interfaceMethodName, explicitInterfaceSpecifierSyntax, diagnostics);
+            return (MethodSymbol)FindExplicitlyImplementedMember(implementingMethod, explicitInterfaceType, interfaceMethodName, explicitInterfaceSpecifierSyntax, diagnostics, checkReturnType);
         }
 
         internal static PropertySymbol FindExplicitlyImplementedProperty(

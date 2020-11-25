@@ -106,6 +106,47 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        private TypeWithAnnotations? TryGetExplicitInterfaceType()
+        {
+            if (IsExplicitInterfaceImplementation)
+            {
+                if (!GetExplicitInterfaceSpecifierSyntaxAndName(out var explicitNameSyntax, out var name))
+                    return null;
+
+                var diagnostics = DiagnosticBag.GetInstance();
+                try
+                {
+                    var explicitMethod = this.FindExplicitlyImplementedMethod(_explicitInterfaceType, name, explicitNameSyntax, diagnostics, checkReturnType: false);
+                    if (explicitMethod == null) return null;
+
+                    var returnType = explicitMethod.GetTypeOrReturnType();
+                    if (!(returnType.Type is null) && !returnType.Type.IsErrorType())
+                        return returnType;
+                }
+                finally
+                {
+                    diagnostics.Free();
+                }
+            }
+
+            return null;
+        }
+
+        private bool GetExplicitInterfaceSpecifierSyntaxAndName(out ExplicitInterfaceSpecifierSyntax explicitSpecifierSyntax, out string name)
+        {
+            explicitSpecifierSyntax = null;
+            name = null;
+
+            var syntax = GetSyntax();
+            if (syntax == null) return false;
+
+            explicitSpecifierSyntax = syntax.ExplicitInterfaceSpecifier;
+            if (explicitSpecifierSyntax == null) return false;
+
+            name = syntax.Identifier.Text;
+            return true;
+        }
+
         protected override void MethodChecks(DiagnosticBag diagnostics)
         {
             base.MethodChecks(diagnostics);
@@ -159,6 +200,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             TypeWithAnnotations returnType = signatureBinder.BindType(returnTypeSyntax, diagnostics);
 
+            var explicitInterfaceType = TryGetExplicitInterfaceType();
+
             // if it's an error type, try to resolve from the Body instead!
             if (returnType.Type?.IsErrorType() == true && !syntax.HasExplicitReturnType())
             {
@@ -187,7 +230,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // make sure we always have a return type, even if it's an error type
             if (returnType.Type is null)
             {
-                returnType = TypeWithAnnotations.Create(signatureBinder.CreateErrorType());
+                if (explicitInterfaceType.HasValue)
+                {
+                    returnType = explicitInterfaceType.Value;
+                }
+                else
+                {
+                    returnType = TypeWithAnnotations.Create(signatureBinder.CreateErrorType());
+                }
+            }
+            else if (explicitInterfaceType.HasValue)
+            {
+                // must always use the explicit interface type otherwise
+                returnType = explicitInterfaceType.Value;
             }
 
             // make sure that the return type of the method is "Task" for async declarations, and if its not - synthesize the Task<...> type
