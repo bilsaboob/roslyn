@@ -388,7 +388,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 if (!(propType.Type is null) && !propType.Type.IsErrorType())
                 {
                     // finally always set the same type as the property!
-                    _lazyReturnType = propType;
+                    if (MethodKind != MethodKind.PropertySet && MethodKind != MethodKind.EventAdd && MethodKind != MethodKind.EventRemove)
+                        _lazyReturnType = propType;
                 }
             }
 
