@@ -539,7 +539,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             else
             {
-                return boundNodes[0];
+                var boundNode = boundNodes[0];
+
+                // in some cases with "extension methods" without a "this." specified... we may get an "ExpressionStatement" at the top ... then we actually prefer the BoundCall if it's the second top...
+                if (boundNodes.Length > 1)
+                {
+                    if (node is InvocationExpressionSyntax &&
+                        boundNode is BoundExpressionStatement boundExprStat &&
+                        boundExprStat.Expression is BoundCall boundCall && 
+                        boundNodes[1] == boundCall
+                        )
+                    {
+                        // prefer finding a "call" over an "expression statement"
+                        boundNode = boundNodes[1];
+                    }
+                }
+
+                return boundNode;
             }
         }
 
