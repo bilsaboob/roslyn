@@ -330,17 +330,35 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
                 var thisParam = extensionMethod.Parameters.FirstOrDefault();
                 if (thisParam?.IsThis == true && thisParam.Type != null)
                 {
-                    // check the "this scope" type ... if it has a conversion
-                    if (thisScopeType != null)
+                    if (thisParam.Type.TypeKind == TypeKind.TypeParameter)
                     {
-                        var hasThisScopeConversion = _context?.SemanticModel?.Compilation?.HasImplicitConversion(thisScopeType, thisParam.Type) == true;
-                        if (hasThisScopeConversion) return true;
-                    }
+                        // check the constraints for the different scopes
+                        if (thisScopeType != null)
+                        {
+                            var hasThisScopeConversion = _context?.SemanticModel?.Compilation?.CheckTypeParameterConstraits(extensionMethod, (ITypeParameterSymbol)thisParam.Type, thisScopeType) == true;
+                            if (hasThisScopeConversion) return true;
+                        }
 
-                    if (lambdaScopeType != null)
+                        if (lambdaScopeType != null)
+                        {
+                            var hasLambdaScopeConversion = _context?.SemanticModel?.Compilation?.CheckTypeParameterConstraits(extensionMethod, (ITypeParameterSymbol)thisParam.Type, lambdaScopeType) == true;
+                            if (hasLambdaScopeConversion) return true;
+                        }
+                    }
+                    else
                     {
-                        var hasLambdaScopeConversion = _context?.SemanticModel?.Compilation?.HasImplicitConversion(lambdaScopeType, thisParam.Type) == true;
-                        if (hasLambdaScopeConversion) return true;
+                        // check the "this scope" type ... if it has a conversion - since it's a "normal type"
+                        if (thisScopeType != null)
+                        {
+                            var hasThisScopeConversion = _context?.SemanticModel?.Compilation?.HasImplicitConversion(thisScopeType, thisParam.Type) == true;
+                            if (hasThisScopeConversion) return true;
+                        }
+
+                        if (lambdaScopeType != null)
+                        {
+                            var hasLambdaScopeConversion = _context?.SemanticModel?.Compilation?.HasImplicitConversion(lambdaScopeType, thisParam.Type) == true;
+                            if (hasLambdaScopeConversion) return true;
+                        }
                     }
                 }
 

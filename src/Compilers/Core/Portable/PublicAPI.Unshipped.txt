@@ -9,6 +9,7 @@ Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalysisResultAsy
 Microsoft.CodeAnalysis.Diagnostics.CompilationWithAnalyzers.GetAnalysisResultAsync(Microsoft.CodeAnalysis.AdditionalText file, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.CodeAnalysis.Diagnostics.AnalysisResult>
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.get -> int
 Microsoft.CodeAnalysis.Diagnostics.Telemetry.AnalyzerTelemetryInfo.AdditionalFileActionsCount.set -> void
+Microsoft.CodeAnalysis.IMethodSymbol.CheckTypeParameterConstraits(Microsoft.CodeAnalysis.ITypeParameterSymbol typeParam, Microsoft.CodeAnalysis.ITypeSymbol targetType) -> bool
 Microsoft.CodeAnalysis.INamespaceSymbol.GlobalMembersContainerType.get -> Microsoft.CodeAnalysis.ITypeSymbol
 Microsoft.CodeAnalysis.IParameterSymbol.IsSpread.get -> bool
 Microsoft.CodeAnalysis.ISymbolWithOriginLocation
@@ -86,6 +87,7 @@ override Microsoft.CodeAnalysis.Symbols.SpreadParamSymbol.Kind.get -> Microsoft.
 static Microsoft.CodeAnalysis.NamespaceSymbolHelpers.GetNamespaceMembersContainerClassName(string namespaceName) -> string
 static Microsoft.CodeAnalysis.NamespaceSymbolHelpers.IsGlobalSymbolAccessible(Microsoft.CodeAnalysis.ISymbol symbol, Microsoft.CodeAnalysis.INamespaceSymbol fromNamespace) -> bool
 static Microsoft.CodeAnalysis.NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(string name) -> bool
+virtual Microsoft.CodeAnalysis.Compilation.CheckTypeParameterConstraits(Microsoft.CodeAnalysis.IMethodSymbol extensionMethod, Microsoft.CodeAnalysis.ITypeParameterSymbol thisParam, Microsoft.CodeAnalysis.ITypeSymbol thisScopeType) -> bool
 virtual Microsoft.CodeAnalysis.Diagnostics.AnalysisContext.RegisterAdditionalFileAction(System.Action<Microsoft.CodeAnalysis.Diagnostics.AdditionalFileAnalysisContext> action) -> void
 virtual Microsoft.CodeAnalysis.Diagnostics.CompilationStartAnalysisContext.RegisterAdditionalFileAction(System.Action<Microsoft.CodeAnalysis.Diagnostics.AdditionalFileAnalysisContext> action) -> void
 virtual Microsoft.CodeAnalysis.WrappedSymbol.Kind.get -> Microsoft.CodeAnalysis.SymbolKind

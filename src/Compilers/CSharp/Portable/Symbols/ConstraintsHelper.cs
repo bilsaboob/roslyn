@@ -795,7 +795,7 @@ hasRelatedInterfaces:
         }
 
         // See TypeBind::CheckSingleConstraint.
-        private static bool CheckConstraints(
+        internal static bool CheckConstraints(
             Symbol containingSymbol,
             ConversionsBase conversions,
             TypeMap substitution,

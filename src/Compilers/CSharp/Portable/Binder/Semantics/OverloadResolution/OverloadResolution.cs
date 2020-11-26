@@ -3121,14 +3121,43 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (member is MethodSymbol method && method.IsExtensionMethod && method.ParameterCount > 0)
             {
-                var typesMatch = false;
-                if (arguments.Arguments.Count > 0) {
-                    var thisParam = method.Parameters[0];
-                    var arg = arguments.Argument(0);
-                    typesMatch = Binder.IsTypeAssignableFrom(arg?.Type as NamedTypeSymbol, thisParam?.Type as NamedTypeSymbol);
+                var firstParam = method.Parameters[0];
+                if (firstParam.IsThis)
+                {
+                    var typesMatch = false;
+
+                    // check if the first param match the argument
+                    if (arguments.Arguments.Count > 0)
+                    {
+                        var arg = arguments.Argument(0);
+
+                        if (firstParam?.Type.Kind == SymbolKind.TypeParameter)
+                        {
+                            typesMatch = Compilation.CheckTypeParameterConstraitsInternal(method, (TypeParameterSymbol)firstParam.Type, arg?.Type);
+                        }
+                        else
+                        {
+                            typesMatch = Binder.IsTypeAssignableFrom(arg?.Type as NamedTypeSymbol, firstParam?.Type as NamedTypeSymbol);
+                        }
+                    }
+
+                    // check if the first param match the receiver
+                    if (!typesMatch && receiver != null)
+                    {
+                        var thisParam = method.Parameters[0];
+                        if (firstParam?.Type.Kind == SymbolKind.TypeParameter)
+                        {
+                            typesMatch = Compilation.CheckTypeParameterConstraitsInternal(method, (TypeParameterSymbol)firstParam.Type, receiver?.Type);
+                        }
+                        else
+                        {
+                            typesMatch = Binder.IsTypeAssignableFrom(receiver?.Type as NamedTypeSymbol, firstParam?.Type as NamedTypeSymbol);
+                        }
+                    }
+
+                    if (!typesMatch)
+                        return new MemberResolutionResult<TMember>(member, leastOverriddenMember, MemberAnalysisResult.RequiredParameterMissing(0));
                 }
-                if (!typesMatch)
-                    return new MemberResolutionResult<TMember>(member, leastOverriddenMember, MemberAnalysisResult.RequiredParameterMissing(0));
             }
 
             // AnalyzeArguments matches arguments to parameter names and positions. 

@@ -204,5 +204,10 @@ namespace Microsoft.CodeAnalysis
                 return true;
             }
         }
+
+        public virtual bool CheckTypeParameterConstraits(IMethodSymbol extensionMethod, ITypeParameterSymbol thisParam, ITypeSymbol thisScopeType)
+        {
+            return false;
+        }
     }
 }

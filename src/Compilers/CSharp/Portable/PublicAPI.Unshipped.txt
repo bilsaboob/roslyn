@@ -71,6 +71,8 @@ Microsoft.CodeAnalysis.CSharp.SyntaxKind.ImportKeyword = 8385 -> Microsoft.CodeA
 Microsoft.CodeAnalysis.CSharp.SyntaxKind.LambdaFunctionType = 9034 -> Microsoft.CodeAnalysis.CSharp.SyntaxKind
 abstract Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousFunctionExpressionSyntax.Modifiers.get -> Microsoft.CodeAnalysis.SyntaxTokenList
 abstract Microsoft.CodeAnalysis.CSharp.Syntax.CommonForEachStatementSyntax.EqualsGreaterThanToken.get -> Microsoft.CodeAnalysis.SyntaxToken
+override Microsoft.CodeAnalysis.CSharp.CSharpCompilation.CheckTypeParameterConstraits(Microsoft.CodeAnalysis.IMethodSymbol extensionMethod, Microsoft.CodeAnalysis.ITypeParameterSymbol typeParam, Microsoft.CodeAnalysis.ITypeSymbol targetType) -> bool
+override Microsoft.CodeAnalysis.CSharp.CSharpCompilation.CheckTypeParameterConstraitsInternal(Microsoft.CodeAnalysis.CSharp.Symbols.MethodSymbol methodSymbol, Microsoft.CodeAnalysis.CSharp.Symbols.TypeParameterSymbol typeParameter, Microsoft.CodeAnalysis.CSharp.Symbols.TypeSymbol typeSymbol) -> bool
 override Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter.VisitDefaultConstraint(Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax node) -> Microsoft.CodeAnalysis.SyntaxNode
 override Microsoft.CodeAnalysis.CSharp.Syntax.AnonymousMethodExpressionSyntax.Modifiers.get -> Microsoft.CodeAnalysis.SyntaxTokenList
 override Microsoft.CodeAnalysis.CSharp.Syntax.DefaultConstraintSyntax.Accept(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxVisitor visitor) -> void

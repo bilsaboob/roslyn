@@ -459,6 +459,35 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (EventQueue != null) EventQueue.TryEnqueue(new CompilationStartedEvent(this));
         }
 
+        public override bool CheckTypeParameterConstraits(IMethodSymbol extensionMethod, ITypeParameterSymbol typeParam, ITypeSymbol targetType)
+        {
+            var methodSymbol = ((Symbols.PublicModel.Symbol)extensionMethod)?.UnderlyingSymbol as Symbols.MethodSymbol;
+            var typeParameter = ((Symbols.PublicModel.Symbol)typeParam)?.UnderlyingSymbol as Symbols.TypeParameterSymbol;
+            var typeSymbol = ((Symbols.PublicModel.Symbol)targetType)?.UnderlyingSymbol as Symbols.TypeSymbol;
+            if (typeParameter is null || typeSymbol is null || methodSymbol is null) return false;
+
+            // create a non generic implementation
+            var typeArgument = TypeWithAnnotations.Create(typeSymbol);
+            var defaultTypeArgs = methodSymbol.GetTypeParametersAsTypeArguments();
+            defaultTypeArgs = defaultTypeArgs.RemoveAt(0).Insert(0, typeArgument);
+            var nonGenericMethodSymbol = methodSymbol.Construct(defaultTypeArgs);
+
+            return nonGenericMethodSymbol.CheckTypeParameterConstraits(typeParameter, typeArgument);
+        }
+
+        internal bool CheckTypeParameterConstraitsInternal(MethodSymbol methodSymbol, TypeParameterSymbol typeParameter, TypeSymbol typeSymbol)
+        {
+            if (typeParameter is null || typeSymbol is null || methodSymbol is null) return false;
+
+            // create a non generic implementation
+            var typeArgument = TypeWithAnnotations.Create(typeSymbol);
+            var defaultTypeArgs = methodSymbol.GetTypeParametersAsTypeArguments();
+            defaultTypeArgs = defaultTypeArgs.RemoveAt(0).Insert(0, typeArgument);
+            var nonGenericMethodSymbol = methodSymbol.Construct(defaultTypeArgs);
+
+            return nonGenericMethodSymbol.CheckTypeParameterConstraits(typeParameter, typeArgument);
+        }
+
         internal override void ValidateDebugEntryPoint(IMethodSymbol debugEntryPoint, DiagnosticBag diagnostics)
         {
             Debug.Assert(debugEntryPoint != null);

@@ -270,6 +270,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        internal bool CheckTypeParameterConstraits(TypeParameterSymbol typeParameter, TypeWithAnnotations typeArgument)
+        {
+            ArrayBuilder<TypeParameterDiagnosticInfo> useSiteDiagnosticsBuilder = default;
+
+            var result = ConstraintsHelper.CheckConstraints(
+                containingSymbol: this,
+                conversions: this.DeclaringCompilation.Conversions,
+                substitution: this.TypeSubstitution,
+                typeParameter: typeParameter,
+                typeArgument: typeArgument,
+                currentCompilation: this.DeclaringCompilation,
+                diagnosticsBuilder: default,
+                nullabilityDiagnosticsBuilderOpt: default,
+                ref useSiteDiagnosticsBuilder,
+                null
+            );
+
+            return result;
+        }
+
         /// <returns>
         /// True if this <see cref="MethodSymbol"/> type supports retrieving the this parameter
         /// and false otherwise.  Note that a return value of true does not guarantee a non-null
