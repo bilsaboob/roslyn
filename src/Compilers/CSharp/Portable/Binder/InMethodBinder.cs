@@ -326,6 +326,12 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var map = _lazyDefinitionMap;
 
+            Symbol existingDeclaration;
+            if (map != null && map.TryGetValue(name, out existingDeclaration))
+            {
+                return ReportConflictWithParameter(existingDeclaration, symbol, name, location, diagnostics);
+            }
+
             if (map == null)
             {
                 map = new SmallDictionary<string, Symbol>();
@@ -333,12 +339,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 RecordDefinition(map, typeParameters);
 
                 _lazyDefinitionMap = map;
-            }
-
-            Symbol existingDeclaration;
-            if (map.TryGetValue(name, out existingDeclaration))
-            {
-                return ReportConflictWithParameter(existingDeclaration, symbol, name, location, diagnostics);
             }
 
             return false;
