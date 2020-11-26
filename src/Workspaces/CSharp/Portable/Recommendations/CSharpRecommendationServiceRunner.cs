@@ -248,6 +248,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
 
             var enclosingSymbol = _context.SemanticModel.GetEnclosingSymbol(_context.Position);
             var thisScopeType = enclosingSymbol?.ContainingType?.GetSymbolType();
+            INamedTypeSymbol thisScope = enclosingSymbol?.ContainingType;
+            INamedTypeSymbol lambdaThisScope = null;
+            ITypeSymbol lambdaScopeType = null;
 
             // could possibly also be a lambda with "this parameter" scope
             if (enclosingSymbol is IMethodSymbol method)
@@ -257,13 +260,34 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
                 {
                     isInStaticContext = false;
                     thisScopeType = thisParam.Type;
+                    lambdaThisScope = thisScopeType as INamedTypeSymbol;
+                    lambdaScopeType = lambdaThisScope?.GetSymbolType();
                 }
             }
 
-            var symbols = !_context.IsNameOfContext && isInStaticContext
-                ? _context.SemanticModel.LookupStaticMembers(_context.LeftToken.SpanStart)
-                : _context.SemanticModel.LookupSymbols(_context.LeftToken.SpanStart);
+            ImmutableArray<ISymbol> symbols = default;
+            if (!_context.IsNameOfContext && isInStaticContext)
+            {
+                symbols = _context.SemanticModel.LookupStaticMembers(_context.LeftToken.SpanStart);
+            }
+            else
+            {
+                symbols = _context.SemanticModel.LookupSymbols(_context.LeftToken.SpanStart);
 
+                if (thisScope != null)
+                {
+                    var thisScopeSymbols = _context.SemanticModel.LookupSymbols(_context.LeftToken.SpanStart, container: thisScope, includeReducedExtensionMethods: thisScope != null);
+                    symbols = symbols.AddRange(thisScopeSymbols);
+                }
+
+                if (lambdaThisScope != null)
+                {
+                    var lambdaScopeSymbols = _context.SemanticModel.LookupSymbols(_context.LeftToken.SpanStart, container: lambdaThisScope, includeReducedExtensionMethods: true);
+                    symbols = symbols.AddRange(lambdaScopeSymbols);
+                }
+
+                symbols = symbols.Distinct().ToImmutableArray();
+            }
 
             // Filter out any extension methods that might be imported by a using static directive.
             // But include extension methods declared in the context's type or it's parents
@@ -273,7 +297,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
                 !symbol.IsExtensionMethod() ||
                 contextEnclosingNamedType.Equals(symbol.ContainingType) ||
                 contextOuterTypes.Any(outerType => outerType.Equals(symbol.ContainingType)) ||
-                IsExtensionMethodAccessible(symbol, contextEnclosingNamedType, thisScopeType)
+                IsExtensionMethodAccessible(symbol, contextEnclosingNamedType, thisScopeType, lambdaScopeType)
             );
 
             // The symbols may include local variables that are declared later in the method and
@@ -287,10 +311,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
             return symbols;
         }
 
-        private bool IsExtensionMethodAccessible(ISymbol symbol, INamedTypeSymbol withinType, ITypeSymbol thisScopeType)
+        private bool IsExtensionMethodAccessible(ISymbol symbol, INamedTypeSymbol withinType, ITypeSymbol thisScopeType, ITypeSymbol lambdaScopeType)
         {
             // must have a this scope receiver
-            if (thisScopeType == null) return false;
+            if (thisScopeType == null && lambdaScopeType == null) return false;
 
             // only check for extension methods
             if (!symbol.IsExtensionMethod()) return false;
@@ -301,11 +325,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
             // the scope receiver must also match the expected type
             if (symbol is IMethodSymbol method)
             {
-                var thisParam = method.Parameters.FirstOrDefault();
+                var extensionMethod = method;
+                if (method.IsReducedExtension())
+                    extensionMethod = method.ReducedFrom ?? method;
+
+                var thisParam = extensionMethod.Parameters.FirstOrDefault();
                 if (thisParam?.IsThis == true && thisParam.Type != null)
                 {
-                    var hasConversion = _context?.SemanticModel?.Compilation?.HasImplicitConversion(thisScopeType, thisParam.Type) == true;
-                    return hasConversion;
+                    // check the "this scope" type ... if it has a conversion
+                    if (thisScopeType != null)
+                    {
+                        var hasThisScopeConversion = _context?.SemanticModel?.Compilation?.HasImplicitConversion(thisScopeType, thisParam.Type) == true;
+                        if (hasThisScopeConversion) return true;
+                    }
+
+                    if (lambdaScopeType != null)
+                    {
+                        var hasLambdaScopeConversion = _context?.SemanticModel?.Compilation?.HasImplicitConversion(lambdaScopeType, thisParam.Type) == true;
+                        if (hasLambdaScopeConversion) return true;
+                    }
                 }
 
                 return false;
