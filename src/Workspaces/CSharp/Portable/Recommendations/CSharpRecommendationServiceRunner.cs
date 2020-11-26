@@ -295,8 +295,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
             var contextOuterTypes = _context.GetOuterTypes(_cancellationToken);
             symbols = symbols.WhereAsArray(symbol =>
                 !symbol.IsExtensionMethod() ||
-                contextEnclosingNamedType.Equals(symbol.ContainingType) ||
-                contextOuterTypes.Any(outerType => outerType.Equals(symbol.ContainingType)) ||
                 IsExtensionMethodAccessible(symbol, contextEnclosingNamedType, thisScopeType, lambdaScopeType)
             );
 
