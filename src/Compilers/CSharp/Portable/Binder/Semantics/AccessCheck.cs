@@ -451,6 +451,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return true;
             }
 
+            // Also check if the original containing type is a global namespace type
+            if (NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(originalContainingType.Name))
+            {
+                // the namespace must be exactly the same or a sub namespace
+                if (withinType.ContainingNamespace == originalContainingType.ContainingNamespace)
+                    return true;
+
+                // check if it's a sub namespace of the required namespace
+                if (withinType.ContainingNamespace?.QualifiedName.StartsWith(originalContainingType.ContainingNamespace?.QualifiedName ?? "") == true)
+                    return true;
+            }
+
             // Protected is really confusing.  Check out 3.5.3 of the language spec "protected access
             // for instance members" to see how it works.  I actually got the code for this from
             // LangCompiler::CheckAccessCore
@@ -503,7 +515,17 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // A private symbol is accessible if we're (optionally nested) inside the type that it
             // was defined in.
-            return IsNestedWithinOriginalContainingType(withinType, originalContainingType);
+            if (IsNestedWithinOriginalContainingType(withinType, originalContainingType))
+                return true;
+
+            // Also check if the original containing type is a global namespace type
+            if (NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(originalContainingType.Name))
+            {
+                // the namespace must match exactly for private members
+                return originalContainingType.ContainingNamespace == within.ContainingNamespace;
+            }
+
+            return false;
         }
 
         /// <summary>

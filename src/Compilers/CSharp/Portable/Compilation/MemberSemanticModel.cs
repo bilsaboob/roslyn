@@ -544,14 +544,21 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // in some cases with "extension methods" without a "this." specified... we may get an "ExpressionStatement" at the top ... then we actually prefer the BoundCall if it's the second top...
                 if (boundNodes.Length > 1)
                 {
-                    if (node is InvocationExpressionSyntax &&
-                        boundNode is BoundExpressionStatement boundExprStat &&
-                        boundExprStat.Expression is BoundCall boundCall && 
-                        boundNodes[1] == boundCall
-                        )
+                    if (node is InvocationExpressionSyntax invocationExpr) 
                     {
+                        var invocationName = invocationExpr.Expression?.ToString() ?? "";
+                        var dotIndex = invocationName.LastIndexOf('.');
+                        if (dotIndex != -1) invocationName = invocationName.Substring(dotIndex);
+
+                        var boundInvocation = boundNodes.FirstOrDefault(n => {
+                            if (n is BoundCall boundCall && boundCall.Method?.Name == invocationName)
+                                return true;
+                            return false;
+                        });
+
                         // prefer finding a "call" over an "expression statement"
-                        boundNode = boundNodes[1];
+                        if (boundInvocation != null)
+                            boundNode = boundInvocation;
                     }
                 }
 

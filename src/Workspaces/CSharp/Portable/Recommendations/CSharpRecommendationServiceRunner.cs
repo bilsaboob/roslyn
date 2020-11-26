@@ -245,19 +245,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
             }
 
             var isInStaticContext = _context.LeftToken.Parent.IsInStaticContext();
-            if (isInStaticContext)
+
+            var enclosingSymbol = _context.SemanticModel.GetEnclosingSymbol(_context.Position);
+            var thisScopeType = enclosingSymbol?.ContainingType?.GetSymbolType();
+
+            // could possibly also be a lambda with "this parameter" scope
+            if (enclosingSymbol is IMethodSymbol method)
             {
-                // could possibly also be a lambda with "this parameter" scope
-                var enclosingSymbol = _context.SemanticModel.GetEnclosingSymbol(_context.Position);
-                if (enclosingSymbol is IMethodSymbol method)
+                var thisParam = method.Parameters.FirstOrDefault();
+                if (thisParam?.IsThis == true)
                 {
-                    if (method.Parameters.FirstOrDefault()?.IsThis == true)
-                        isInStaticContext = false;
+                    isInStaticContext = false;
+                    thisScopeType = thisParam.Type;
                 }
             }
+
             var symbols = !_context.IsNameOfContext && isInStaticContext
                 ? _context.SemanticModel.LookupStaticMembers(_context.LeftToken.SpanStart)
                 : _context.SemanticModel.LookupSymbols(_context.LeftToken.SpanStart);
+
 
             // Filter out any extension methods that might be imported by a using static directive.
             // But include extension methods declared in the context's type or it's parents
@@ -266,7 +272,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
             symbols = symbols.WhereAsArray(symbol =>
                 !symbol.IsExtensionMethod() ||
                 contextEnclosingNamedType.Equals(symbol.ContainingType) ||
-                contextOuterTypes.Any(outerType => outerType.Equals(symbol.ContainingType)));
+                contextOuterTypes.Any(outerType => outerType.Equals(symbol.ContainingType)) ||
+                IsExtensionMethodAccessible(symbol, contextEnclosingNamedType, thisScopeType)
+            );
 
             // The symbols may include local variables that are declared later in the method and
             // should not be included in the completion list, so remove those. Filter them away,
@@ -277,6 +285,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Recommendations
             }
 
             return symbols;
+        }
+
+        private bool IsExtensionMethodAccessible(ISymbol symbol, INamedTypeSymbol withinType, ITypeSymbol thisScopeType)
+        {
+            // must have a this scope receiver
+            if (thisScopeType == null) return false;
+
+            // only check for extension methods
+            if (!symbol.IsExtensionMethod()) return false;
+
+            // must be accessible according to visiblity rules from where it's used
+            if (!symbol.IsAccessibleWithin(withinType)) return false;
+
+            // the scope receiver must also match the expected type
+            if (symbol is IMethodSymbol method)
+            {
+                var thisParam = method.Parameters.FirstOrDefault();
+                if (thisParam?.IsThis == true && thisParam.Type != null)
+                {
+                    var hasConversion = _context?.SemanticModel?.Compilation?.HasImplicitConversion(thisScopeType, thisParam.Type) == true;
+                    return hasConversion;
+                }
+
+                return false;
+            }
+
+            return true;
         }
 
         private ImmutableArray<ISymbol> GetSymbolsOffOfName(NameSyntax name)

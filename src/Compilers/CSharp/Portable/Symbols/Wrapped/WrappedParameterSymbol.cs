@@ -28,6 +28,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             Debug.Assert((object)underlyingParameter != null);
 
             this._underlyingParameter = underlyingParameter;
+
+            this.IsSpread = underlyingParameter.IsSpread;
+            this.IsThis = underlyingParameter.IsThis;
         }
 
         public ParameterSymbol UnderlyingParameter => _underlyingParameter;
@@ -35,6 +38,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public sealed override bool IsDiscard => _underlyingParameter.IsDiscard;
 
         #region Forwarded
+
+        public override bool IsSpread
+        {
+            get
+            {
+                if (_underlyingParameter.IsSpread) return true;
+                return base.IsSpread;
+            }
+            protected internal set => base.IsSpread = value; 
+        }
+
+        public override bool IsThis
+        {
+            get
+            {
+                if (_underlyingParameter.IsThis) return true;
+                return base.IsThis;
+            }
+            set => base.IsThis = value;
+        }
 
         public override TypeWithAnnotations TypeWithAnnotations
         {

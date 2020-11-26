@@ -41,6 +41,12 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
         public static IReadOnlyList<string> GetNameParts(this INamespaceOrTypeSymbol symbol)
             => s_namespaceOrTypeToNameMap.GetValue(symbol, s_getNamePartsCallBack);
 
+        public static string GetFullName(this INamespaceOrTypeSymbol symbol)
+        {
+            if (symbol == null) return "";
+            return symbol.GetNameParts()?.Join(".") ?? "";
+        }
+
         public static int CompareNameParts(
             IReadOnlyList<string> names1, IReadOnlyList<string> names2,
             bool placeSystemNamespaceFirst)

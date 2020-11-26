@@ -22,7 +22,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
     {
         internal const string ValueParameterName = "value";
 
-        private bool _isThis;
+        protected bool? _isThis;
+        protected bool? _isSpread;
 
         internal ParameterSymbol()
         {
@@ -130,7 +131,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// Returns true if the parameter is declared as a spread parameter type.
         /// </summary>
-        public virtual bool IsSpread { get; protected internal set; }
+        public virtual bool IsSpread
+        {
+            get
+            {
+                return _isSpread ?? false;
+            }
+            protected internal set
+            {
+                _isSpread = value;
+            }
+        }
 
         /// <summary>
         /// Returns true if the parameter is semantically optional.
@@ -375,7 +386,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get
             {
-                return _isThis;
+                return _isThis ?? false;
             }
             set
             {
