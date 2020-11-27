@@ -272,22 +272,32 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal bool CheckTypeParameterConstraits(TypeParameterSymbol typeParameter, TypeWithAnnotations typeArgument)
         {
-            ArrayBuilder<TypeParameterDiagnosticInfo> useSiteDiagnosticsBuilder = default;
+            var useSiteDiagnosticsBuilder = ArrayBuilder<TypeParameterDiagnosticInfo>.GetInstance();
+            var diagnosticsBuilder = ArrayBuilder<TypeParameterDiagnosticInfo>.GetInstance();
+            var nullabilityDiagnosticsBuilderOpt = ArrayBuilder<TypeParameterDiagnosticInfo>.GetInstance();
+            try
+            {
+                var result = ConstraintsHelper.CheckConstraints(
+                    containingSymbol: this,
+                    conversions: this.DeclaringCompilation.Conversions,
+                    substitution: this.TypeSubstitution,
+                    typeParameter: typeParameter,
+                    typeArgument: typeArgument,
+                    currentCompilation: this.DeclaringCompilation,
+                    diagnosticsBuilder: diagnosticsBuilder,
+                    nullabilityDiagnosticsBuilderOpt: nullabilityDiagnosticsBuilderOpt,
+                    ref useSiteDiagnosticsBuilder,
+                    null
+                );
 
-            var result = ConstraintsHelper.CheckConstraints(
-                containingSymbol: this,
-                conversions: this.DeclaringCompilation.Conversions,
-                substitution: this.TypeSubstitution,
-                typeParameter: typeParameter,
-                typeArgument: typeArgument,
-                currentCompilation: this.DeclaringCompilation,
-                diagnosticsBuilder: default,
-                nullabilityDiagnosticsBuilderOpt: default,
-                ref useSiteDiagnosticsBuilder,
-                null
-            );
-
-            return result;
+                return result;
+            }
+            finally
+            {
+                nullabilityDiagnosticsBuilderOpt.Free();
+                diagnosticsBuilder.Free();
+                useSiteDiagnosticsBuilder.Free();
+            }
         }
 
         /// <returns>
