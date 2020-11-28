@@ -3119,6 +3119,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             )
             where TMember : Symbol
         {
+            var hasReceiver = receiver != null;
+            var receiverType = receiver?.Type;
+
             if (member is MethodSymbol method && method.IsExtensionMethod && method.ParameterCount > 0)
             {
                 var firstParam = method.Parameters[0];
@@ -3130,7 +3133,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (arguments.Arguments.Count > 0)
                     {
                         var arg = arguments.Argument(0);
-
                         if (firstParam?.Type.Kind == SymbolKind.TypeParameter)
                         {
                             typesMatch = Compilation.CheckTypeParameterConstraitsInternal(method, (TypeParameterSymbol)firstParam.Type, arg?.Type);
@@ -3144,7 +3146,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // check if the first param match the receiver
                     if (!typesMatch && receiver != null)
                     {
-                        var thisParam = method.Parameters[0];
                         if (firstParam?.Type.Kind == SymbolKind.TypeParameter)
                         {
                             typesMatch = Compilation.CheckTypeParameterConstraitsInternal(method, (TypeParameterSymbol)firstParam.Type, receiver?.Type);
@@ -3162,7 +3163,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // AnalyzeArguments matches arguments to parameter names and positions. 
             // For that purpose we use the most derived member.
-            var argumentAnalysis = AnalyzeArguments(member, arguments, isMethodGroupConversion, expanded: false, hasReceiver: receiver != null);
+            var argumentAnalysis = AnalyzeArguments(member, arguments, isMethodGroupConversion, expanded: false, hasReceiver: hasReceiver);
 
             // handle spread parameters - if the initial analysis failed
             if (!argumentAnalysis.IsValid && argumentAnalysis.HasSpreadParameters)
@@ -3183,7 +3184,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     onlyUnmatchedArguments: onlyUnmatchedArguments,
                     onlyThisScopedLambdas: false,
                     acceptInvalidResult: true,
-                    hasReceiver: receiver != null
+                    hasReceiver: hasReceiver,
+                    receiverType: receiverType
                 );
             }
             else if (argumentAnalysis.HasLambdaArgumentsWithThisScope)
@@ -3197,7 +3199,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     onlyUnmatchedArguments: false,
                     onlyThisScopedLambdas: true,
                     acceptInvalidResult: true,
-                    hasReceiver: receiver != null
+                    hasReceiver: hasReceiver,
+                    receiverType: receiverType
                 );
             }
 
@@ -3270,15 +3273,70 @@ namespace Microsoft.CodeAnalysis.CSharp
             return applicableResult;
         }
 
+        private (bool, ImmutableArray<ParameterSymbol>, ImmutableArray<ParameterSymbol>) GetMemberParameters(Symbol member, AnalyzedArguments arguments, ArgumentAnalysisResult argumentAnalysis, bool hasReceiver, TypeSymbol receiverType)
+        {
+            var parameters = member.GetParameters();
+            if (member is MethodSymbol method)
+            {
+                if (method.IsGenericMethod)
+                {
+                    // for generic methods, we really need to have the "parameter type" if possible... but the types are generally infered later along the line... however, we can try to do our "best"...
+                    var typeParams = method.TypeParameters.ToList();
+                    var mappedTypeParams = typeParams.Select(tp => (tp, null as TypeSymbol)).ToList();
+
+                    // check the parameter types to know which ones we could possibly figure out
+                    for (var p = 0; p < method.Parameters.Length; ++p)
+                    {
+                        var param = method.Parameters[p];
+                        var type = param.Type;
+
+                        // match on the name
+                        var tpi = typeParams.FindIndex(tp => tp.Name == type.Name);
+                        if (tpi == -1) continue;
+
+                        // try getting the argument type
+                        var a = argumentAnalysis.ArgumentFromParameter(p);
+                        if (a == -1) continue;
+
+                        var arg = arguments.Arguments[a];
+                        if (arg == null) continue;
+
+                        var argType = arg.Type;
+                        if (argType is null || argType.IsErrorType()) continue;
+
+                        var mtp = mappedTypeParams[tpi];
+                        mappedTypeParams[tpi] = (mtp.tp, argType);
+                    }
+
+                    // build the type parameters we will use
+                    var constructedTypeParams = method.GetTypeParametersAsTypeArguments();
+                    for (var i = 0; i < mappedTypeParams.Count; ++i)
+                    {
+                        var mtp = mappedTypeParams[i];
+                        var mappedType = mtp.Item2;
+                        if (mappedType is null) continue;
+                        constructedTypeParams = constructedTypeParams.SetItem(i, TypeWithAnnotations.Create(mappedType));
+                    }
+
+                    // construct the non generic method and return those parameters
+                    var constructedMethod = method.Construct(constructedTypeParams) ?? method;
+                    return (true, parameters, constructedMethod.Parameters);
+                }
+            }
+
+            return (false, parameters, parameters);
+        }
+
         private ArgumentAnalysisResult AnalyzeLambdaArguments(
             Symbol member, AnalyzedArguments arguments, ArgumentAnalysisResult argumentAnalysis,
             bool isMethodGroupConversion,
             bool onlyUnmatchedArguments,
             bool onlyThisScopedLambdas,
             bool acceptInvalidResult,
-            bool hasReceiver)
+            bool hasReceiver,
+            TypeSymbol receiverType)
         {
-            var parameters = member.GetParameters();
+            var (isGenericMethod, parameters, constructedParameters) = GetMemberParameters(member, arguments, argumentAnalysis, hasReceiver, receiverType);
 
             var newArguments = ArrayBuilder<BoundExpression>.GetInstance();
             var newArgumentNames = ArrayBuilder<IdentifierNameSyntax>.GetInstance();
@@ -3308,8 +3366,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var newArg = arg;
                 if (param.Type?.IsDelegateType() == true)
                 {
-                    newArg = TryBuildAdaptedLambdaArg(param.Type, arg, i, onlyThisScopedLambdas);
-                    if (newArg == null) 
+                    var constructedParam = constructedParameters[paramIndex];
+                    var paramType = param.Type;
+                    var constructedParamType = constructedParam?.Type ?? paramType;
+
+                    newArg = TryBuildAdaptedLambdaArg(paramType, constructedParamType, arg, i, onlyThisScopedLambdas);
+                    if (newArg == null)
                         newArg = arg;
                 }
 
@@ -3340,7 +3402,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return argumentAnalysis;
         }
 
-        private BoundExpression TryBuildAdaptedLambdaArg(TypeSymbol paramType, BoundExpression arg, int argIndex, bool onlyThisScopedLambdas)
+        private BoundExpression TryBuildAdaptedLambdaArg(TypeSymbol paramType, TypeSymbol constructedParamType, BoundExpression arg, int argIndex, bool onlyThisScopedLambdas)
         {
             // can only fix parameters that are lambda types
             if (paramType?.IsDelegateType() != true) return null;
@@ -3355,13 +3417,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (onlyThisScopedLambdas && !firstParamIsThis)
                     return arg;
 
-                return BuildAdaptedLambdaArg(lambda, lambdaSyntax, paramType.DelegateParameters(), argIndex, firstParamIsThis);
+                return BuildAdaptedLambdaArg(lambda, lambdaSyntax, paramType.DelegateParameters(), constructedParamType.DelegateParameters(), argIndex, firstParamIsThis);
             }
 
             return arg;
         }
 
-        private BoundExpression BuildAdaptedLambdaArg(UnboundLambda lambda, LambdaExpressionSyntax lambdaSyntax, ImmutableArray<ParameterSymbol> expectedParameters, int argIndex, bool firstParamIsThis)
+        private BoundExpression BuildAdaptedLambdaArg(UnboundLambda lambda, LambdaExpressionSyntax lambdaSyntax, ImmutableArray<ParameterSymbol> expectedParameters, ImmutableArray<ParameterSymbol> constructedParameters, int argIndex, bool firstParamIsThis)
         {
             // the lambda has parameters - now we need to "fill" in the missing parameters for the lambda to match the expected parameters
             var parametersListSyntax = new SeparatedSyntaxList<ParameterSyntax>();
@@ -3373,6 +3435,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             for (var i = 0; i < expectedParameters.Length; ++i)
             {
                 var expectedParam = expectedParameters[i];
+                
                 var isThis = firstParamIsThis && i == 0;
                 if (isThis) hasAnyThisParam = true;
 
@@ -3421,7 +3484,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                         name = lambdaParamName;
 
                     var paramName = isThis ? "@this" : name;
-                    var paramSyntax = SyntaxFactory.Parameter(default, default, SyntaxFactory.Identifier(paramName), SyntaxFactory.IdentifierName(expectedParam.Type.Name), null);
+
+                    // if we are on a generic type parameter - we need to actually use the constructed... otherwise type inference will fail... a lambda expression can't have generic type ... it must have a constructed type ...
+                    var expectedParamType = expectedParam.Type;
+                    if (expectedParamType.Kind == SymbolKind.TypeParameter)
+                        expectedParamType = constructedParameters[i]?.Type ?? expectedParamType;
+
+                    var paramSyntax = SyntaxFactory.Parameter(default, default, SyntaxFactory.Identifier(paramName), SyntaxFactory.IdentifierName(expectedParamType.Name), null);
 
                     // if we have a name but not a type, use the lambda param index as the original param index ... we expected to match it...
                     if (lambdaParamType is null && !string.IsNullOrEmpty(lambdaParamName) && !isThis)
@@ -3646,7 +3715,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (argMemberType?.IsDelegateType() == true)
                 {
                     // try adapting the argument
-                    var adaptedArg = TryBuildAdaptedLambdaArg(argMemberType, arg, -1, onlyThisScopedLambdas: false);
+                    var adaptedArg = TryBuildAdaptedLambdaArg(argMemberType, argMemberType, arg, -1, onlyThisScopedLambdas: false);
                     if (adaptedArg != null) arg = adaptedArg;
                 }
 
