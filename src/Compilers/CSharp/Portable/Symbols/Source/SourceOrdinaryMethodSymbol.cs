@@ -168,6 +168,34 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        public static TypeWithAnnotations PostProcessReturnType(TypeWithAnnotations returnType, TypeWithAnnotations? explicitInterfaceType, Binder signatureBinder, TypeSyntax returnTypeSyntax, bool isAsync, DiagnosticBag diagnostics)
+        {
+            if (returnType.Type is null)
+            {
+                if (explicitInterfaceType.HasValue)
+                {
+                    returnType = explicitInterfaceType.Value;
+                }
+                else
+                {
+                    returnType = TypeWithAnnotations.Create(signatureBinder.CreateErrorType());
+                }
+            }
+            else if (explicitInterfaceType.HasValue)
+            {
+                // must always use the explicit interface type otherwise
+                returnType = explicitInterfaceType.Value;
+            }
+
+            // make sure that the return type of the method is "Task" for async declarations, and if its not - synthesize the Task<...> type
+            if (isAsync)
+            {
+                returnType = signatureBinder.BindAsTaskType(returnType, diagnostics, returnTypeSyntax);
+            }
+
+            return returnType;
+        }
+
         protected override (TypeWithAnnotations ReturnType, ImmutableArray<ParameterSymbol> Parameters, bool IsVararg, ImmutableArray<TypeParameterConstraintClause> DeclaredConstraintsForOverrideOrImplementation) MakeParametersAndBindReturnType(DiagnosticBag diagnostics)
         {
             var syntax = GetSyntax();
@@ -199,7 +227,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var returnTypeSyntax = syntax.ReturnType.SkipRef(out refKind);
 
             TypeWithAnnotations returnType = signatureBinder.BindType(returnTypeSyntax, diagnostics);
-
             var explicitInterfaceType = TryGetExplicitInterfaceType();
 
             // if it's an error type, try to resolve from the Body instead!
@@ -210,8 +237,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 if (bodyBinder != null)
                 {
                     // evaluate method body
-                    var bodyDiagnostics = new DiagnosticBag();
-                    var boundBody = bodyBinder.BindMethodBody(syntax, bodyDiagnostics);
+                    var tmpDiagnostics = DiagnosticBag.GetInstance();
+
+                    // set the return type to "something" before attempting any body resolution at all
+                    _lazyReturnType = PostProcessReturnType(returnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, tmpDiagnostics);
+
+                    // before we do a full binding of the body, we could attempt just binding the "return statements" ... this will then work for "recursive methods" methods too...
+                    // "temporarily" set the first resolve type we get
+                    TypeWithAnnotations tmpReturnType = returnType;
+                    var (firstResolvedType, firstIsVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(syntax, bodyBinder, bodyBinder.Conversions);
+                    if (firstIsVoidType) tmpReturnType = signatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
+                    else if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
+                    _lazyReturnType = PostProcessReturnType(tmpReturnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, tmpDiagnostics);
+                    tmpDiagnostics.Free();
+
+                    // now do a full body binding to get the "real" return type
+                    var boundBody = bodyBinder.BindMethodBody(syntax, diagnostics);
                     var (resolvedType, isVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnType(boundBody, bodyBinder.Conversions, out var useSiteDiagnostics);
                     if (isVoidType) returnType = signatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
                     else if (resolvedType != null) returnType = resolvedType.Value;
@@ -228,28 +269,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             // make sure we always have a return type, even if it's an error type
-            if (returnType.Type is null)
-            {
-                if (explicitInterfaceType.HasValue)
-                {
-                    returnType = explicitInterfaceType.Value;
-                }
-                else
-                {
-                    returnType = TypeWithAnnotations.Create(signatureBinder.CreateErrorType());
-                }
-            }
-            else if (explicitInterfaceType.HasValue)
-            {
-                // must always use the explicit interface type otherwise
-                returnType = explicitInterfaceType.Value;
-            }
-
-            // make sure that the return type of the method is "Task" for async declarations, and if its not - synthesize the Task<...> type
-            if (IsAsync)
-            {
-                returnType = signatureBinder.BindAsTaskType(returnType, diagnostics, returnTypeSyntax);
-            }
+            returnType = PostProcessReturnType(returnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, diagnostics);
 
             // span-like types are returnable in general
             if (returnType.IsRestrictedType(ignoreSpanLikeTypes: true))

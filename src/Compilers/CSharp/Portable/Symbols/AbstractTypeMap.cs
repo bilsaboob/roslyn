@@ -115,7 +115,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     result = SubstituteDynamicType();
                     break;
                 case SymbolKind.ErrorType:
-                    return ((ErrorTypeSymbol)previous).Substitute(this);
+                    if (previous is ErrorTypeSymbol errorTypeSymbol)
+                    {
+                        return errorTypeSymbol.Substitute(this);
+                    }
+                    else if (previous is NamedTypeSymbol)
+                    {
+                        result = SubstituteNamedType((NamedTypeSymbol)previous);
+                        break;
+                    }
+                    result = previous;
+                    break;
                 default:
                     result = previous;
                     break;

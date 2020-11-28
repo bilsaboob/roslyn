@@ -235,14 +235,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             TypeWithAnnotations returnType = _binder.BindType(returnTypeSyntax.SkipRef(), diagnostics);
 
             // if there is an issue with the return type - try to do the binding from the body - only if this is a method without explicit return type
-            if (returnType.Type?.IsErrorType() == true && !Syntax.HasExplicitReturnType()) 
+            if (returnType.Type?.IsErrorType() == true && !Syntax.HasExplicitReturnType())
             {
+                var tmpDiagnostics = DiagnosticBag.GetInstance();
                 // temporarily set the return type before attempting any binding ... it's an error type ... but thats fine ... it will either stay so or will get an infered type from body
-                Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(returnType));
+                var tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(returnType, null, _binder, returnTypeSyntax, IsAsync, tmpDiagnostics);
+                Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(tmpReturnType));
                 updateReturnType = true;
 
+                // before we do a full binding of the body, we could attempt just binding the "return statements" ... this will then work for "recursive methods" methods too...
+                // "temporarily" set the first resolve type we get
+                tmpReturnType = returnType;
+                var (firstResolvedType, firstIsVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(Syntax, _binder, _binder.Conversions);
+                if (firstIsVoidType) tmpReturnType = _binder.BindSpecialType(SyntaxKind.VoidKeyword);
+                else if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
+                tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(tmpReturnType, null, _binder, returnTypeSyntax, IsAsync, tmpDiagnostics);
+                Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(tmpReturnType));
+
                 // bind the body of the function
-                var tmpDiagnostics = DiagnosticBag.GetInstance();
                 BoundNode boundBodyNode = null;
                 if (Syntax.Body != null)
                     boundBodyNode = _binder.BindEmbeddedBlock(Syntax.Body, tmpDiagnostics);

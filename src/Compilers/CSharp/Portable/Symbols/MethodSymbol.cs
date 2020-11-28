@@ -272,6 +272,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal bool CheckTypeParameterConstraits(TypeParameterSymbol typeParameter, TypeWithAnnotations typeArgument)
         {
+            var substitution = this.TypeSubstitution;
+            if (substitution == null) return false;
+
             var useSiteDiagnosticsBuilder = ArrayBuilder<TypeParameterDiagnosticInfo>.GetInstance();
             var diagnosticsBuilder = ArrayBuilder<TypeParameterDiagnosticInfo>.GetInstance();
             var nullabilityDiagnosticsBuilderOpt = ArrayBuilder<TypeParameterDiagnosticInfo>.GetInstance();
@@ -280,7 +283,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var result = ConstraintsHelper.CheckConstraints(
                     containingSymbol: this,
                     conversions: this.DeclaringCompilation.Conversions,
-                    substitution: this.TypeSubstitution,
+                    substitution: substitution,
                     typeParameter: typeParameter,
                     typeArgument: typeArgument,
                     currentCompilation: this.DeclaringCompilation,

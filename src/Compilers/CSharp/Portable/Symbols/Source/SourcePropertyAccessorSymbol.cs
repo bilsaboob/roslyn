@@ -550,21 +550,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         var bodyBinder = TryGetBodyBinder();
                         if (bodyBinder != null)
                         {
-                            var (blockBody, arrowBody) = Bodies;
+                            var tmpDiagnostics = DiagnosticBag.GetInstance();
 
+                            var (blockBody, arrowBody) = Bodies;
+                            var csBodySyntax = blockBody ?? arrowBody as CSharpSyntaxNode;
+
+                            // set the return type to something at least
+                            _lazyReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(type, null, bodyBinder, propDeclSyntax.Type, IsAsync, tmpDiagnostics);
+
+                            // try to make a simple resolving of return type based on return syntaxes
+                            TypeWithAnnotations tmpReturnType = default;
+                            var (firstResolvedType, _) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(csBodySyntax, bodyBinder, bodyBinder.Conversions);
+                            if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
+                            _lazyReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(tmpReturnType, null, bodyBinder, propDeclSyntax.Type, IsAsync, tmpDiagnostics);
+                            tmpDiagnostics.Free();
+
+                            // bind the body and evaluate the return type
                             BoundNode boundBody = null;
-                            var bodyDiagnostics = new DiagnosticBag();
                             if (blockBody != null)
                             {
                                 bodySyntax = blockBody;
-                                boundBody = bodyBinder.BindEmbeddedBlock(blockBody, bodyDiagnostics, bodyBinder);
+                                boundBody = bodyBinder.BindEmbeddedBlock(blockBody, diagnostics, bodyBinder);
                             }
                             else if (arrowBody != null)
                             {
                                 bodySyntax = arrowBody;
-                                boundBody = bodyBinder.BindExpressionBodyAsBlock(arrowBody, bodyDiagnostics, bodyBinder);
+                                boundBody = bodyBinder.BindExpressionBodyAsBlock(arrowBody, diagnostics, bodyBinder);
                             }
-                            bodyDiagnostics.Free();
 
                             if (boundBody != null)
                             {
