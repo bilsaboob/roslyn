@@ -63,7 +63,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.Formatting
             using (Logger.LogBlock(FunctionId.CommandHandler_FormatCommand, KeyValueLogMessage.Create(LogType.UserAction, m => m["Span"] = selectionOpt?.Length ?? -1), cancellationToken))
             using (var transaction = CreateEditTransaction(textView, EditorFeaturesResources.Formatting))
             {
-                var changes = formattingService.GetFormattingChangesAsync(document, selectionOpt, cancellationToken).WaitAndGetResult(cancellationToken);
+                var changes = formattingService.GetFormattingChangesAsync(document, selectionOpt, cancellationToken, CodeAnalysis.Formatting.FormattingReason.CommandAction).WaitAndGetResult(cancellationToken);
                 if (changes.Count == 0)
                 {
                     return;

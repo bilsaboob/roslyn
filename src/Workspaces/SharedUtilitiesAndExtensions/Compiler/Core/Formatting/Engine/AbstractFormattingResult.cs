@@ -17,6 +17,7 @@ namespace Microsoft.CodeAnalysis.Formatting
     public enum FormattingReason
     {
         DefaultFormatAction,
+        CommandAction,
         CopyPasteAction,
     }
 

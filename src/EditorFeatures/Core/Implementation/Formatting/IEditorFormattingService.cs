@@ -29,7 +29,7 @@ namespace Microsoft.CodeAnalysis.Editor
         /// Returns the text changes necessary to format the document.  If "textSpan" is provided,
         /// only the text changes necessary to format that span are needed.
         /// </summary>
-        Task<IList<TextChange>> GetFormattingChangesAsync(Document document, TextSpan? textSpan, CancellationToken cancellationToken);
+        Task<IList<TextChange>> GetFormattingChangesAsync(Document document, TextSpan? textSpan, CancellationToken cancellationToken, Formatting.FormattingReason reason = Formatting.FormattingReason.DefaultFormatAction);
 
         /// <summary>
         /// Returns the text changes necessary to format the document on paste operation.

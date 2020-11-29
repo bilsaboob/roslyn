@@ -37,7 +37,7 @@ namespace Microsoft.CodeAnalysis.ExternalAccess.FSharp.Internal.Editor
 
         public bool SupportsFormatOnReturn => _service.SupportsFormatOnReturn;
 
-        public Task<IList<TextChange>> GetFormattingChangesAsync(Document document, TextSpan? textSpan, CancellationToken cancellationToken)
+        public Task<IList<TextChange>> GetFormattingChangesAsync(Document document, TextSpan? textSpan, CancellationToken cancellationToken, Formatting.FormattingReason reason = Formatting.FormattingReason.DefaultFormatAction)
         {
             return _service.GetFormattingChangesAsync(document, textSpan, cancellationToken);
         }

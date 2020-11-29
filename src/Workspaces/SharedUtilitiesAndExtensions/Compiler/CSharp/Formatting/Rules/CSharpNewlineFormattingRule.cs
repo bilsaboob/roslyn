@@ -14,11 +14,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 {
     internal class CSharpNewlineFormattingRule : BaseFormattingRule
     {
-        private ConcurrentDictionary<SyntaxToken, bool> _executedOperations;
-
         internal CSharpNewlineFormattingRule()
         {
-            _executedOperations = new ConcurrentDictionary<SyntaxToken, bool>();
         }
 
         public override AdjustNewLinesOperation GetAdjustNewLinesOperation(in SyntaxToken previousToken, in SyntaxToken currentToken, in NextGetAdjustNewLinesOperation nextOperation, FormattingReason reason)
@@ -57,7 +54,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         private AdjustNewLinesOperation EvalNewlineForSemicolon(SyntaxToken previousToken, SyntaxToken currentToken, FormattingReason reason)
         {
-            if (reason != FormattingReason.CopyPasteAction) return null;
+            if (reason != FormattingReason.CopyPasteAction && reason != FormattingReason.CommandAction) return null;
 
             var currentDecl = currentToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
             // we only handle for supported top statements

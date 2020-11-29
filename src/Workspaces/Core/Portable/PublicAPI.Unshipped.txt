@@ -1,3 +1,5 @@
 Microsoft.CodeAnalysis.Formatting.FormattingReason
-Microsoft.CodeAnalysis.Formatting.FormattingReason.CopyPasteAction = 1 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
+Microsoft.CodeAnalysis.Formatting.FormattingReason.CommandAction = 1 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
+Microsoft.CodeAnalysis.Formatting.FormattingReason.CopyPasteAction = 2 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
 Microsoft.CodeAnalysis.Formatting.FormattingReason.DefaultFormatAction = 0 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
+static Microsoft.CodeAnalysis.Formatting.Formatter.GetFormattedTextChanges(Microsoft.CodeAnalysis.SyntaxNode node, System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.Text.TextSpan> spans, Microsoft.CodeAnalysis.Workspace workspace, Microsoft.CodeAnalysis.Options.OptionSet options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), Microsoft.CodeAnalysis.Formatting.FormattingReason reason = Microsoft.CodeAnalysis.Formatting.FormattingReason.DefaultFormatAction) -> System.Collections.Generic.IList<Microsoft.CodeAnalysis.Text.TextChange>

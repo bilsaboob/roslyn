@@ -100,7 +100,7 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.Formatting
             return _supportedChars.Contains(ch);
         }
 
-        public async Task<IList<TextChange>> GetFormattingChangesAsync(Document document, TextSpan? textSpan, CancellationToken cancellationToken)
+        public async Task<IList<TextChange>> GetFormattingChangesAsync(Document document, TextSpan? textSpan, CancellationToken cancellationToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
             var root = await document.GetRequiredSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
             var span = textSpan ?? new TextSpan(0, root.FullSpan.Length);
@@ -109,7 +109,7 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.Formatting
             var options = await document.GetDocumentOptionsWithInferredIndentationAsync(explicitFormat: true, indentationManagerService: _indentationManagerService, cancellationToken: cancellationToken).ConfigureAwait(false);
             return Formatter.GetFormattedTextChanges(root,
                 SpecializedCollections.SingletonEnumerable(formattingSpan),
-                document.Project.Solution.Workspace, options, cancellationToken);
+                document.Project.Solution.Workspace, options, rules: null, cancellationToken, reason);
         }
 
         public async Task<IList<TextChange>> GetFormattingChangesOnPasteAsync(Document document, TextSpan textSpan, CancellationToken cancellationToken)

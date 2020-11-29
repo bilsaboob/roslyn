@@ -1,3 +1,7 @@
+Microsoft.CodeAnalysis.Formatting.FormattingReason
+Microsoft.CodeAnalysis.Formatting.FormattingReason.CommandAction = 1 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
+Microsoft.CodeAnalysis.Formatting.FormattingReason.CopyPasteAction = 2 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
+Microsoft.CodeAnalysis.Formatting.FormattingReason.DefaultFormatAction = 0 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
 Microsoft.CodeAnalysis.Internal.Editing.DeclarationKind
 Microsoft.CodeAnalysis.Internal.Editing.DeclarationKind.AddAccessor = 26 -> Microsoft.CodeAnalysis.Internal.Editing.DeclarationKind
 Microsoft.CodeAnalysis.Internal.Editing.DeclarationKind.Attribute = 22 -> Microsoft.CodeAnalysis.Internal.Editing.DeclarationKind
