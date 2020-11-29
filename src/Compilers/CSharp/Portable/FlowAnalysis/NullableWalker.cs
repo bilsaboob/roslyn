@@ -5715,6 +5715,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     result = resultMethod.Construct(((MethodSymbol)symbol).TypeArgumentsWithAnnotations);
                 }
+                else if (result is PropertySymbol resultProperty)
+                {
+                    var returnType = resultProperty.GetTypeOrReturnType().Type;
+                    if (returnType.TypeKind == TypeKind.TypeParameter)
+                    {
+                        result = symbol;
+                        return true;
+                    }
+                }
                 return true;
             }
         }
