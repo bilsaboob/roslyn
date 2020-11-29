@@ -196,7 +196,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return returnType;
         }
 
+        private bool _isCalculatingReturnType;
+        private TypeWithAnnotations _partialReturnType;
+        public override TypeWithAnnotations ReturnTypeWithAnnotations
+        {
+            get
+            {
+                if (_isCalculatingReturnType)
+                    return _partialReturnType;
+
+                return base.ReturnTypeWithAnnotations;
+            }
+        }
+
         protected override (TypeWithAnnotations ReturnType, ImmutableArray<ParameterSymbol> Parameters, bool IsVararg, ImmutableArray<TypeParameterConstraintClause> DeclaredConstraintsForOverrideOrImplementation) MakeParametersAndBindReturnType(DiagnosticBag diagnostics)
+        {
+            try
+            {
+                _isCalculatingReturnType = true;
+                return MakeParametersAndBindReturnType_(diagnostics);
+            }
+            finally
+            {
+                _isCalculatingReturnType = false;
+            }
+        }
+
+        protected (TypeWithAnnotations ReturnType, ImmutableArray<ParameterSymbol> Parameters, bool IsVararg, ImmutableArray<TypeParameterConstraintClause> DeclaredConstraintsForOverrideOrImplementation) MakeParametersAndBindReturnType_(DiagnosticBag diagnostics)
         {
             var syntax = GetSyntax();
             var withTypeParamsBinder = this.DeclaringCompilation.GetBinderFactory(syntax.SyntaxTree).GetBinder(syntax.ReturnType, syntax, this);
@@ -243,17 +269,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                     // set the return type to "something" before attempting any body resolution at all
                     tmpReturnType = PostProcessReturnType(returnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, tmpDiagnostics);
-                    if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
-                        _lazyReturnType = tmpReturnType;
+                    _partialReturnType = tmpReturnType;
 
                     // before we do a full binding of the body, we could attempt just binding the "return statements" ... this will then work for "recursive methods" methods too...
                     // "temporarily" set the first resolve type we get
                     var (firstResolvedType, firstIsVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(syntax, bodyBinder, bodyBinder.Conversions);
                     if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
                     tmpReturnType = PostProcessReturnType(tmpReturnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, tmpDiagnostics);
+                    _partialReturnType = tmpReturnType;
 
-                    if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
-                        _lazyReturnType = tmpReturnType;
                     tmpDiagnostics.Free();
 
                     // now do a full body binding to get the "real" return type

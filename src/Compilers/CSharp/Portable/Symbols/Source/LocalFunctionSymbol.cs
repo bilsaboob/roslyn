@@ -214,10 +214,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        private bool _isCalculatingReturnType;
+        private TypeWithAnnotations _partialReturnType;
+
         public override TypeWithAnnotations ReturnTypeWithAnnotations
         {
             get
             {
+                if (_isCalculatingReturnType)
+                    return _partialReturnType;
+
                 ComputeReturnType();
                 return _lazyReturnType!.Value;
             }
@@ -226,6 +232,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public override RefKind RefKind => _refKind;
 
         internal void ComputeReturnType()
+        {
+            try
+            {
+                _isCalculatingReturnType = true;
+                ComputeReturnType_();
+            }
+            finally
+            {
+                _isCalculatingReturnType = false;
+            }
+        }
+
+        internal void ComputeReturnType_()
         {
             if (_lazyReturnType != null) return;
 
@@ -237,14 +256,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // if there is an issue with the return type - try to do the binding from the body - only if this is a method without explicit return type
             if (returnType.Type?.IsErrorType() == true && !Syntax.HasExplicitReturnType())
             {
+                updateReturnType = true;
+
                 var tmpDiagnostics = DiagnosticBag.GetInstance();
                 // temporarily set the return type before attempting any binding ... it's an error type ... but thats fine ... it will either stay so or will get an infered type from body
                 var tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(returnType, null, _binder, returnTypeSyntax, IsAsync, tmpDiagnostics);
-                if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
-                {
-                    Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(tmpReturnType));
-                    updateReturnType = true;
-                }
+                _partialReturnType = tmpReturnType;
 
                 // before we do a full binding of the body, we could attempt just binding the "return statements" ... this will then work for "recursive methods" methods too...
                 // "temporarily" set the first resolve type we get
@@ -252,11 +269,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var (firstResolvedType, firstIsVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(Syntax, _binder, _binder.Conversions);
                 if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
                 tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(tmpReturnType, null, _binder, returnTypeSyntax, IsAsync, tmpDiagnostics);
-                if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
-                {
-                    Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(tmpReturnType));
-                    updateReturnType = true;
-                }
+                _partialReturnType = tmpReturnType;
 
                 // bind the body of the function
                 BoundNode boundBodyNode = null;

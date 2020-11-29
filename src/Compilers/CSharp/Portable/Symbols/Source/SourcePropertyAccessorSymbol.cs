@@ -486,6 +486,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get
             {
+                if (_isCalculatingReturnType)
+                    return default;
+
                 LazyMethodChecks();
                 return _lazyReturnType;
             }
@@ -515,12 +518,23 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public sealed override ImmutableHashSet<string> ReturnNotNullIfParameterNotNull => ImmutableHashSet<string>.Empty;
 
-        private TypeWithAnnotations ComputeReturnType(DiagnosticBag diagnostics)
-        {
-            return ComputeReturnType(diagnostics, out _);
-        }
+        private bool _isCalculatingReturnType;
+        private TypeWithAnnotations _partialReturnType;
 
         private TypeWithAnnotations ComputeReturnType(DiagnosticBag diagnostics, out SyntaxNode bodySyntax)
+        {
+            try
+            {
+                _isCalculatingReturnType = true;
+                return ComputeReturnType_(diagnostics, out bodySyntax);
+            }
+            finally
+            {
+                _isCalculatingReturnType = false;
+            }
+        }
+
+        private TypeWithAnnotations ComputeReturnType_(DiagnosticBag diagnostics, out SyntaxNode bodySyntax)
         {
             bodySyntax = null;
 
@@ -559,15 +573,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                             // set the return type to something at least
                             tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(type, null, bodyBinder, propDeclSyntax.Type, IsAsync, tmpDiagnostics);
-                            if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
-                                _lazyReturnType = tmpReturnType;
+                            _partialReturnType = tmpReturnType;
 
                             // try to make a simple resolving of return type based on return syntaxes
                             var (firstResolvedType, _) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(csBodySyntax, bodyBinder, bodyBinder.Conversions);
                             if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
                             tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(tmpReturnType, null, bodyBinder, propDeclSyntax.Type, IsAsync, tmpDiagnostics);
-                            if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
-                                _lazyReturnType = tmpReturnType;
+                            _partialReturnType = tmpReturnType;
 
                             tmpDiagnostics.Free();
 
