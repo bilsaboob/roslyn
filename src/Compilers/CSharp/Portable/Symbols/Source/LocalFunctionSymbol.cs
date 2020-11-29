@@ -247,8 +247,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 // "temporarily" set the first resolve type we get
                 tmpReturnType = returnType;
                 var (firstResolvedType, firstIsVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(Syntax, _binder, _binder.Conversions);
-                if (firstIsVoidType) tmpReturnType = _binder.BindSpecialType(SyntaxKind.VoidKeyword);
-                else if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
+                if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
                 tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(tmpReturnType, null, _binder, returnTypeSyntax, IsAsync, tmpDiagnostics);
                 Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(tmpReturnType));
 
