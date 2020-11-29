@@ -861,7 +861,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Retain candidates with use site diagnostics for later reporting.
             if (result.Result.IsValid || completeResults || result.HasUseSiteDiagnosticToReport)
             {
-                results.Add(result);
+                if (!result.IsNull)
+                    results.Add(result);
             }
         }
 

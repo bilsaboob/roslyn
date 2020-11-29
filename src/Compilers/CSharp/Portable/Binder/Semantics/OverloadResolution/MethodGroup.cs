@@ -33,7 +33,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             DiagnosticInfo error = null)
         {
             this.PopulateHelper(receiverOpt, resultKind, error);
-            this.Methods.Add(method);
+            if (method != null)
+                this.Methods.Add(method);
         }
 
         internal void PopulateWithExtensionMethods(
@@ -47,7 +48,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.IsExtensionMethodGroup = true;
             foreach (var member in members)
             {
-                this.Methods.Add((MethodSymbol)member);
+                if (member != null)
+                    this.Methods.Add((MethodSymbol)member);
             }
             if (!typeArguments.IsDefault)
             {
@@ -63,7 +65,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             DiagnosticInfo error = null)
         {
             this.PopulateHelper(receiverOpt, resultKind, error);
-            this.Methods.AddRange(methods);
+            foreach (var method in methods)
+            {
+                if (method != null)
+                    this.Methods.Add(method);
+            }
             if (!typeArguments.IsDefault)
             {
                 this.TypeArguments.AddRange(typeArguments);

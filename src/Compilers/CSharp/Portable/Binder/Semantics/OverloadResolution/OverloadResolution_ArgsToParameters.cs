@@ -199,6 +199,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var tmpParameterPosition = parameterPosition;
                 var foundMatchAhead = false;
                 var firstPossibleLambdaDiscardMatchParamPosition = -1;
+                var matchedParamsParameter = false;
 
                 while (true)
                 {
@@ -206,6 +207,39 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (parameterPosition >= parameterCount) break;
 
                     var conversion = CheckArgumentForApplicability(symbol, argumentPosition, parameterPosition, arguments, parameters, ignoreOpenTypes: true);
+
+                    // first handle special case when we have a "params" parameter - but only if we are evaluating the expanded form
+                    if (!conversion.Exists && expanded)
+                    {
+                        var param = parameters[parameterPosition];
+
+                        // if it's a params, we can get some additional information about this and handle it explicitly when making the final decision later on
+                        if (param?.IsParams == true)
+                        {
+                            // also check if the arg type matches the params type
+                            HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+                            var argRefKind = arguments.RefKind(argumentPosition);
+                            var paramsType = GetParamsType(param.Type);
+                            if (!(paramsType is null))
+                            {
+                                conversion = CheckArgumentForApplicability(
+                                    symbol,
+                                    arg,
+                                    argRefKind,
+                                    paramsType,
+                                    RefKind.None,
+                                    ignoreOpenTypes: true,
+                                    ref useSiteDiagnostics,
+                                    forExtensionMethodThisArg: false
+                                );
+
+                                // don't proceed to the next parameter... "params" should be the last possible parameter ...
+                                if (conversion.Exists)
+                                    matchedParamsParameter = true;
+                            }
+                        }
+                    }
+
                     if (!conversion.Exists)
                     {
                         var param = parameters[parameterPosition];
@@ -284,7 +318,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
 
                 // increment the expected parameter position
-                moveToNextParameterPosition();
+                if (!matchedParamsParameter)
+                    moveToNextParameterPosition();
             }
 
             ParameterMap argsToParameters = new ParameterMap(parametersPositions, argumentCount);
@@ -368,6 +403,34 @@ namespace Microsoft.CodeAnalysis.CSharp
             result.HasLambdaArgumentsWithThisScope = hasAnyLambdaArgWithThisScope;
 
             return result;
+        }
+
+        private TypeSymbol GetParamsType(TypeSymbol type)
+        {
+            if (type is null || type.IsErrorType()) return null;
+
+            // check if it's an array?
+            if (type is ArrayTypeSymbol arrayType)
+                return arrayType.ElementType;
+
+            // must be a subtype of "IEnumerable"
+            var hasEnumerableType = type.GetAllInterfaces().Any(i => i.ToString() == "System.Collections.IEnumerable");
+            if (!hasEnumerableType) return null;
+
+            // if it's a generic type, we assume the first arg is the element type
+            var typeArgs = type.GetMemberTypeArgumentsNoUseSiteDiagnostics();
+            if (typeArgs.Length > 1)
+            {
+                // generic type with more than 1 type argument is invalid
+                return null;
+            }
+
+            // if it's a single type, lets return that as the element type
+            if (typeArgs.Length == 1)
+                return typeArgs[0];
+
+            // generic type with more than 0 argument is invalid
+            return Compilation.GetSpecialType(SpecialType.System_Object);
         }
 
         private Conversion CheckArgumentForApplicability(
