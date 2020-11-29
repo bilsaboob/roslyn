@@ -239,15 +239,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     // evaluate method body
                     var tmpDiagnostics = DiagnosticBag.GetInstance();
 
+                    TypeWithAnnotations tmpReturnType = default;
+
                     // set the return type to "something" before attempting any body resolution at all
-                    _lazyReturnType = PostProcessReturnType(returnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, tmpDiagnostics);
+                    tmpReturnType = PostProcessReturnType(returnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, tmpDiagnostics);
+                    if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
+                        _lazyReturnType = tmpReturnType;
 
                     // before we do a full binding of the body, we could attempt just binding the "return statements" ... this will then work for "recursive methods" methods too...
                     // "temporarily" set the first resolve type we get
-                    TypeWithAnnotations tmpReturnType = returnType;
                     var (firstResolvedType, firstIsVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(syntax, bodyBinder, bodyBinder.Conversions);
                     if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
-                    _lazyReturnType = PostProcessReturnType(tmpReturnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, tmpDiagnostics);
+                    tmpReturnType = PostProcessReturnType(tmpReturnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, tmpDiagnostics);
+
+                    if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
+                        _lazyReturnType = tmpReturnType;
                     tmpDiagnostics.Free();
 
                     // now do a full body binding to get the "real" return type

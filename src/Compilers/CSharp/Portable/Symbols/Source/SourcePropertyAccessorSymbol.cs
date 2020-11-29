@@ -555,14 +555,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                             var (blockBody, arrowBody) = Bodies;
                             var csBodySyntax = blockBody ?? arrowBody as CSharpSyntaxNode;
 
+                            TypeWithAnnotations tmpReturnType = default;
+
                             // set the return type to something at least
-                            _lazyReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(type, null, bodyBinder, propDeclSyntax.Type, IsAsync, tmpDiagnostics);
+                            tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(type, null, bodyBinder, propDeclSyntax.Type, IsAsync, tmpDiagnostics);
+                            if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
+                                _lazyReturnType = tmpReturnType;
 
                             // try to make a simple resolving of return type based on return syntaxes
-                            TypeWithAnnotations tmpReturnType = default;
                             var (firstResolvedType, _) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(csBodySyntax, bodyBinder, bodyBinder.Conversions);
                             if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
-                            _lazyReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(tmpReturnType, null, bodyBinder, propDeclSyntax.Type, IsAsync, tmpDiagnostics);
+                            tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(tmpReturnType, null, bodyBinder, propDeclSyntax.Type, IsAsync, tmpDiagnostics);
+                            if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
+                                _lazyReturnType = tmpReturnType;
+
                             tmpDiagnostics.Free();
 
                             // bind the body and evaluate the return type

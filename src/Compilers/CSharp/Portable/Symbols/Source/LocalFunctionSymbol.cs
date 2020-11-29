@@ -240,8 +240,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var tmpDiagnostics = DiagnosticBag.GetInstance();
                 // temporarily set the return type before attempting any binding ... it's an error type ... but thats fine ... it will either stay so or will get an infered type from body
                 var tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(returnType, null, _binder, returnTypeSyntax, IsAsync, tmpDiagnostics);
-                Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(tmpReturnType));
-                updateReturnType = true;
+                if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
+                {
+                    Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(tmpReturnType));
+                    updateReturnType = true;
+                }
 
                 // before we do a full binding of the body, we could attempt just binding the "return statements" ... this will then work for "recursive methods" methods too...
                 // "temporarily" set the first resolve type we get
@@ -249,7 +252,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var (firstResolvedType, firstIsVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(Syntax, _binder, _binder.Conversions);
                 if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
                 tmpReturnType = SourceOrdinaryMethodSymbol.PostProcessReturnType(tmpReturnType, null, _binder, returnTypeSyntax, IsAsync, tmpDiagnostics);
-                Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(tmpReturnType));
+                if (!(tmpReturnType.Type is null) && tmpReturnType.Type.IsErrorType() == false)
+                {
+                    Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(tmpReturnType));
+                    updateReturnType = true;
+                }
 
                 // bind the body of the function
                 BoundNode boundBodyNode = null;

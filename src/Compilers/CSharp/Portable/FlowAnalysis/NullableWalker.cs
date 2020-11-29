@@ -2090,7 +2090,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // When the local is used before or during initialization, there can potentially be a mismatch between node.LocalSymbol.Type and node.Type. We
                 // need to prefer node.Type as we shouldn't be changing the type of the BoundLocal node during rewrite.
                 // https://github.com/dotnet/roslyn/issues/34158
-                Debug.Assert(node.Type.IsErrorType() || type.Type.IsErrorType());
+                Debug.Assert(node.Type.IsErrorType() || type.Type.IsErrorType() || type.TypeKind == TypeKind.TypeParameter);
                 type = TypeWithAnnotations.Create(node.Type, type.NullableAnnotation);
             }
 
