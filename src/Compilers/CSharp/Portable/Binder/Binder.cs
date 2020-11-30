@@ -434,6 +434,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        internal virtual NamedTypeSymbol? ThisScopeOrContainingType
+        {
+            get
+            {
+                var result = ContainingMemberOrLambda.ContainingSymbolWithThisScope(out var islabmda);
+                if (!islabmda || !result.HasValue) return ContainingType;
+
+                var thisType = result.Value.Item2 as NamedTypeSymbol;
+                if (thisType is null) return ContainingType;
+
+                return thisType;
+            }
+        }
+
         /// <summary>
         /// The type containing the binding context
         /// </summary>

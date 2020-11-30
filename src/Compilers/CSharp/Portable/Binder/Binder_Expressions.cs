@@ -1724,7 +1724,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var isForExtensionMethod = false;
             var isInThisLambdaScope = this.InLambdaWithThisScope;
             var usedParentContainingType = false;
-            var currentType = this.ContainingType;
+            var currentType = this.ThisScopeOrContainingType;
             var declaringType = members[0].ContainingType;
 
             // use the type of the first parameter as declaring type for extension methods
@@ -1736,8 +1736,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             var receiverMatches = MatchReceiverType(currentType, declaringType, isForExtensionMethod);
             if (!receiverMatches && isInThisLambdaScope)
             {
-                var parentCurrentType = this.ParentContainingType;
-                if (!(parentCurrentType is null) && MatchReceiverType(parentCurrentType, declaringType, isForExtensionMethod))
+                var parentCurrentType = FindMatchingParentReceiverType(declaringType, isForExtensionMethod);
+                if (!(parentCurrentType is null))
                 {
                     usedParentContainingType = true;
                     receiverMatches = true;
@@ -1763,6 +1763,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 return TryBindInteractiveReceiver(syntax, declaringType);
             }
+        }
+
+        private NamedTypeSymbol FindMatchingParentReceiverType(NamedTypeSymbol declaringType, bool isForExtensionMethod)
+        {
+            for (var current = this; current != null; current = current.Next)
+            {
+                var parentCurrentType = current.ParentContainingType;
+                if (!(parentCurrentType is null) && MatchReceiverType(parentCurrentType, declaringType, isForExtensionMethod))
+                {
+                    return parentCurrentType;
+                }
+            }
+
+            return null;
         }
 
         private bool IsBadLocalOrParameterCapture(Symbol symbol, TypeSymbol type, RefKind refKind)
@@ -2006,7 +2020,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return null;
             }
 
-            var currentType = this.ContainingType;
+            var currentType = this.ThisScopeOrContainingType;
             var usedParentContainingType = false;
             NamedTypeSymbol declaringType = member.ContainingType;
             var isInThisLambdaScope = InLambdaWithThisScope;
@@ -2014,8 +2028,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             var receiverMatches = MatchReceiverType(currentType, declaringType);
             if (!receiverMatches && isInThisLambdaScope)
             {
-                var parentCurrentType = this.ParentContainingType;
-                if (!(parentCurrentType is null) && MatchReceiverType(parentCurrentType, declaringType))
+                var parentCurrentType = FindMatchingParentReceiverType(declaringType, false);
+                if (!(parentCurrentType is null))
                 {
                     usedParentContainingType = true;
                     receiverMatches = true;
