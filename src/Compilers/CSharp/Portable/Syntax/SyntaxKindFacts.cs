@@ -295,6 +295,77 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        public static SyntaxKind GetPredefinedTypeKind(string typeName)
+        {
+            if (string.IsNullOrEmpty(typeName)) return SyntaxKind.None;
+
+            if (typeName.StartsWith("System."))
+                typeName = typeName.Substring("System.".Length);
+
+            switch (typeName)
+            {
+                case "String": return SyntaxKind.StringKeyword;
+                case "Char": return SyntaxKind.CharKeyword;
+                case "Boolean": return SyntaxKind.BoolKeyword;
+                case "Int32": return SyntaxKind.IntKeyword;
+                case "Byte": return SyntaxKind.ByteKeyword;
+                case "SByte": return SyntaxKind.SByteKeyword;
+                case "UInt32": return SyntaxKind.UIntKeyword;
+                case "Int16:": return SyntaxKind.ShortKeyword;
+                case "UInt16": return SyntaxKind.UShortKeyword;
+                case "Int64": return SyntaxKind.LongKeyword;
+                case "UInt64": return SyntaxKind.ULongKeyword;
+                case "Single": return SyntaxKind.FloatKeyword;
+                case "Double": return SyntaxKind.DoubleKeyword;
+                case "Decimal": return SyntaxKind.DecimalKeyword;
+                case "Object": return SyntaxKind.ObjectKeyword;
+
+                case "string": return SyntaxKind.StringKeyword;
+                case "char": return SyntaxKind.CharKeyword;
+                case "bool": return SyntaxKind.BoolKeyword;
+                case "int": return SyntaxKind.IntKeyword;
+                case "byte": return SyntaxKind.ByteKeyword;
+                case "sbyte": return SyntaxKind.SByteKeyword;
+                case "uint": return SyntaxKind.UIntKeyword;
+                case "short:": return SyntaxKind.ShortKeyword;
+                case "ushort": return SyntaxKind.UShortKeyword;
+                case "long": return SyntaxKind.LongKeyword;
+                case "ulong": return SyntaxKind.ULongKeyword;
+                case "single": return SyntaxKind.FloatKeyword;
+                case "double": return SyntaxKind.DoubleKeyword;
+                case "decimal": return SyntaxKind.DecimalKeyword;
+                case "object": return SyntaxKind.ObjectKeyword;
+                case "void": return SyntaxKind.VoidKeyword;
+            }
+
+            return SyntaxKind.None;
+        }
+
+        public static string GetPredefinedTypeName(SyntaxKind typeKind)
+        {
+            switch (typeKind)
+            {
+                case SyntaxKind.BoolKeyword: return "bool";
+                case SyntaxKind.ByteKeyword: return "byte";
+                case SyntaxKind.SByteKeyword: return "sbyte";
+                case SyntaxKind.IntKeyword: return "int";
+                case SyntaxKind.UIntKeyword: return "uint";
+                case SyntaxKind.ShortKeyword: return "short";
+                case SyntaxKind.UShortKeyword: return "ushort";
+                case SyntaxKind.LongKeyword: return "long";
+                case SyntaxKind.ULongKeyword: return "ulong";
+                case SyntaxKind.FloatKeyword: return "float";
+                case SyntaxKind.DoubleKeyword: return "double";
+                case SyntaxKind.DecimalKeyword: return "decimal";
+                case SyntaxKind.StringKeyword: return "string";
+                case SyntaxKind.CharKeyword: return "char";
+                case SyntaxKind.ObjectKeyword: return "object";
+                case SyntaxKind.VoidKeyword: return "void";
+            }
+
+            return null;
+        }
+
         public static bool IsPredefinedType(SyntaxKind kind)
         {
             switch (kind)

@@ -115,7 +115,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
             var methodDeclaration = SyntaxFactory.MethodDeclaration(
                 attributeLists: GenerateAttributes(method, options, explicitInterfaceSpecifier != null),
-                modifiers: GenerateModifiers(method, destination, options),
+                modifiers: GenerateModifiers(method, destination, options, isAsync),
                 returnType: returnTypeSyntax,
                 explicitInterfaceSpecifier: explicitInterfaceSpecifier,
                 identifier: method.Name.ToIdentifierToken(),
@@ -130,7 +130,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             return AddFormatterAndCodeGeneratorAnnotationsTo(methodDeclaration);
         }
 
-        private static BlockSyntax GenerateBody(IMethodSymbol method, bool isAsync, bool isVoidType)
+        private static BlockSyntax GenerateBody(IMethodSymbol method, bool isAsync, bool isVoidType, bool includeNotImplementedStatement = false)
         {
             var methodStatements = CodeGenerationMethodInfo.GetStatements(method);
 
@@ -163,6 +163,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 for (var i = 0; i < statements.Count; ++i)
                 {
                     var stat = statements[i];
+
                     if (stat is ReturnStatementSyntax returnStat)
                     {
                         statements[i] = returnStat.Update(returnStat.ReturnKeyword, returnStat.Expression.WithTrailingTrivia(SyntaxFactory.Whitespace(" ")), SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken));
@@ -170,6 +171,23 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     else if (stat is ExpressionStatementSyntax exprStat)
                     {
                         statements[statements.Count - 1] = exprStat.Update(exprStat.Expression.WithTrailingTrivia(SyntaxFactory.Whitespace(" ")), SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken));
+                    }
+                }
+
+                // remove the throw statements
+                if (!includeNotImplementedStatement && statements.Count == 1 && statements[0] is ThrowStatementSyntax)
+                {
+                    statements.RemoveAt(0);
+                    if (!isVoidType)
+                    {
+                        // add a default return instead
+                        statements.Add(SyntaxFactory.ReturnStatement(
+                            default,
+                            SyntaxFactory.Token(SyntaxKind.ReturnKeyword),
+                            SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression, SyntaxFactory.Token(SyntaxKind.DefaultKeyword))
+                                .WithTrailingTrivia(SyntaxFactory.Whitespace(" ")),
+                            SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken)
+                        ));
                     }
                 }
             }
@@ -182,6 +200,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             isAsync = method.IsAsync;
             isVoidType = method.ReturnsVoid;
 
+            // handle specific logic for override
             if (method.IsOverride && method.GetOverriddenSymbolSyntax<MethodDeclarationSyntax>(out var overriddenMethodSyntax))
             {
                 isAsync = overriddenMethodSyntax.Modifiers.Any(m => m.IsKind(SyntaxKind.AsyncKeyword));
@@ -196,7 +215,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                             return SyntaxFactory.FakeTypeIdentifier();
 
                         var name = returnTypeName.Replace("Task<", "");
-                        if (name.EndsWith("<")) name = name.Substring(0, name.Length - 1);
+                        if (name.EndsWith(">")) name = name.Substring(0, name.Length - 1);
                         return SyntaxFactory.ParseTypeName(name);
                     }
                     else if (returnTypeName.StartsWith("System.Threading.Tasks.Task<"))
@@ -205,7 +224,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                             return SyntaxFactory.FakeTypeIdentifier();
 
                         var name = returnTypeName.Replace("System.Threading.Tasks.Task<", "");
-                        if (name.EndsWith("<")) name = name.Substring(0, name.Length - 1);
+                        if (name.EndsWith(">")) name = name.Substring(0, name.Length - 1);
                         return SyntaxFactory.ParseTypeName(name);
                     }
                     else if (returnTypeName == "Task" || returnTypeName == "System.Threading.Tasks.Task")
@@ -221,21 +240,59 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 }
             }
 
-            return method.GenerateReturnTypeSyntax();
+            var returnType = method.GenerateReturnTypeSyntax();
+            var returnTypeStr = returnType.ToString().Replace("global::", "").Trim();
+
+            // we don't need void as return type
+            if (returnTypeStr == "void")
+                return SyntaxFactory.FakeTypeIdentifier();
+
+            // convert Task types to async methods instead
+            if (returnTypeStr.StartsWith("System.Threading.Tasks.Task"))
+            {
+                isAsync = true;
+                isVoidType = true;
+
+                returnTypeStr = returnTypeStr.Substring("System.Threading.Tasks.Task".Length);
+                if (returnTypeStr.StartsWith("<"))
+                {
+                    returnTypeStr = returnTypeStr.Substring(1).Trim();
+                    isVoidType = false;
+                }
+                if (returnTypeStr.EndsWith(">"))
+                {
+                    returnTypeStr = returnTypeStr.Substring(0, returnTypeStr.Length - 1).Trim();
+                    isVoidType = false;
+                }
+
+                // convert predefined types from format "System.String" to "string"
+                var predefinedTypeKind = SyntaxFacts.GetPredefinedTypeKind(returnTypeStr);
+                returnTypeStr = SyntaxFacts.GetPredefinedTypeName(predefinedTypeKind) ?? returnTypeStr;
+
+                if (isVoidType)
+                    return SyntaxFactory.FakeTypeIdentifier();
+
+                // return the new type
+                returnType = SyntaxFactory.ParseTypeName(returnTypeStr);
+            }
+
+            return returnType;
         }
 
         private static LocalFunctionStatementSyntax GenerateLocalFunctionDeclarationWorker(
             IMethodSymbol method, CodeGenerationDestination destination,
             CodeGenerationOptions options, ParseOptions parseOptions)
         {
+            var returnTypeSyntax = GenerateReturnType(method, out var isAsync, out var isVoidType).WithTrailingTrivia(SyntaxFactory.Whitespace(" "));
+
             var localFunctionDeclaration = SyntaxFactory.LocalFunctionStatement(
-                modifiers: GenerateModifiers(method, destination, options),
-                returnType: method.GenerateReturnTypeSyntax(),
+                modifiers: GenerateModifiers(method, destination, options, isAsync),
+                returnType: returnTypeSyntax,
                 identifier: method.Name.ToIdentifierToken(),
                 typeParameterList: GenerateTypeParameterList(method, options),
                 parameterList: ParameterGenerator.GenerateParameterList(method.Parameters, isExplicit: false, options),
                 constraintClauses: GenerateConstraintClauses(method),
-                body: StatementGenerator.GenerateBlock(method),
+                body: GenerateBody(method, isAsync, isVoidType),
                 expressionBody: null,
                 semicolonToken: default);
 
@@ -310,9 +367,14 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         }
 
         private static SyntaxTokenList GenerateModifiers(
-            IMethodSymbol method, CodeGenerationDestination destination, CodeGenerationOptions options)
+            IMethodSymbol method, CodeGenerationDestination destination, CodeGenerationOptions options, bool isAsync = false)
         {
             var tokens = ArrayBuilder<SyntaxToken>.GetInstance();
+
+            if (method.IsAsync || CodeGenerationMethodInfo.GetIsAsyncMethod(method))
+                isAsync = true;
+
+            var hasAsyncModifier = false;
 
             // Only "unsafe" modifier allowed if we're an explicit impl.
             if (method.ExplicitInterfaceImplementations.Any())
@@ -372,6 +434,12 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                                 hasOverrideModifier = true;
                                 continue;
                             }
+
+                            if (m.IsKind(SyntaxKind.AsyncKeyword))
+                            {
+                                hasAsyncModifier = true;
+                                continue;
+                            }
                         }
 
                         // add sealed before any other modifiers
@@ -415,7 +483,21 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     }
                     else
                     {
-                        AddAccessibilityModifiers(method.DeclaredAccessibility, tokens, options, Accessibility.Private);
+                        // for private/public, we don't need to add the accessibility modifier if the name follows the private/public naming convention
+                        var addAccessibility = true;
+                        if (method.DeclaredAccessibility.HasFlag(Accessibility.Private))
+                        {
+                            if (!SymbolHelpers.IsNameClassifiedAsPublic(method.Name))
+                                addAccessibility = false;
+                        }
+                        else if (method.DeclaredAccessibility.HasFlag(Accessibility.Public))
+                        {
+                            if (SymbolHelpers.IsNameClassifiedAsPublic(method.Name))
+                                addAccessibility = false;
+                        }
+
+                        if (addAccessibility)
+                            AddAccessibilityModifiers(method.DeclaredAccessibility, tokens, options, Accessibility.Private);
 
                         if (method.IsAbstract)
                         {
@@ -467,13 +549,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 }
             }
 
-            if (destination != CodeGenerationDestination.InterfaceType)
-            {
-                if (CodeGenerationMethodInfo.GetIsAsyncMethod(method))
-                {
-                    tokens.Add(SyntaxFactory.Token(SyntaxKind.AsyncKeyword));
-                }
-            }
+            if (!hasAsyncModifier && isAsync)
+                tokens.Add(SyntaxFactory.Token(SyntaxKind.AsyncKeyword));
 
             if (CodeGenerationMethodInfo.GetIsPartial(method) && method.IsAsync)
             {

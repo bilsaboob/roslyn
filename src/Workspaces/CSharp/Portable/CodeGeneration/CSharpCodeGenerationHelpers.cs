@@ -200,14 +200,56 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 CSharpDeclarationComparer.WithNamesInstance,
                 after, before);
 
+            var leadingSyntaxTrivia = new List<SyntaxTrivia>(declaration.GetLeadingTrivia());
+            var trailingSyntaxTrivia = new List<SyntaxTrivia>();
+
+            // always add a starting newline / trailing newline
+            leadingSyntaxTrivia.Add(SyntaxFactory.ElasticCarriageReturnLineFeed);
+            trailingSyntaxTrivia.Add(SyntaxFactory.ElasticCarriageReturnLineFeed);
+
             if (availableIndices != null)
             {
                 availableIndices.Insert(index, true);
             }
 
+            var nextNewlinesCount = 0;
+            var nextLineNo = 0;
+            var prevNewlinesCount = 0;
+            var prevLineNo = 0;
+            var indent = 0;
+
+            if (index < declarationList.Count)
+            {
+                var nextDecl = declarationList[index];
+                nextNewlinesCount = nextDecl.GetLeadingTrivia().Count(t => t.IsKind(SyntaxKind.EndOfLineTrivia));
+                var firstToken = nextDecl.GetFirstToken();
+                nextLineNo = firstToken.Line;
+                indent = firstToken.Coloumn;
+            }
+            if (index > 0)
+            {
+                var prevDecl = declarationList[index - 1];
+                prevNewlinesCount = prevDecl.GetTrailingTrivia().Count(t => t.IsKind(SyntaxKind.EndOfLineTrivia));
+                prevLineNo = prevDecl.GetLastToken().Line;
+
+                if (indent == 0)
+                    indent = prevDecl.GetFirstToken().Coloumn;
+            }
+
+            // add another newline to the end if the following declaration doesn't have any
+            var lineDiff = nextLineNo - prevLineNo;
+            if (nextNewlinesCount == 0 && prevNewlinesCount == 0 && lineDiff <= 1)
+                trailingSyntaxTrivia.Add(SyntaxFactory.ElasticCarriageReturnLineFeed);
+
+            // also make sure to add indentation
+            if (indent > 0)
+                leadingSyntaxTrivia.Add(SyntaxFactory.ElasticWhitespace("".PadLeft(indent)));
+
+            declaration = declaration.WithLeadingTrivia(leadingSyntaxTrivia).WithTrailingTrivia(trailingSyntaxTrivia);
+
             if (index != 0 && declarationList[index - 1].ContainsDiagnostics && AreBracesMissing(declarationList[index - 1]))
             {
-                return declarationList.Insert(index, declaration.WithLeadingTrivia(SyntaxFactory.ElasticCarriageReturnLineFeed));
+                return declarationList.Insert(index, declaration);
             }
 
             return declarationList.Insert(index, declaration);

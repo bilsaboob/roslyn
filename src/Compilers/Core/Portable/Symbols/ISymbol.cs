@@ -14,6 +14,20 @@ using System.Threading;
 
 namespace Microsoft.CodeAnalysis
 {
+    public static class SymbolHelpers
+    {
+        public static bool IsNameClassifiedAsPublic(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+
+            var ch = name[0];
+
+            if (!char.IsLetter(ch) || !char.IsUpper(ch)) return false;
+
+            return true;
+        }
+    }
+
     /// <summary>
     /// Represents a symbol (namespace, class, method, parameter, etc.)
     /// exposed by the compiler.

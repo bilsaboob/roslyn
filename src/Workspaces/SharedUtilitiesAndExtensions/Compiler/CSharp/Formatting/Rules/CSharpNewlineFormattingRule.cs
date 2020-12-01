@@ -29,6 +29,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             op = EvalNewlineForTopStatements(previousToken, currentToken);
             if (op != null) return op;
 
+            op = EvalNewlineForGeneratedSymbols(previousToken, currentToken);
+            if (op != null) return op;
+
             op = base.GetAdjustNewLinesOperation(previousToken, currentToken, nextOperation, reason);
             return op;
         }
@@ -97,6 +100,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             return null;
         }
 
+        private AdjustNewLinesOperation EvalNewlineForGeneratedSymbols(SyntaxToken previousToken, SyntaxToken currentToken)
+        {
+            var currentDecl = currentToken.Parent?.GetAncestorOrThis(n => IsMemberDeclaration(n));
+
+            // if we have a "fake token" ... check the previous "visible token" instead
+            if (previousToken.Width() == 0) previousToken = currentToken.GetPreviousToken();
+            var prevDecl = previousToken.Parent?.GetAncestorOrThis(n => IsMemberDeclaration(n));
+
+            // we don't do anything if they are same declaration
+            if (prevDecl == currentDecl) return null;
+
+            return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
+        }
+
         private AdjustNewLinesOperation EvalNewlineForTopStatements(SyntaxToken previousToken, SyntaxToken currentToken)
         {
             var currentDecl = currentToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
@@ -161,6 +178,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                 n is MethodDeclarationSyntax ||
                 n is PropertyDeclarationSyntax ||
                 n is FieldDeclarationSyntax;
+        }
+
+        private bool IsMemberDeclaration(SyntaxNode n)
+        {
+            switch (n.Kind())
+            {
+                case SyntaxKind.UsingDirective:
+                case SyntaxKind.NamespaceDeclaration:
+
+                case SyntaxKind.ClassDeclaration:
+                case SyntaxKind.InterfaceDeclaration:
+                case SyntaxKind.StructDeclaration:
+                case SyntaxKind.EnumDeclaration:
+                case SyntaxKind.DelegateDeclaration:
+
+                case SyntaxKind.Attribute:
+                case SyntaxKind.FieldDeclaration:
+                case SyntaxKind.PropertyDeclaration:
+                case SyntaxKind.MethodDeclaration:
+                    return true;
+            }
+
+            return false;
         }
 
         private bool IsTopDeclaration(SyntaxNode n)

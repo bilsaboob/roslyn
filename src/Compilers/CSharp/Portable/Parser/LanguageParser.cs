@@ -1961,15 +1961,7 @@ tryAgain:
         #region Field to Property conversion
 
         private bool IsNameClassifiedAsPublic(SyntaxToken name)
-        {
-            if (string.IsNullOrEmpty(name?.Text)) return false;
-
-            var ch = name.Text[0];
-
-            if (!char.IsLetter(ch) || !char.IsUpper(ch)) return false;
-
-            return true;
-        }
+            => SymbolHelpers.IsNameClassifiedAsPublic(name?.Text);
 
         private bool CanConvertFieldToClassProperty(BaseFieldDeclarationSyntax fieldDecl, VariableDeclaratorSyntax varDecl)
         {
