@@ -54,4 +54,7 @@
       <Output TaskParameter="OutputFile" ItemName="FileWrites" />
     </WriteCodeFragment>
   </Target>
+  <PropertyGroup Condition="'$(TargetFramework)'=='net5.0'">
+    <AnalysisLevel>4</AnalysisLevel>
+  </PropertyGroup>
 </Project>

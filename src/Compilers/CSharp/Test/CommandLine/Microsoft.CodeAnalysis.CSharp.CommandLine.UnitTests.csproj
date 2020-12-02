@@ -39,4 +39,7 @@
       <Content Include="@(_CsiReferenceContent)" Link="dependency\csi\%(_CsiReferenceContent.Filename)%(_CsiReferenceContent.Extension)" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
+  <PropertyGroup Condition="'$(TargetFramework)'=='net5.0'">
+    <AnalysisLevel>4</AnalysisLevel>
+  </PropertyGroup>
 </Project>
