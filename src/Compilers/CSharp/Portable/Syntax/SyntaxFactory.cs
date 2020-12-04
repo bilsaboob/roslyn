@@ -305,6 +305,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new SyntaxToken(Syntax.InternalSyntax.SyntaxFactory.FakeToken(kind, value, allowTrivia));
         }
 
+        public static AccessorListSyntax FakeAccessorList()
+        {
+            return (AccessorListSyntax)Syntax.InternalSyntax.SyntaxFactory.FakeAccessorList().CreateRed();
+        }
+
         public static IdentifierNameSyntax FakeTypeIdentifier(bool isVar = false)
         {
             var identifier = Syntax.InternalSyntax.SyntaxFactory.Token(SyntaxKind.IdentifierToken);
@@ -2542,6 +2547,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         // backwards compatibility for extended API
         public static AccessorDeclarationSyntax AccessorDeclaration(SyntaxKind kind, SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, BlockSyntax body)
                 => SyntaxFactory.AccessorDeclaration(kind, attributeLists, modifiers, body, expressionBody: null);
+        public static AccessorDeclarationSyntax GetInlineAccessorDeclaration(SyntaxKind kind, SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, BlockSyntax body)
+        {
+            return SyntaxFactory.AccessorDeclaration(kind, attributeLists, modifiers, SyntaxFactory.FakeToken(SyntaxKind.GetKeyword), body, null, default);
+        }
         public static AccessorDeclarationSyntax AccessorDeclaration(SyntaxKind kind, SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken keyword, BlockSyntax body, SyntaxToken semicolonToken)
                 => SyntaxFactory.AccessorDeclaration(kind, attributeLists, modifiers, keyword, body, expressionBody: null, semicolonToken);
         public static AccessorDeclarationSyntax AccessorDeclaration(SyntaxKind kind, SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, ArrowExpressionClauseSyntax expressionBody)
