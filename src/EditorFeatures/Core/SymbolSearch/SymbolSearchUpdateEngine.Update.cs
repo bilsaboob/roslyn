@@ -81,7 +81,15 @@ namespace Microsoft.CodeAnalysis.SymbolSearch
 
             // We were the first ones to try to update this source.  Spawn off a task to do
             // the updating.
-            return new Updater(this, source, localSettingsDirectory).UpdateInBackgroundAsync(cancellationToken);
+            try
+            {
+                return new Updater(this, source, localSettingsDirectory).UpdateInBackgroundAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                LogExceptionAsync(ex, "Failed updater");
+                return Task.CompletedTask;
+            }
         }
 
         private class Updater
