@@ -874,6 +874,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 foreach (var member in namespaceSymbol.NamespaceOrType.GetMembersUnordered())
                 {
+                    // never include the namespace members container type, but expose the members of it
+                    if (member is NamedTypeSymbol membersContainerType && NamespaceSymbolHelpers.IsNamespaceMembersContainerClassName(membersContainerType.Name ?? ""))
+                    {
+                        foreach (var namespaceMember in membersContainerType.GetMembersUnordered())
+                        {
+                            if (IsValidLookupCandidateInUsings(namespaceMember) && originalBinder.CanAddLookupSymbolInfo(namespaceMember, options, result, null))
+                            {
+                                result.AddSymbol(namespaceMember, namespaceMember.Name, namespaceMember.GetArity());
+                            }
+                        }
+
+                        continue;
+                    }
+
                     if (IsValidLookupCandidateInUsings(member) && originalBinder.CanAddLookupSymbolInfo(member, options, result, null))
                     {
                         result.AddSymbol(member, member.Name, member.GetArity());
