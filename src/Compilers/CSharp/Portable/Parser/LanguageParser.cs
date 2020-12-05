@@ -4282,6 +4282,8 @@ parse_member_name:;
             // semi comma usually means end of the member declaration
             if (CurrentToken.Kind == SyntaxKind.SemicolonToken) return true;
 
+            if (CurrentToken.Kind == SyntaxKind.EndOfFileToken) return true;
+
             // if not a semi comma... then we must be at a new line at least!
             if (!IsCurrentTokenOnNewline) return false;
 
