@@ -33,6 +33,7 @@ namespace Microsoft.CodeAnalysis
     {
         // The lazyBag field is populated lazily -- the first time an error is added.
         private ConcurrentQueue<Diagnostic>? _lazyBag;
+        private ConcurrentSet<Diagnostic>? _lazyBagSet;
 
         /// <summary>
         /// Return true if the bag is completely empty - not even containing void diagnostics.
@@ -116,7 +117,10 @@ namespace Microsoft.CodeAnalysis
         public void Add(Diagnostic diag)
         {
             ConcurrentQueue<Diagnostic> bag = this.Bag;
-            bag.Enqueue(diag);
+            ConcurrentSet<Diagnostic> bagSet = this.BagSet;
+
+            if (bagSet.Add(diag))
+                bag.Enqueue(diag);
         }
 
         /// <summary>
@@ -127,9 +131,12 @@ namespace Microsoft.CodeAnalysis
             if (!diagnostics.IsDefaultOrEmpty)
             {
                 ConcurrentQueue<Diagnostic> bag = this.Bag;
+                ConcurrentSet<Diagnostic> bagSet = this.BagSet;
                 for (int i = 0; i < diagnostics.Length; i++)
                 {
-                    bag.Enqueue(diagnostics[i]);
+                    var diagnostic = diagnostics[i];
+                    if (bagSet.Add(diagnostic))
+                        bag.Enqueue(diagnostic);
                 }
             }
         }
@@ -141,7 +148,8 @@ namespace Microsoft.CodeAnalysis
         {
             foreach (Diagnostic diagnostic in diagnostics)
             {
-                this.Bag.Enqueue(diagnostic);
+                if(this.BagSet.Add(diagnostic))
+                    this.Bag.Enqueue(diagnostic);
             }
         }
 
@@ -298,7 +306,29 @@ namespace Microsoft.CodeAnalysis
                 }
 
                 ConcurrentQueue<Diagnostic> newBag = new ConcurrentQueue<Diagnostic>();
-                return Interlocked.CompareExchange(ref _lazyBag, newBag, null) ?? newBag;
+                var resultBag = Interlocked.CompareExchange(ref _lazyBag, newBag, null) ?? newBag;
+
+                ConcurrentSet<Diagnostic> newBagSet = new ConcurrentSet<Diagnostic>();
+                _lazyBagSet = Interlocked.CompareExchange(ref _lazyBagSet, newBagSet, null) ?? newBagSet;
+
+                return resultBag;
+            }
+        }
+        
+        private ConcurrentSet<Diagnostic> BagSet
+        {
+            get
+            {
+                ConcurrentSet<Diagnostic>? bagSet = _lazyBagSet;
+                if (bagSet != null)
+                {
+                    return bagSet;
+                }
+
+                ConcurrentSet<Diagnostic> newBagSet = new ConcurrentSet<Diagnostic>();
+                var resultBag = Interlocked.CompareExchange(ref _lazyBagSet, newBagSet, null) ?? newBagSet;
+
+                return resultBag;
             }
         }
 
@@ -312,6 +342,12 @@ namespace Microsoft.CodeAnalysis
             if (bag != null)
             {
                 _lazyBag = null;
+            }
+
+            ConcurrentSet<Diagnostic>? bagSet = _lazyBagSet;
+            if (bagSet != null)
+            {
+                _lazyBagSet = null;
             }
         }
 

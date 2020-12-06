@@ -1797,6 +1797,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         internal virtual uint LocalScopeDepth => Next.LocalScopeDepth;
 
+        internal BoundBlock BindEmbeddedBlockForLambda(BlockSyntax node, DiagnosticBag diagnostics)
+        {
+            return BindBlock(node, diagnostics, isBindingLambda: true, convertSingleExprToReturn: true);
+        }
+
         internal virtual BoundBlock BindEmbeddedBlock(BlockSyntax node, DiagnosticBag diagnostics)
         {
             return BindBlock(node, diagnostics);
@@ -1807,7 +1812,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             return BindBlock(node, diagnostics, fallbackBinder);
         }
 
-        private BoundBlock BindBlock(BlockSyntax node, DiagnosticBag diagnostics, Binder? fallbackBinder = null)
+        private BoundBlock BindBlock(BlockSyntax node, DiagnosticBag diagnostics, Binder? fallbackBinder = null,
+            bool isBindingLambda = false,
+            bool convertSingleExprToReturn = false)
         {
             if (node.AttributeLists.Count > 0)
             {
@@ -1817,20 +1824,67 @@ namespace Microsoft.CodeAnalysis.CSharp
             var binder = GetBinder(node) ?? fallbackBinder;
             Debug.Assert(binder != null);
 
-            return binder.BindBlockParts(node, diagnostics);
+            return binder.BindBlockParts(node, diagnostics, isBindingLambda, convertSingleExprToReturn);
         }
 
-        private BoundBlock BindBlockParts(BlockSyntax node, DiagnosticBag diagnostics)
+        private BoundBlock BindBlockParts(BlockSyntax node, DiagnosticBag diagnostics,
+            bool isBindingLambda = false,
+            bool convertSingleExprToReturn = false)
         {
             var syntaxStatements = node.Statements;
             int nStatements = syntaxStatements.Count;
 
             ArrayBuilder<BoundStatement> boundStatements = ArrayBuilder<BoundStatement>.GetInstance(nStatements);
 
-            for (int i = 0; i < nStatements; i++)
+            var createImplicitReturn = convertSingleExprToReturn;
+            bool isSingeExprLambdaBlock = false;
+            ExpressionStatementSyntax singleExprLambdaStat = null;
+            bool isEmptyLambdaBlock = false;
+            if (isBindingLambda && createImplicitReturn)
             {
-                var boundStatement = BindStatement(syntaxStatements[i], diagnostics);
-                boundStatements.Add(boundStatement);
+                isSingeExprLambdaBlock = nStatements == 1;
+                if (isSingeExprLambdaBlock)
+                    singleExprLambdaStat = syntaxStatements[0] as ExpressionStatementSyntax;
+
+                isEmptyLambdaBlock = nStatements == 0;
+
+                if (!isSingeExprLambdaBlock && !isEmptyLambdaBlock)
+                    createImplicitReturn = false;
+            }
+
+            if (createImplicitReturn && isEmptyLambdaBlock)
+            {
+                // create a default return
+                var returnSyntax = SyntaxFactory.ReturnStatement(
+                    SyntaxFactory.FakeToken(SyntaxKind.ReturnKeyword),
+                    SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression, SyntaxFactory.FakeToken(SyntaxKind.DefaultKeyword)),
+                    SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken),
+                    node,
+                    node.Position + 1
+                );
+                var boundReturnStatement = BindReturn(returnSyntax, diagnostics);
+                boundStatements.Add(boundReturnStatement);
+            }
+            else if (createImplicitReturn && isSingeExprLambdaBlock && singleExprLambdaStat != null)
+            {
+                // create a return from the expression
+                var returnSyntax = SyntaxFactory.ReturnStatement(
+                    SyntaxFactory.FakeToken(SyntaxKind.ReturnKeyword),
+                    singleExprLambdaStat.Expression,
+                    SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken),
+                    singleExprLambdaStat.Parent,
+                    singleExprLambdaStat.Position
+                );
+                var boundReturnStatement = BindReturn(returnSyntax, diagnostics);
+                boundStatements.Add(boundReturnStatement);
+            }
+            else
+            {
+                for (int i = 0; i < nStatements; i++)
+                {
+                    var boundStatement = BindStatement(syntaxStatements[i], diagnostics);
+                    boundStatements.Add(boundStatement);
+                }
             }
 
             var block = FinishBindBlockParts(node, boundStatements.ToImmutableAndFree(), diagnostics);
