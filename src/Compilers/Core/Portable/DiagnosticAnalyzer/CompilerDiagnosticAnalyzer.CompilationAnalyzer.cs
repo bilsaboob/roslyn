@@ -38,10 +38,14 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             public static void AnalyzeSemanticModel(SemanticModelAnalysisContext context)
             {
-                var declDiagnostics = context.SemanticModel.GetDeclarationDiagnostics(cancellationToken: context.CancellationToken);
-                ReportDiagnostics(declDiagnostics, context.ReportDiagnostic, IsSourceLocation, s_declaration);
-
                 var bodyDiagnostics = context.SemanticModel.GetMethodBodyDiagnostics(cancellationToken: context.CancellationToken);
+                var declDiagnostics = context.SemanticModel.GetDeclarationDiagnostics(cancellationToken: context.CancellationToken);
+
+                // remove the body diagnostics from the declaration diagnostics so we don't get duplicates
+                declDiagnostics = declDiagnostics.RemoveRange(bodyDiagnostics);
+
+                // now we can safely report the diagnostics for declaration and method bodies
+                ReportDiagnostics(declDiagnostics, context.ReportDiagnostic, IsSourceLocation, s_declaration);
                 ReportDiagnostics(bodyDiagnostics, context.ReportDiagnostic, IsSourceLocation);
             }
 
