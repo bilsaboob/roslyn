@@ -1613,14 +1613,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(node != null);
 
 #if DEBUG
-            for (CSharpSyntaxNode current = node; current != this.Root; current = current.ParentOrStructuredTriviaParent)
+            var isFakeNode = (node?.Width ?? 0) == 0;
+            for (CSharpSyntaxNode current = node; current != this.Root && current != null; current = current.ParentOrStructuredTriviaParent)
             {
                 // make sure we never go out of Root
-                Debug.Assert(current != null, "How did we get outside the root?");
+                Debug.Assert(current != null || isFakeNode, "How did we get outside the root?");
             }
 #endif
 
-            for (CSharpSyntaxNode current = node; current != this.Root; current = current.ParentOrStructuredTriviaParent)
+            for (CSharpSyntaxNode current = node; current != this.Root && current != null; current = current.ParentOrStructuredTriviaParent)
             {
                 if (current is StatementSyntax)
                 {
