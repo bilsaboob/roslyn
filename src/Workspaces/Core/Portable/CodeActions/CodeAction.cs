@@ -195,15 +195,17 @@ namespace Microsoft.CodeAnalysis.CodeActions
         /// <param name="operations">A list of operations.</param>
         /// <param name="cancellationToken">A cancellation token.</param>
         /// <returns>A new list of operations with post processing steps applied to any <see cref="ApplyChangesOperation"/>'s.</returns>
-        protected async Task<ImmutableArray<CodeActionOperation>> PostProcessAsync(IEnumerable<CodeActionOperation> operations, CancellationToken cancellationToken)
+        protected async Task<ImmutableArray<CodeActionOperation>> PostProcessAsync(IEnumerable<CodeActionOperation> operations, CancellationToken cancellationToken, FormattingReason? reason = null)
         {
             var arrayBuilder = new ArrayBuilder<CodeActionOperation>();
+
+            reason ??= FormattingReason.CodeGen;
 
             foreach (var op in operations)
             {
                 if (op is ApplyChangesOperation ac)
                 {
-                    arrayBuilder.Add(new ApplyChangesOperation(await this.PostProcessChangesAsync(ac.ChangedSolution, cancellationToken).ConfigureAwait(false)));
+                    arrayBuilder.Add(new ApplyChangesOperation(await this.PostProcessChangesAsync(ac.ChangedSolution, cancellationToken, reason.Value).ConfigureAwait(false)));
                 }
                 else
                 {
@@ -214,12 +216,17 @@ namespace Microsoft.CodeAnalysis.CodeActions
             return arrayBuilder.ToImmutableAndFree();
         }
 
+        protected Task<Solution> PostProcessChangesAsync(Solution changedSolution, CancellationToken cancellationToken)
+        {
+            return PostProcessChangesAsync(changedSolution, cancellationToken, FormattingReason.DefaultFormatAction);
+        }
+
         /// <summary>
         ///  Apply post processing steps to solution changes, like formatting and simplification.
         /// </summary>
         /// <param name="changedSolution">The solution changed by the <see cref="CodeAction"/>.</param>
         /// <param name="cancellationToken">A cancellation token</param>
-        protected async Task<Solution> PostProcessChangesAsync(Solution changedSolution, CancellationToken cancellationToken)
+        protected async Task<Solution> PostProcessChangesAsync(Solution changedSolution, CancellationToken cancellationToken, FormattingReason reason)
         {
             var solutionChanges = changedSolution.GetChanges(changedSolution.Workspace.CurrentSolution);
 
@@ -234,7 +241,7 @@ namespace Microsoft.CodeAnalysis.CodeActions
                 foreach (var documentId in documentsToProcess)
                 {
                     var document = processedSolution.GetRequiredDocument(documentId);
-                    var processedDocument = await PostProcessChangesAsync(document, cancellationToken).ConfigureAwait(false);
+                    var processedDocument = await PostProcessChangesAsync(document, cancellationToken, reason).ConfigureAwait(false);
                     processedSolution = processedDocument.Project.Solution;
                 }
             }
@@ -247,7 +254,7 @@ namespace Microsoft.CodeAnalysis.CodeActions
                 foreach (var documentId in documentsToProcess)
                 {
                     var document = processedSolution.GetRequiredDocument(documentId);
-                    var processedDocument = await PostProcessChangesAsync(document, cancellationToken).ConfigureAwait(false);
+                    var processedDocument = await PostProcessChangesAsync(document, cancellationToken, reason).ConfigureAwait(false);
                     processedSolution = processedDocument.Project.Solution;
                 }
             }
@@ -264,10 +271,13 @@ namespace Microsoft.CodeAnalysis.CodeActions
         /// <param name="cancellationToken">A cancellation token.</param>
         /// <returns>A document with the post processing changes applied.</returns>
         protected virtual Task<Document> PostProcessChangesAsync(Document document, CancellationToken cancellationToken)
-            => CleanupDocumentAsync(document, cancellationToken);
+            => CleanupDocumentAsync(document, cancellationToken, FormattingReason.DefaultFormatAction);
+
+        protected Task<Document> PostProcessChangesAsync(Document document, CancellationToken cancellationToken, FormattingReason reason)
+            => CleanupDocumentAsync(document, cancellationToken, reason);
 
         internal static async Task<Document> CleanupDocumentAsync(
-            Document document, CancellationToken cancellationToken)
+            Document document, CancellationToken cancellationToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
             if (document.SupportsSyntaxTree)
             {
@@ -277,10 +287,10 @@ namespace Microsoft.CodeAnalysis.CodeActions
                 document = await Simplifier.ReduceAsync(document, Simplifier.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 // format any node with explicit formatter annotation
-                document = await Formatter.FormatAsync(document, Formatter.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
+                document = await Formatter.FormatAsync(document, Formatter.Annotation, null, cancellationToken, reason).ConfigureAwait(false);
 
                 // format any elastic whitespace
-                document = await Formatter.FormatAsync(document, SyntaxAnnotation.ElasticAnnotation, cancellationToken: cancellationToken).ConfigureAwait(false);
+                document = await Formatter.FormatAsync(document, SyntaxAnnotation.ElasticAnnotation, null, cancellationToken, reason).ConfigureAwait(false);
 
                 document = await CaseCorrector.CaseCorrectAsync(document, CaseCorrector.Annotation, cancellationToken).ConfigureAwait(false);
             }

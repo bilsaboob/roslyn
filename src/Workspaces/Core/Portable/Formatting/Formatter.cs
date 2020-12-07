@@ -81,7 +81,10 @@ namespace Microsoft.CodeAnalysis.Formatting
         /// <param name="cancellationToken">An optional cancellation token.</param>
         /// <returns>The formatted document.</returns>
         public static Task<Document> FormatAsync(Document document, OptionSet options = null, CancellationToken cancellationToken = default)
-            => FormatAsync(document, spans: null, options: options, cancellationToken: cancellationToken);
+            => FormatAsync(document, spans: null, options: options, cancellationToken: cancellationToken, FormattingReason.DefaultFormatAction);
+
+        internal static Task<Document> FormatAsync(Document document, OptionSet options, CancellationToken cancellationToken, FormattingReason reason)
+            => FormatAsync(document, spans: null, options: options, cancellationToken: cancellationToken, reason);
 
         /// <summary>
         /// Formats the whitespace in an area of a document corresponding to a text span.
@@ -110,7 +113,15 @@ namespace Microsoft.CodeAnalysis.Formatting
                 : formattingService.FormatAsync(document, spans, options, cancellationToken);
         }
 
-        internal static async Task<Document> FormatAsync(Document document, IEnumerable<TextSpan> spans, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken)
+        internal static Task<Document> FormatAsync(Document document, IEnumerable<TextSpan> spans, OptionSet options, CancellationToken cancellationToken, FormattingReason reason)
+        {
+            var formattingService = document.GetLanguageService<IFormattingService>();
+            return formattingService == null
+                ? SpecializedTasks.FromResult(document)
+                : formattingService.FormatAsync(document, spans, options, cancellationToken, reason);
+        }
+
+        internal static async Task<Document> FormatAsync(Document document, IEnumerable<TextSpan> spans, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
             if (document == null)
             {
@@ -131,9 +142,15 @@ namespace Microsoft.CodeAnalysis.Formatting
         /// <param name="cancellationToken">An optional cancellation token.</param>
         /// <returns>The formatted document.</returns>
         public static Task<Document> FormatAsync(Document document, SyntaxAnnotation annotation, OptionSet options = null, CancellationToken cancellationToken = default)
-            => FormatAsync(document, annotation, options, rules: null, cancellationToken: cancellationToken);
+            => FormatAsync(document, annotation, options, rules: null, cancellationToken: cancellationToken, FormattingReason.DefaultFormatAction);
 
-        internal static async Task<Document> FormatAsync(Document document, SyntaxAnnotation annotation, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken)
+        internal static Task<Document> FormatAsync(Document document, SyntaxAnnotation annotation, OptionSet options, CancellationToken cancellationToken, FormattingReason reason)
+            => FormatAsync(document, annotation, options, rules: null, cancellationToken: cancellationToken, reason);
+
+        internal static Task<Document> FormatAsync(Document document, SyntaxAnnotation annotation, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken)
+            => FormatAsync(document, annotation, options, rules, cancellationToken, FormattingReason.DefaultFormatAction);
+
+        internal static async Task<Document> FormatAsync(Document document, SyntaxAnnotation annotation, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken, FormattingReason reason)
         {
             if (document == null)
             {
@@ -147,7 +164,7 @@ namespace Microsoft.CodeAnalysis.Formatting
 
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
             var documentOptions = options ?? await document.GetOptionsAsync(cancellationToken).ConfigureAwait(false);
-            return document.WithSyntaxRoot(Format(root, annotation, document.Project.Solution.Workspace, documentOptions, rules, cancellationToken));
+            return document.WithSyntaxRoot(Format(root, annotation, document.Project.Solution.Workspace, documentOptions, rules, cancellationToken, reason));
         }
 
         /// <summary>
@@ -162,7 +179,7 @@ namespace Microsoft.CodeAnalysis.Formatting
         public static SyntaxNode Format(SyntaxNode node, SyntaxAnnotation annotation, Workspace workspace, OptionSet options = null, CancellationToken cancellationToken = default)
             => Format(node, annotation, workspace, options, rules: null, cancellationToken: cancellationToken);
 
-        internal static SyntaxNode Format(SyntaxNode node, SyntaxAnnotation annotation, Workspace workspace, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken)
+        internal static SyntaxNode Format(SyntaxNode node, SyntaxAnnotation annotation, Workspace workspace, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
             if (workspace == null)
             {
@@ -183,7 +200,7 @@ namespace Microsoft.CodeAnalysis.Formatting
                 ? GetElasticSpans(node)
                 : GetAnnotatedSpans(node, annotation);
 
-            return Format(node, spans, workspace, options, rules, cancellationToken);
+            return Format(node, spans, workspace, options, rules, cancellationToken, reason);
         }
 
         /// <summary>
@@ -221,9 +238,9 @@ namespace Microsoft.CodeAnalysis.Formatting
         public static SyntaxNode Format(SyntaxNode node, IEnumerable<TextSpan> spans, Workspace workspace, OptionSet options = null, CancellationToken cancellationToken = default)
             => Format(node, spans, workspace, options, rules: null, cancellationToken: cancellationToken);
 
-        internal static SyntaxNode Format(SyntaxNode node, IEnumerable<TextSpan> spans, Workspace workspace, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken)
+        internal static SyntaxNode Format(SyntaxNode node, IEnumerable<TextSpan> spans, Workspace workspace, OptionSet options, IEnumerable<AbstractFormattingRule> rules, CancellationToken cancellationToken, FormattingReason reason = FormattingReason.DefaultFormatAction)
         {
-            var formattingResult = GetFormattingResult(node, spans, workspace, options, rules, cancellationToken);
+            var formattingResult = GetFormattingResult(node, spans, workspace, options, rules, cancellationToken, reason);
             return formattingResult == null ? node : formattingResult.GetFormattedRoot(cancellationToken);
         }
 

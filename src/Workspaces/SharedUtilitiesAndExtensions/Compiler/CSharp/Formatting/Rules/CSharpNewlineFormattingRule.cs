@@ -20,32 +20,43 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         public override AdjustNewLinesOperation GetAdjustNewLinesOperation(in SyntaxToken previousToken, in SyntaxToken currentToken, in NextGetAdjustNewLinesOperation nextOperation, FormattingReason reason)
         {
-            var op = EvalNewlineForBraces(currentToken);
+            var op = EvalNewlineForBraces(previousToken, currentToken, reason);
             if (op != null) return op;
 
             op = EvalNewlineForSemicolon(previousToken, currentToken, reason);
             if (op != null) return op;
 
-            op = EvalNewlineForTopStatements(previousToken, currentToken);
+            op = EvalNewlineForTopStatements(previousToken, currentToken, reason);
             if (op != null) return op;
 
-            op = EvalNewlineForGeneratedSymbols(previousToken, currentToken);
+            op = EvalNewlineForGeneratedSymbols(previousToken, currentToken, reason);
             if (op != null) return op;
 
             op = base.GetAdjustNewLinesOperation(previousToken, currentToken, nextOperation, reason);
             return op;
         }
 
-        private AdjustNewLinesOperation EvalNewlineForBraces(SyntaxToken currentToken)
+        private AdjustNewLinesOperation EvalNewlineForBraces(SyntaxToken previousToken, SyntaxToken currentToken, FormattingReason reason)
         {
             // only consider "real tokens" ... which have some actual length ... otherwise it may be "fake tokens"
             if (currentToken.Width() == 0) return null;
 
+            // always add a newline for code gen if the previous was a brace too!
+            if (reason == FormattingReason.CodeGen)
+            {
+                if (currentToken.IsKind(SyntaxKind.CloseBraceToken) && previousToken.IsKind(SyntaxKind.CloseBraceToken))
+                {
+                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.ForceLines);
+                }
+
+                return null;
+            }
+
             if (currentToken.IsKind(
-                SyntaxKind.OpenBraceToken, SyntaxKind.CloseBraceToken,
-                SyntaxKind.OpenBracketToken, SyntaxKind.CloseBracketToken,
-                SyntaxKind.OpenParenToken, SyntaxKind.CloseParenToken,
-                SyntaxKind.LessThanToken, SyntaxKind.GreaterThanToken
+                    SyntaxKind.OpenBraceToken, SyntaxKind.CloseBraceToken,
+                    SyntaxKind.OpenBracketToken, SyntaxKind.CloseBracketToken,
+                    SyntaxKind.OpenParenToken, SyntaxKind.CloseParenToken,
+                    SyntaxKind.LessThanToken, SyntaxKind.GreaterThanToken
                 ))
             {
                 // don't adjust anything for brace pairs
@@ -100,8 +111,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             return null;
         }
 
-        private AdjustNewLinesOperation EvalNewlineForGeneratedSymbols(SyntaxToken previousToken, SyntaxToken currentToken)
+        private AdjustNewLinesOperation EvalNewlineForGeneratedSymbols(SyntaxToken previousToken, SyntaxToken currentToken, FormattingReason reason)
         {
+            if (reason != FormattingReason.DefaultFormatAction && reason != FormattingReason.CodeGen) return null;
+
             var currentDecl = currentToken.Parent?.GetAncestorOrThis(n => IsMemberDeclaration(n));
 
             // if we have a "fake token" ... check the previous "visible token" instead
@@ -111,10 +124,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             // we don't do anything if they are same declaration
             if (prevDecl == currentDecl) return null;
 
-            return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.PreserveLines);
+            return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.ForceLines);
         }
 
-        private AdjustNewLinesOperation EvalNewlineForTopStatements(SyntaxToken previousToken, SyntaxToken currentToken)
+        private AdjustNewLinesOperation EvalNewlineForTopStatements(SyntaxToken previousToken, SyntaxToken currentToken, FormattingReason reason)
         {
             var currentDecl = currentToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
             // we only handle for supported top statements
