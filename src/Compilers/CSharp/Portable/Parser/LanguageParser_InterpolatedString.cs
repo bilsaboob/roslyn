@@ -58,10 +58,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             var originalToken = this.EatToken();
             var originalText = originalToken.ValueText; // this is actually the source text
-            Debug.Assert(originalText[0] == '$' || originalText[0] == '@');
+            Debug.Assert(originalText[0] == '$' || originalText[0] == '@' || originalText[0] == '`');
+
+            // get the quote character to be used
+            var quoteChar = originalText[0];
+            if (quoteChar != '`')
+                quoteChar = '"';
 
             var isAltInterpolatedVerbatim = originalText.Length > 2 && originalText[0] == '@'; // @$
             var isVerbatim = isAltInterpolatedVerbatim || (originalText.Length > 2 && originalText[1] == '@');
+            var isBacktick = quoteChar == '`';
+
+            // all backtick strings are verbatime too
+            if (isBacktick) isVerbatim = true;
 
             Debug.Assert(originalToken.Kind == SyntaxKind.InterpolatedStringToken);
             var interpolations = ArrayBuilder<Lexer.Interpolation>.GetInstance();
@@ -72,22 +81,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 // compute the positions of the interpolations in the original string literal, and also compute/preserve
                 // lexical errors
                 var info = default(Lexer.TokenInfo);
-                tempLexer.ScanInterpolatedStringLiteralTop(interpolations, isVerbatim, ref info, ref error, out closeQuoteMissing);
+                tempLexer.ScanInterpolatedStringLiteralTop(interpolations, isVerbatim, quoteChar, ref info, ref error, out closeQuoteMissing);
             }
 
             // Make a token for the open quote $" or $@" or @$"
             var openQuoteIndex = isVerbatim ? 2 : 1;
-            Debug.Assert(originalText[openQuoteIndex] == '"');
+            if (isBacktick) openQuoteIndex = 0;
+
+            Debug.Assert(originalText[openQuoteIndex] == quoteChar);
 
             var openQuoteKind = isVerbatim
                     ? SyntaxKind.InterpolatedVerbatimStringStartToken // $@ or @$
                     : SyntaxKind.InterpolatedStringStartToken; // $
 
             var openQuoteText = isAltInterpolatedVerbatim
-                ? "@$\""
+                ? $"@${quoteChar}"
                 : isVerbatim
-                    ? "$@\""
-                    : "$\"";
+                    ? $"$@{quoteChar}"
+                    : $"${quoteChar}";
+
+            // backticks are handled as only '`'
+            if (isBacktick)
+                openQuoteText = "`";
+
             var openQuote = SyntaxFactory.Token(originalToken.GetLeadingTrivia(), openQuoteKind, openQuoteText, openQuoteText, trailing: null);
 
             if (isAltInterpolatedVerbatim)
@@ -97,10 +113,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             // Make a token for the close quote " (even if it was missing)
             var closeQuoteIndex = closeQuoteMissing ? originalText.Length : originalText.Length - 1;
-            Debug.Assert(closeQuoteMissing || originalText[closeQuoteIndex] == '"');
+            Debug.Assert(closeQuoteMissing || originalText[closeQuoteIndex] == quoteChar);
+
+            var closeTokenKind = SyntaxKind.InterpolatedStringEndToken;
             var closeQuote = closeQuoteMissing
-                ? SyntaxFactory.MissingToken(SyntaxKind.InterpolatedStringEndToken).TokenWithTrailingTrivia(originalToken.GetTrailingTrivia())
-                : SyntaxFactory.Token(null, SyntaxKind.InterpolatedStringEndToken, originalToken.GetTrailingTrivia());
+                ? SyntaxFactory.MissingToken(closeTokenKind).TokenWithTrailingTrivia(originalToken.GetTrailingTrivia())
+                : SyntaxFactory.Token(null, closeTokenKind, $"{quoteChar}", $"{quoteChar}", originalToken.GetTrailingTrivia());
             var builder = _pool.Allocate<InterpolatedStringContentSyntax>();
 
             if (interpolations.Count == 0)
@@ -122,7 +140,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     var interpolation = interpolations[i];
 
                     // Add a token for text preceding the interpolation
-                    var text = Substring(originalText, (i == 0) ? (openQuoteIndex + 1) : (interpolations[i - 1].CloseBracePosition + 1), interpolation.OpenBracePosition - 1);
+                    var text = Substring(originalText, (i == 0) ? (openQuoteIndex + 1) : (interpolations[i - 1].CloseBracePosition + (interpolations[i - 1].HasBraces ? 1 : 0)), interpolation.OpenBracePosition - 1);
                     if (text.Length > 0)
                     {
                         var token = MakeStringToken(text, text, isVerbatim, SyntaxKind.InterpolatedStringTextToken);
@@ -135,7 +153,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 }
 
                 // Add a token for text following the last interpolation
-                var lastText = Substring(originalText, interpolations[interpolations.Count - 1].CloseBracePosition + 1, closeQuoteIndex - 1);
+                var lastText = Substring(originalText, interpolations[interpolations.Count - 1].CloseBracePosition + (interpolations[interpolations.Count - 1].HasBraces ? 1 : 0), closeQuoteIndex - 1);
                 if (lastText.Length > 0)
                 {
                     var token = MakeStringToken(lastText, lastText, isVerbatim, SyntaxKind.InterpolatedStringTextToken);
@@ -161,11 +179,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             ExpressionSyntax expression;
             InterpolationAlignmentClauseSyntax alignment = null;
             InterpolationFormatClauseSyntax format = null;
+
             var closeBraceToken = interpolation.CloseBraceMissing
                 ? SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken)
                 : SyntaxFactory.Token(SyntaxKind.CloseBraceToken);
 
-            var parsedText = Substring(text, interpolation.OpenBracePosition, interpolation.HasColon ? interpolation.ColonPosition - 1 : interpolation.CloseBracePosition - 1);
+            var startIndex = interpolation.OpenBracePosition;
+            var endIndex = interpolation.HasColon ? interpolation.ColonPosition - 1 : interpolation.CloseBracePosition - 1;
+
+            if (interpolation.IsBacktick)
+            {
+                if (!interpolation.HasBraces)
+                    closeBraceToken = SyntaxFactory.FakeToken(SyntaxKind.CloseBraceToken);
+            }
+
+            var parsedText = Substring(text, startIndex, endIndex);
+
             using (var tempLexer = new Lexer(Text.SourceText.From(parsedText), this.Options, allowPreprocessorDirectives: false, interpolationFollowedByColon: interpolation.HasColon))
             {
                 // TODO: some of the trivia in the interpolation maybe should be trailing trivia of the openBraceToken
@@ -173,7 +202,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 {
                     SyntaxToken commaToken = null;
                     ExpressionSyntax alignmentExpression = null;
-                    tempParser.ParseInterpolationStart(out openBraceToken, out expression, out commaToken, out alignmentExpression);
+                    tempParser.ParseInterpolationStart(interpolation.IsBacktick, interpolation.HasBraces, out openBraceToken, out expression, out commaToken, out alignmentExpression);
                     if (alignmentExpression != null)
                     {
                         alignment = SyntaxFactory.InterpolationAlignmentClause(commaToken, alignmentExpression);
@@ -193,6 +222,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                         closeBraceToken = closeBraceToken.TokenWithLeadingTrivia(extraTrivia);
                     }
                 }
+            }
+
+            if (interpolation.IsBacktick && !interpolation.HasBraces && openBraceToken == null)
+            {
+                openBraceToken = SyntaxFactory.Token(null, SyntaxKind.OpenBraceToken, "$", "$", null);
             }
 
             var result = SyntaxFactory.Interpolation(openBraceToken, expression, alignment, format, closeBraceToken);
@@ -238,9 +272,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return builder.ToArrayAndFree();
         }
 
-        private void ParseInterpolationStart(out SyntaxToken openBraceToken, out ExpressionSyntax expr, out SyntaxToken commaToken, out ExpressionSyntax alignmentExpression)
+        private void ParseInterpolationStart(bool isBackTick, bool hasBraces, out SyntaxToken openBraceToken, out ExpressionSyntax expr, out SyntaxToken commaToken, out ExpressionSyntax alignmentExpression)
         {
-            openBraceToken = this.EatToken(SyntaxKind.OpenBraceToken);
+            openBraceToken = null;
+
+            if (isBackTick && CurrentToken?.ToString() == "$") this.EatToken(); // $ if any
+            if (hasBraces) openBraceToken = this.EatToken(SyntaxKind.OpenBraceToken);
+
             expr = this.ParseExpressionCore();
             if (this.CurrentToken.Kind == SyntaxKind.CommaToken)
             {
