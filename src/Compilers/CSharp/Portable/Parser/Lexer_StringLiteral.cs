@@ -223,6 +223,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         private void ScanInterpolatedStringLiteral(bool isVerbatim, ref TokenInfo info)
         {
+            ScanInterpolatedStringLiteral(isVerbatim, '"', ref info);
+        }
+
+        private void ScanInterpolatedStringLiteral(bool isVerbatim, char quoteChar, ref TokenInfo info)
+        {
             // We have a string of the form
             //                $" ... "
             // or, if isVerbatim is true, of possible forms
@@ -241,14 +246,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             SyntaxDiagnosticInfo error = null;
             bool closeQuoteMissing;
-            ScanInterpolatedStringLiteralTop(null, isVerbatim, ref info, ref error, out closeQuoteMissing);
+            ScanInterpolatedStringLiteralTop(null, isVerbatim, quoteChar, ref info, ref error, out closeQuoteMissing);
             this.AddError(error);
         }
 
         internal void ScanInterpolatedStringLiteralTop(ArrayBuilder<Interpolation> interpolations, bool isVerbatim, ref TokenInfo info, ref SyntaxDiagnosticInfo error, out bool closeQuoteMissing)
         {
+            ScanInterpolatedStringLiteralTop(interpolations, isVerbatim, '"', ref info, ref error, out closeQuoteMissing);
+        }
+
+        internal void ScanInterpolatedStringLiteralTop(ArrayBuilder<Interpolation> interpolations, bool isVerbatim, char quoteChar, ref TokenInfo info, ref SyntaxDiagnosticInfo error, out bool closeQuoteMissing)
+        {
             var subScanner = new InterpolatedStringScanner(this, isVerbatim);
-            subScanner.ScanInterpolatedStringLiteralTop(interpolations, ref info, out closeQuoteMissing);
+            subScanner.ScanInterpolatedStringLiteralTop(interpolations, quoteChar, ref info, out closeQuoteMissing);
             error = subScanner.error;
             info.Text = TextWindow.GetText(false);
         }
@@ -259,16 +269,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             public readonly int ColonPosition;
             public readonly int CloseBracePosition;
             public readonly bool CloseBraceMissing;
+            public readonly bool IsBacktick;
+            public readonly bool HasBraces;
+
             public bool ColonMissing => ColonPosition <= 0;
             public bool HasColon => ColonPosition > 0;
-            public int LastPosition => CloseBraceMissing ? CloseBracePosition - 1 : CloseBracePosition;
+            public int LastPosition => (CloseBraceMissing || !HasBraces) ? CloseBracePosition - 1 : CloseBracePosition;
             public int FormatEndPosition => CloseBracePosition - 1;
-            public Interpolation(int openBracePosition, int colonPosition, int closeBracePosition, bool closeBraceMissing)
+
+            public Interpolation(int openBracePosition, int colonPosition, int closeBracePosition, bool closeBraceMissing, bool isBackTick, bool hasBraces)
             {
                 this.OpenBracePosition = openBracePosition;
                 this.ColonPosition = colonPosition;
                 this.CloseBracePosition = closeBracePosition;
                 this.CloseBraceMissing = closeBraceMissing;
+                this.IsBacktick = isBackTick;
+                this.HasBraces = hasBraces;
             }
         }
 
@@ -320,26 +336,35 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             internal void ScanInterpolatedStringLiteralTop(ArrayBuilder<Interpolation> interpolations, ref TokenInfo info, out bool closeQuoteMissing)
             {
-                if (isVerbatim)
-                {
-                    Debug.Assert(
-                        (lexer.TextWindow.PeekChar() == '@' && lexer.TextWindow.PeekChar(1) == '$') ||
-                        (lexer.TextWindow.PeekChar() == '$' && lexer.TextWindow.PeekChar(1) == '@'));
+                ScanInterpolatedStringLiteralTop(interpolations, '"', ref info, out closeQuoteMissing);
+            }
 
-                    // @$ or $@
-                    lexer.TextWindow.AdvanceChar();
-                    lexer.TextWindow.AdvanceChar();
-                }
-                else
+            internal void ScanInterpolatedStringLiteralTop(ArrayBuilder<Interpolation> interpolations, char quoteChar, ref TokenInfo info, out bool closeQuoteMissing)
+            {
+                var isBackTick = quoteChar == '`';
+                if (!isBackTick)
                 {
-                    Debug.Assert(lexer.TextWindow.PeekChar() == '$');
-                    lexer.TextWindow.AdvanceChar(); // $
+                    if (isVerbatim)
+                    {
+                        Debug.Assert(
+                            (lexer.TextWindow.PeekChar() == '@' && lexer.TextWindow.PeekChar(1) == '$') ||
+                            (lexer.TextWindow.PeekChar() == '$' && lexer.TextWindow.PeekChar(1) == '@'));
+
+                        // @$ or $@
+                        lexer.TextWindow.AdvanceChar();
+                        lexer.TextWindow.AdvanceChar();
+                    }
+                    else
+                    {
+                        Debug.Assert(lexer.TextWindow.PeekChar() == '$');
+                        lexer.TextWindow.AdvanceChar(); // $
+                    }
                 }
 
-                Debug.Assert(lexer.TextWindow.PeekChar() == '"');
+                Debug.Assert(lexer.TextWindow.PeekChar() == quoteChar);
                 lexer.TextWindow.AdvanceChar(); // "
-                ScanInterpolatedStringLiteralContents(interpolations);
-                if (lexer.TextWindow.PeekChar() != '"')
+                ScanInterpolatedStringLiteralContents(interpolations, isBackTick);
+                if (lexer.TextWindow.PeekChar() != quoteChar)
                 {
                     Debug.Assert(IsAtEnd());
                     if (error == null)
@@ -360,7 +385,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 info.Kind = SyntaxKind.InterpolatedStringToken;
             }
 
-            private void ScanInterpolatedStringLiteralContents(ArrayBuilder<Interpolation> interpolations)
+            private void ScanInterpolatedStringLiteralContents(ArrayBuilder<Interpolation> interpolations, bool isBackTick)
             {
                 while (true)
                 {
@@ -372,13 +397,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
                     switch (lexer.TextWindow.PeekChar())
                     {
-                        case '"' when RecoveringFromRunawayLexing():
+                        case '`' when isBackTick && RecoveringFromRunawayLexing():
+                            return;
+                        case '"' when !isBackTick && RecoveringFromRunawayLexing():
                             // When recovering from mismatched delimiters, we consume the next
                             // quote character as the close quote for the interpolated string. In
                             // practice this gets us out of trouble in scenarios we've encountered.
                             // See, for example, https://github.com/dotnet/roslyn/issues/44789
                             return;
-                        case '"':
+                        case '`' when isBackTick:
+                            if (isVerbatim && lexer.TextWindow.PeekChar(1) == '`')
+                            {
+                                lexer.TextWindow.AdvanceChar(); // `
+                                lexer.TextWindow.AdvanceChar(); // `
+                                continue;
+                            }
+                            // found the end of the string
+                            return;
+                        case '"' when !isBackTick:
                             if (isVerbatim && lexer.TextWindow.PeekChar(1) == '"')
                             {
                                 lexer.TextWindow.AdvanceChar(); // "
@@ -398,6 +434,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                             else if (error == null)
                             {
                                 error = lexer.MakeError(pos, 1, ErrorCode.ERR_UnescapedCurly, "}");
+                            }
+                            continue;
+                        case '$':
+                            if (lexer.TextWindow.PeekChar(1) == '$')
+                            {
+                                lexer.TextWindow.AdvanceChar();
+                                lexer.TextWindow.AdvanceChar();
+                            }
+                            else
+                            {
+                                // skip the opening $
+                                int openPosition = lexer.TextWindow.Position;
+                                lexer.TextWindow.AdvanceChar();
+
+                                ScanBacktickInterpolatedStringCode('`');
+                                int closePosition = lexer.TextWindow.Position;
+
+                                interpolations?.Add(new Interpolation(openPosition, 0, closePosition, false, isBackTick, hasBraces: false));
                             }
                             continue;
                         case '{':
@@ -427,7 +481,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                                     }
                                 }
 
-                                interpolations?.Add(new Interpolation(openBracePosition, colonPosition, closeBracePosition, closeBraceMissing));
+                                interpolations?.Add(new Interpolation(openBracePosition, colonPosition, closeBracePosition, closeBraceMissing, isBackTick, hasBraces: true));
                             }
                             continue;
                         case '\\':
@@ -516,6 +570,118 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     else
                     {
                         lexer.TextWindow.AdvanceChar();
+                    }
+                }
+            }
+
+            private static bool IsIdentifierStartChar(char ch)
+            {
+                if (char.IsLetter(ch) || ch == '@' || ch == '_') return true;
+                return false;
+            }
+
+            private static bool IsIdentifierChar(char ch)
+            {
+                if (char.IsLetterOrDigit(ch) || ch == '_') return true;
+                return false;
+            }
+
+            private bool ScanIdentifier()
+            {
+                if (IsAtEnd()) return false;
+
+                // first character must be identifier start character
+                if (!IsIdentifierStartChar(lexer.TextWindow.PeekChar())) return false;
+                lexer.TextWindow.AdvanceChar();
+
+                while (!IsAtEnd())
+                {
+                    if (!IsIdentifierChar(lexer.TextWindow.PeekChar())) break;
+                    lexer.TextWindow.AdvanceChar();
+                }
+
+                return true;
+            }
+
+            private bool AdvanceChar()
+            {
+                if (IsAtEnd()) return false;
+                lexer.TextWindow.AdvanceChar();
+                return true;
+            }
+
+            private void ScanBacktickInterpolatedStringCode(char endingChar)
+            {
+                if (lexer.TextWindow.PeekChar() == '`') return;
+
+                if (IsAtEnd()) return;
+
+                // must start with an identifier
+                if (!ScanIdentifier())
+                {
+                    error = lexer.MakeError(lexer.TextWindow.Position, 1, ErrorCode.ERR_SyntaxError, endingChar.ToString());
+                    AdvanceChar();
+                    return;
+                }
+
+                // following we allow certain parenthesized expressions
+                while (!IsAtEnd())
+                {
+                    var ch = lexer.TextWindow.PeekChar();
+                    switch (ch)
+                    {
+                        case '(':
+                            // scan a member call expression
+                            ScanInterpolatedStringLiteralHoleBracketed('(', ')');
+                            break;
+                        case '[':
+                            // scan an indexer expression
+                            ScanInterpolatedStringLiteralHoleBracketed('[', ']');
+                            break;
+                        case '?':
+                            var nextCh = lexer.TextWindow.PeekChar(1);
+                            if (nextCh != '.' && nextCh != '?')
+                                return;
+
+                            // scan a member access expression
+                            if (!IsIdentifierStartChar(lexer.TextWindow.PeekChar(2)))
+                            {
+                                // we now treat it as if we exit the code
+                                return;
+                            }
+
+                            AdvanceChar(); // ?
+                            AdvanceChar(); // . or ?
+                            // ?.
+                            // ??
+
+                            if (!ScanIdentifier())
+                            {
+                                error = lexer.MakeError(lexer.TextWindow.Position, 1, ErrorCode.ERR_SyntaxError, endingChar.ToString());
+                                return;
+                            }
+
+                            break;
+                        case '.':
+                            // scan a member access expression
+                            if (!IsIdentifierStartChar(lexer.TextWindow.PeekChar(1)))
+                            {
+                                // we now treat it as if we exit the code
+                                return;
+                            }
+
+                            AdvanceChar(); // .
+
+                            if (!ScanIdentifier())
+                            {
+                                error = lexer.MakeError(lexer.TextWindow.Position, 1, ErrorCode.ERR_SyntaxError, endingChar.ToString());
+                                return;
+                            }
+
+                            break;
+                        default:
+                            // anything other than those will close the code block
+                            return;
                     }
                 }
             }
