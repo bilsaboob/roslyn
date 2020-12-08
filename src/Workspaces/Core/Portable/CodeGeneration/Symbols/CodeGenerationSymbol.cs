@@ -19,6 +19,7 @@ namespace Microsoft.CodeAnalysis.CodeGeneration
 
         private ImmutableArray<AttributeData> _attributes;
 
+        public ISymbol OriginalSymbol { get; set; }
         public ISymbol OverriddenSymbol { get; set; }
 
         public Accessibility DeclaredAccessibility { get; }

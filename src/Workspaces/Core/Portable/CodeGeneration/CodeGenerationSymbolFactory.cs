@@ -468,7 +468,7 @@ namespace Microsoft.CodeAnalysis.CodeGeneration
             ITypeSymbol returnType = null,
             Optional<ImmutableArray<AttributeData>> returnTypeAttributes = default)
         {
-            return CreateMethodSymbol(
+            var symbol = CreateMethodSymbol(
                 containingType,
                 attributes,
                 accessibility ?? method.DeclaredAccessibility,
@@ -483,6 +483,11 @@ namespace Microsoft.CodeAnalysis.CodeGeneration
                 returnTypeAttributes: returnTypeAttributes.HasValue ? returnTypeAttributes.Value : method.GetReturnTypeAttributes(),
                 methodKind: method.MethodKind,
                 isInitOnly: method.IsInitOnly);
+
+            if (symbol is CodeGenerationSymbol genSymbol)
+                genSymbol.OriginalSymbol = method;
+
+            return symbol;
         }
 
         internal static IPropertySymbol CreatePropertySymbol(
@@ -497,7 +502,7 @@ namespace Microsoft.CodeAnalysis.CodeGeneration
             IMethodSymbol getMethod = null,
             IMethodSymbol setMethod = null)
         {
-            return CreatePropertySymbol(
+            var symbol = CreatePropertySymbol(
                 attributes,
                 accessibility ?? property.DeclaredAccessibility,
                 modifiers ?? property.GetSymbolModifiers(),
@@ -509,6 +514,11 @@ namespace Microsoft.CodeAnalysis.CodeGeneration
                 getMethod,
                 setMethod,
                 isIndexer ?? property.IsIndexer);
+
+            if (symbol is CodeGenerationSymbol genSymbol)
+                genSymbol.OriginalSymbol = property;
+
+            return symbol;
         }
 
         internal static IEventSymbol CreateEventSymbol(
@@ -521,7 +531,7 @@ namespace Microsoft.CodeAnalysis.CodeGeneration
             IMethodSymbol addMethod = null,
             IMethodSymbol removeMethod = null)
         {
-            return CreateEventSymbol(
+            var symbol = CreateEventSymbol(
                 attributes,
                 accessibility ?? @event.DeclaredAccessibility,
                 modifiers ?? @event.GetSymbolModifiers(),
@@ -530,6 +540,11 @@ namespace Microsoft.CodeAnalysis.CodeGeneration
                 name ?? @event.Name,
                 addMethod,
                 removeMethod);
+
+            if (symbol is CodeGenerationSymbol genSymbol)
+                genSymbol.OriginalSymbol = @event;
+
+            return symbol;
         }
     }
 }

@@ -286,11 +286,26 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
             var getAccessor = accessorList.Accessors.FirstOrDefault(a => a.IsKind(SyntaxKind.GetAccessorDeclaration));
             var hasGetAccessor = getAccessor != null;
-            var useGetAccessor = true;
 
             var setAccessor = accessorList.Accessors.FirstOrDefault(a => a.IsKind(SyntaxKind.SetAccessorDeclaration));
             var hasSetAccessor = setAccessor != null;
-            var useSetAccessor = true;
+
+            // check if we have info about the original symbol for which we are creating - if that symbol is defined in a certain way, we should do the same
+            var sourceSymbol = (property as CodeGenerationSymbol)?.OriginalSymbol ?? property.GetOverriddenSymbol();
+
+            // try fetching the source property syntax and check if the original definition has any bodies
+            sourceSymbol.GetSourceSymbolSyntax<PropertyDeclarationSyntax>(out var sourcePropertySyntax);
+            if (sourcePropertySyntax != null)
+            {
+                if (hasAnyAccessorBody && !property.IsOverride)
+                    hasAnyAccessorBody = sourcePropertySyntax?.AccessorList?.Accessors.Any(a => a.Body != null || a.ExpressionBody != null) == true || sourcePropertySyntax.ExpressionBody?.Expression != null;
+
+                if (hasGetAccessor)
+                    hasGetAccessor = sourcePropertySyntax?.AccessorList?.Accessors.FirstOrDefault(a => a.IsKind(SyntaxKind.GetAccessorDeclaration)) != null;
+
+                if (hasSetAccessor)
+                    hasSetAccessor = sourcePropertySyntax?.AccessorList?.Accessors.FirstOrDefault(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) != null;
+            }
 
             if (!hasAnyAccessorBody)
             {
@@ -299,33 +314,29 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             }
             else if (hasGetAccessor && !hasSetAccessor)
             {
-                if (property.IsOverride && property.GetOverriddenSymbolSyntax<PropertyDeclarationSyntax>(out var overriddenPropertySyntax))
+                // check if the base syntax is an inline block getter
+                if (sourcePropertySyntax?.AccessorList?.OpenBraceToken.Width() == 0)
                 {
-                    // check if the base syntax is an inline block getter
-                    if (overriddenPropertySyntax.AccessorList?.OpenBraceToken.Width() == 0)
-                    {
-                        accessorList = SyntaxFactory.AccessorList(
-                            openBraceToken: SyntaxFactory.FakeToken(SyntaxKind.OpenBraceToken),
-                            accessors: SyntaxFactory.List<AccessorDeclarationSyntax>(new[] { SyntaxFactory.GetInlineAccessorDeclaration(
+                    accessorList = SyntaxFactory.AccessorList(
+                        openBraceToken: SyntaxFactory.FakeToken(SyntaxKind.OpenBraceToken),
+                        accessors: SyntaxFactory.List<AccessorDeclarationSyntax>(new[] { SyntaxFactory.GetInlineAccessorDeclaration(
                                 kind: SyntaxKind.GetAccessorDeclaration,
                                 attributeLists: getAccessor.AttributeLists,
                                 modifiers: getAccessor.Modifiers,
                                 SyntaxFactory.Block(getAccessor.Body?.Statements ?? SyntaxFactory.List<StatementSyntax>(new [] {SyntaxFactory.ReturnStatement(getAccessor.ExpressionBody?.Expression) }))
                                     .WithLeadingTrivia(SyntaxFactory.Whitespace(" "))
                             ) }),
-                            closeBraceToken: SyntaxFactory.FakeToken(SyntaxKind.CloseBraceToken)
-                        );
+                        closeBraceToken: SyntaxFactory.FakeToken(SyntaxKind.CloseBraceToken)
+                    );
 
-                        allowExpressionBody = false;
-                    }
+                    allowExpressionBody = false;
                 }
             }
-
             else if (hasGetAccessor && hasSetAccessor)
             {
                 accessorList = SyntaxFactory.AccessorList(
                     accessors: SyntaxFactory.List<AccessorDeclarationSyntax>(new[] {
-                        getAccessor.WithLeadingTrivia(SyntaxFactory.EndOfLine(System.Environment.NewLine)),
+                        getAccessor,
                         setAccessor.WithLeadingTrivia(SyntaxFactory.EndOfLine(System.Environment.NewLine))
                     })
                 );

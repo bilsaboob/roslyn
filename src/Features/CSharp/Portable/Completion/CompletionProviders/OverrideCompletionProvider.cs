@@ -211,7 +211,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
                     // move to the end of the last statement of the first accessor
                     var firstAccessor = propertyDeclaration.AccessorList.Accessors[0];
                     var firstAccessorStatement = (SyntaxNode)firstAccessor.Body?.Statements.LastOrDefault() ??
-                        firstAccessor.ExpressionBody.Expression;
+                        firstAccessor.ExpressionBody?.Expression;
+
+                    // if no accessor; move to the end of the declaration
+                    if (firstAccessorStatement == null)
+                        return propertyDeclaration.GetLocation().SourceSpan.End;
+
                     return firstAccessorStatement.GetLocation().SourceSpan.End;
                 }
                 else

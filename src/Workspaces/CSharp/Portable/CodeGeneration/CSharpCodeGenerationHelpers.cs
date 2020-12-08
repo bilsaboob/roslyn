@@ -21,6 +21,18 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 {
     internal static class CSharpCodeGenerationHelpers
     {
+        internal static bool GetSourceSymbolSyntax<TSyntax>(this ISymbol? symbol, out TSyntax syntax)
+            where TSyntax : SyntaxNode
+        {
+            syntax = null;
+            if (symbol == null) return false;
+
+            syntax = symbol.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as TSyntax;
+            if (syntax == null) return false;
+
+            return true;
+        }
+
         internal static bool GetOverriddenSymbolSyntax<TSyntax>(this ISymbol? symbol, out TSyntax syntax)
             where TSyntax : SyntaxNode
         {
@@ -42,6 +54,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
         internal static ISymbol? GetOverriddenSymbol(this ISymbol? symbol)
         {
+            if (symbol == null) return null;
+            if (!symbol.IsOverride) return null;
+
             if (symbol is CodeGenerationSymbol codeGenSymbol && codeGenSymbol.OverriddenSymbol != null)
             {
                 return codeGenSymbol.OverriddenSymbol;
