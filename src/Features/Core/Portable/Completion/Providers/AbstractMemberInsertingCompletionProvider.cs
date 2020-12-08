@@ -173,7 +173,7 @@ namespace Microsoft.CodeAnalysis.Completion.Providers
             Document memberContainingDocument, CancellationToken cancellationToken)
         {
             memberContainingDocument = await Simplifier.ReduceAsync(memberContainingDocument, Simplifier.Annotation, optionSet: null, cancellationToken).ConfigureAwait(false);
-            memberContainingDocument = await Formatter.FormatAsync(memberContainingDocument, Formatter.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
+            memberContainingDocument = await Formatter.FormatAsync(memberContainingDocument, Formatter.Annotation, null, cancellationToken, FormattingReason.CodeGen).ConfigureAwait(false);
 
             var root = await memberContainingDocument.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
             return root.GetAnnotatedNodesAndTokens(_annotation).Single().AsNode().ToString().Trim();

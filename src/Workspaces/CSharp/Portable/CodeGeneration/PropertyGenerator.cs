@@ -94,13 +94,18 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
             accessorList = CleanupAccessorBodies(accessorList, includeNotImplementedStatement: false);
 
+            var returnType = GenerateTypeSyntax(property);
+            if (returnType?.Width() > 0)
+                returnType = returnType.WithLeadingTrivia(SyntaxFactory.ElasticWhitespace(" "));
+
             var declaration = SyntaxFactory.IndexerDeclaration(
                     attributeLists: AttributeGenerator.GenerateAttributeLists(property.GetAttributes(), options),
                     modifiers: GenerateModifiers(property, destination, options),
-                    type: GenerateTypeSyntax(property),
+                    type: returnType,
                     explicitInterfaceSpecifier: explicitInterfaceSpecifier,
                     parameterList: ParameterGenerator.GenerateBracketedParameterList(property.Parameters, explicitInterfaceSpecifier != null, options),
-                    accessorList: accessorList);
+                    accessorList: accessorList?.WithLeadingTrivia(SyntaxFactory.ElasticWhitespace(" "))
+            );
 
             if (allowExpressionBody)
                 declaration = UseExpressionBodyIfDesired(options, declaration, parseOptions);
@@ -124,14 +129,16 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             accessorList = CleanupAccessorBodies(accessorList, includeNotImplementedStatement: false);
 
             var returnType = GenerateTypeSyntax(property);
+            if (returnType?.Width() > 0)
+                returnType = returnType.WithLeadingTrivia(SyntaxFactory.ElasticWhitespace(" "));
 
             var propertyDeclaration = SyntaxFactory.PropertyDeclaration(
                 attributeLists: AttributeGenerator.GenerateAttributeLists(property.GetAttributes(), options),
                 modifiers: GenerateModifiers(property, destination, options),
                 explicitInterfaceSpecifier: explicitInterfaceSpecifier,
                 identifier: property.Name.ToIdentifierToken().WithLeadingTrivia(SyntaxFactory.ElasticWhitespace(" ")),
-                type: returnType.WithLeadingTrivia(SyntaxFactory.ElasticWhitespace(" ")),
-                accessorList: accessorList.WithLeadingTrivia(SyntaxFactory.ElasticWhitespace(" ")),
+                type: returnType,
+                accessorList: accessorList?.WithLeadingTrivia(SyntaxFactory.ElasticWhitespace(" ")),
                 expressionBody: null,
                 initializer: initializer);
 
@@ -339,15 +346,6 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         getAccessor,
                         setAccessor.WithLeadingTrivia(SyntaxFactory.EndOfLine(System.Environment.NewLine))
                     })
-                );
-            }
-
-            if (accessorList.OpenBraceToken.Width() > 0 && accessorList.CloseBraceToken.Width() > 0)
-            {
-                accessorList = accessorList.Update(
-                    openBraceToken: accessorList.OpenBraceToken.WithTrailingTrivia(SyntaxFactory.EndOfLine(System.Environment.NewLine)),
-                    accessors: accessorList.Accessors,
-                    closeBraceToken: accessorList.CloseBraceToken.WithLeadingTrivia(SyntaxFactory.EndOfLine(System.Environment.NewLine))
                 );
             }
 

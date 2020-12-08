@@ -7,6 +7,7 @@ using Roslyn.Utilities;
 using Microsoft.CodeAnalysis.CSharp.Extensions;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using System;
+using System.Linq;
 using System.Collections.Concurrent;
 using Microsoft.CodeAnalysis.Formatting;
 
@@ -20,7 +21,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         public override AdjustNewLinesOperation GetAdjustNewLinesOperation(in SyntaxToken previousToken, in SyntaxToken currentToken, in NextGetAdjustNewLinesOperation nextOperation, FormattingReason reason)
         {
-            var op = EvalNewlineForBraces(previousToken, currentToken, reason);
+            var op = EvalNewlineForPropertyAccessors(previousToken, currentToken, reason);
+            if (op != null) return op;
+
+            op = EvalNewlineForBraces(previousToken, currentToken, reason);
             if (op != null) return op;
 
             op = EvalNewlineForSemicolon(previousToken, currentToken, reason);
@@ -36,6 +40,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             return op;
         }
 
+        private AdjustNewLinesOperation EvalNewlineForPropertyAccessors(SyntaxToken previousToken, SyntaxToken currentToken, FormattingReason reason)
+        {
+            if (currentToken.Width() == 0) return null;
+
+            if (currentToken.IsKind(SyntaxKind.GetKeyword, SyntaxKind.SetKeyword, SyntaxKind.CloseBraceToken))
+            {
+                // getter should be on newline is some cases ... that is if it's a "simple" property declaration
+                var propDecl = currentToken.Parent?.GetAncestorOrThis(n => IsMemberDeclaration(n)) as PropertyDeclarationSyntax;
+                if (propDecl == null) return null;
+
+                var anyAccessorWithBody = propDecl.AccessorList?.Accessors.Any(a => (a.Body != null || a.ExpressionBody != null) && a.Keyword.Width() > 0) == true;
+                if (anyAccessorWithBody)
+                {
+                    // if there is any accessor with a body, we must put it on a newline
+                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.ForceLines);
+                }
+            }
+
+            return null;
+        }
+
         private AdjustNewLinesOperation EvalNewlineForBraces(SyntaxToken previousToken, SyntaxToken currentToken, FormattingReason reason)
         {
             // only consider "real tokens" ... which have some actual length ... otherwise it may be "fake tokens"
@@ -46,7 +71,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             {
                 if (currentToken.IsKind(SyntaxKind.CloseBraceToken) && previousToken.IsKind(SyntaxKind.CloseBraceToken))
                 {
-                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.ForceLines);
+                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.ForceLinesIfOnSingleLine);
                 }
 
                 return null;
@@ -123,6 +148,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
             // we don't do anything if they are same declaration
             if (prevDecl == currentDecl) return null;
+
+            // special handling for properties without any get/set body - need an additional line for those if it's a code gen action ... since those properties generate a big "funky syntax" with hidden tokens and such...
+            if (reason == FormattingReason.CodeGen && prevDecl is PropertyDeclarationSyntax propDecl)
+            {
+                var anyAccessorWithBody = propDecl.AccessorList?.Accessors.Any(a => (a.Body != null || a.ExpressionBody != null) && a.Keyword.Width() > 0) == true;
+                var hasExprBody = propDecl.ExpressionBody?.Expression != null;
+                if (!anyAccessorWithBody && !hasExprBody)
+                {
+                    return CreateAdjustNewLinesOperation(3, AdjustNewLinesOption.ForceLines);
+                }
+            }
 
             return CreateAdjustNewLinesOperation(2, AdjustNewLinesOption.ForceLines);
         }
