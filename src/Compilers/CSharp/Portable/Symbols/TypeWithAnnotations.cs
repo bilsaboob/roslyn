@@ -240,11 +240,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         public void TryForceResolve(bool asValueType)
         {
-            _extensions.TryForceResolve(asValueType);
+            _extensions?.TryForceResolve(asValueType);
         }
 
-        private TypeWithAnnotations AsNullableReferenceType() => _extensions.AsNullableReferenceType(this);
-        public TypeWithAnnotations AsNotNullableReferenceType() => _extensions.AsNotNullableReferenceType(this);
+        private TypeWithAnnotations AsNullableReferenceType() => _extensions?.AsNullableReferenceType(this) ?? default;
+        public TypeWithAnnotations AsNotNullableReferenceType() => _extensions?.AsNotNullableReferenceType(this) ?? default;
 
         /// <summary>
         /// Merges top-level and nested nullability, dynamic/object, and tuple names from an otherwise equivalent type.
@@ -259,7 +259,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         public TypeWithAnnotations WithModifiers(ImmutableArray<CustomModifier> customModifiers) =>
-            _extensions.WithModifiers(this, customModifiers);
+            _extensions?.WithModifiers(this, customModifiers) ?? default(TypeWithAnnotations).WithModifiers(customModifiers);
 
         public bool IsResolved => _extensions?.IsResolved != false;
         public TypeSymbol Type
@@ -275,7 +275,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return resolvedType;
             }
         }
-        public TypeSymbol NullableUnderlyingTypeOrSelf => _extensions.GetNullableUnderlyingTypeOrSelf(DefaultType);
+        public TypeSymbol NullableUnderlyingTypeOrSelf => _extensions?.GetNullableUnderlyingTypeOrSelf(DefaultType);
 
         /// <summary>
         /// Is this System.Nullable`1 type, or its substitution.
@@ -288,20 +288,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// The list of custom modifiers, if any, associated with the <see cref="Type"/>.
         /// </summary>
-        public ImmutableArray<CustomModifier> CustomModifiers => _extensions.CustomModifiers;
+        public ImmutableArray<CustomModifier> CustomModifiers => _extensions?.CustomModifiers ?? ImmutableArray<CustomModifier>.Empty;
 
         public TypeKind TypeKind => Type.TypeKind;
-        public SpecialType SpecialType => _extensions.GetSpecialType(DefaultType);
+        public SpecialType SpecialType => _extensions?.GetSpecialType(DefaultType) ?? SpecialType.None;
         public Cci.PrimitiveTypeCode PrimitiveTypeCode => Type.PrimitiveTypeCode;
 
         public bool IsVoidType() =>
-            _extensions.IsVoid(DefaultType);
+            _extensions?.IsVoid(DefaultType) ?? false;
         public bool IsSZArray() =>
-            _extensions.IsSZArray(DefaultType);
+            _extensions?.IsSZArray(DefaultType) ?? false;
         public bool IsStatic =>
-            _extensions.IsStatic(DefaultType);
+            _extensions?.IsStatic(DefaultType) ?? false;
         public bool IsRestrictedType(bool ignoreSpanLikeTypes = false) =>
-            _extensions.IsRestrictedType(DefaultType, ignoreSpanLikeTypes);
+            _extensions?.IsRestrictedType(DefaultType, ignoreSpanLikeTypes) ?? false;
 
         public string ToDisplayString(SymbolDisplayFormat format = null)
         {
@@ -443,7 +443,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         internal bool TypeSymbolEquals(TypeWithAnnotations other, TypeCompareKind comparison, IReadOnlyDictionary<TypeParameterSymbol, bool> isValueTypeOverrideOpt) =>
-            _extensions.TypeSymbolEquals(this, other, comparison, isValueTypeOverrideOpt);
+            _extensions?.TypeSymbolEquals(this, other, comparison, isValueTypeOverrideOpt) ?? false;
 
         public bool GetUnificationUseSiteDiagnosticRecursive(ref DiagnosticInfo result, Symbol owner, ref HashSet<TypeSymbol> checkedTypes)
         {
@@ -458,7 +458,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         public TypeWithAnnotations SubstituteType(AbstractTypeMap typeMap) =>
-            _extensions.SubstituteType(this, typeMap);
+            _extensions?.SubstituteType(this, typeMap) ?? default(TypeWithAnnotations);
 
         internal TypeWithAnnotations SubstituteTypeCore(AbstractTypeMap typeMap)
         {
@@ -536,7 +536,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         public void ReportDiagnosticsIfObsolete(Binder binder, SyntaxNode syntax, DiagnosticBag diagnostics) =>
-            _extensions.ReportDiagnosticsIfObsolete(this, binder, syntax, diagnostics);
+            _extensions?.ReportDiagnosticsIfObsolete(this, binder, syntax, diagnostics);
 
         private bool TypeSymbolEqualsCore(TypeWithAnnotations other, TypeCompareKind comparison, IReadOnlyDictionary<TypeParameterSymbol, bool> isValueTypeOverrideOpt)
         {
@@ -552,7 +552,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// Extract type under assumption that there should be no custom modifiers or annotations.
         /// The method asserts otherwise.
         /// </summary>
-        public TypeSymbol AsTypeSymbolOnly() => _extensions.AsTypeSymbolOnly(DefaultType);
+        public TypeSymbol AsTypeSymbolOnly() => _extensions?.AsTypeSymbolOnly(DefaultType);
 
         /// <summary>
         /// Is this the given type parameter?
@@ -564,10 +564,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         public TypeWithAnnotations WithTypeAndModifiers(TypeSymbol typeSymbol, ImmutableArray<CustomModifier> customModifiers) =>
-            _extensions.WithTypeAndModifiers(this, typeSymbol, customModifiers);
+            _extensions?.WithTypeAndModifiers(this, typeSymbol, customModifiers) ?? default(TypeWithAnnotations).WithTypeAndModifiers(typeSymbol, customModifiers);
 
         public TypeWithAnnotations WithType(TypeSymbol typeSymbol) =>
-            _extensions.WithTypeAndModifiers(this, typeSymbol, CustomModifiers);
+            _extensions?.WithTypeAndModifiers(this, typeSymbol, CustomModifiers) ?? default(TypeWithAnnotations).WithTypeAndModifiers(typeSymbol, CustomModifiers);
 
         /// <summary>
         /// Used by callers before calling CSharpCompilation.EnsureNullableAttributeExists().
