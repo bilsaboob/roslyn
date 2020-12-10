@@ -488,7 +488,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public abstract Location ParameterLocation(int index);
         public abstract TypeWithAnnotations ParameterTypeWithAnnotations(int index);
         public abstract RefKind RefKind(int index);
-        protected abstract BoundBlock BindLambdaBody(LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, DiagnosticBag diagnostics);
+        protected abstract BoundBlock BindLambdaBody(LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, DiagnosticBag diagnostics, TypeWithAnnotations returnType);
 
         /// <summary>
         /// Return the bound expression if the lambda has an expression body and can be reused easily.
@@ -639,7 +639,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     refKind,
                     thisParameterIndex);
                 lambdaBodyBinder = new ExecutableCodeBinder(_unboundLambda.Syntax, lambdaSymbol, ParameterBinder(lambdaSymbol, Binder));
-                block = BindLambdaBody(lambdaSymbol, lambdaBodyBinder, diagnostics);
+                block = BindLambdaBody(lambdaSymbol, lambdaBodyBinder, diagnostics, returnType);
 
                 if (returnType.Type.IsAsyncTaskType(compilation) && !IsAsync)
                 {
@@ -846,7 +846,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 thisParameterIndes
             );
             var lambdaBodyBinder = new ExecutableCodeBinder(_unboundLambda.Syntax, lambdaSymbol, ParameterBinder(lambdaSymbol, Binder));
-            var block = BindLambdaBody(lambdaSymbol, lambdaBodyBinder, diagnostics);
+            var block = BindLambdaBody(lambdaSymbol, lambdaBodyBinder, diagnostics, returnType);
             return (lambdaSymbol, block, lambdaBodyBinder, diagnostics);
         }
 
@@ -1350,7 +1350,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return lambdaBodyBinder.CreateBlockFromExpression((ExpressionSyntax)this.Body, expression, diagnostics);
         }
 
-        protected override BoundBlock BindLambdaBody(LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, DiagnosticBag diagnostics)
+        protected override BoundBlock BindLambdaBody(LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, DiagnosticBag diagnostics, TypeWithAnnotations returnType)
         {
             if (this.IsExpressionLambda)
             {
@@ -1358,7 +1358,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             else
             {
-                return lambdaBodyBinder.BindEmbeddedBlockForLambda((BlockSyntax)this.Body, diagnostics);
+                return lambdaBodyBinder.BindEmbeddedBlockForLambda((BlockSyntax)this.Body, returnType, diagnostics);
             }
         }
     }

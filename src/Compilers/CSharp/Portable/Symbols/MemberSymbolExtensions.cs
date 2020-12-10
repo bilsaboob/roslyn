@@ -160,6 +160,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return symbol.Kind == SymbolKind.Method && IsAccessor((MethodSymbol)symbol);
         }
 
+        public static bool IsLambda(this Symbol symbol)
+        {
+            if (symbol == null) return false;
+            return symbol.Kind == SymbolKind.Method && IsLambda(symbol as MethodSymbol);
+        }
+
+        public static bool IsLambda(this MethodSymbol methodSymbol)
+        {
+            if (methodSymbol == null) return false;
+            return methodSymbol.MethodKind == MethodKind.AnonymousFunction || methodSymbol.MethodKind == MethodKind.LambdaMethod;
+        }
+
         public static bool IsIndexedPropertyAccessor(this MethodSymbol methodSymbol)
         {
             var propertyOrEvent = methodSymbol.AssociatedSymbol;

@@ -1797,9 +1797,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         internal virtual uint LocalScopeDepth => Next.LocalScopeDepth;
 
-        internal BoundBlock BindEmbeddedBlockForLambda(BlockSyntax node, DiagnosticBag diagnostics)
+        internal BoundBlock BindEmbeddedBlockForLambda(BlockSyntax node, TypeWithAnnotations returnType, DiagnosticBag diagnostics)
         {
-            return BindBlock(node, diagnostics, isBindingLambda: true, convertSingleExprToReturn: true);
+            return BindBlock(node, diagnostics, returnType: returnType, isBindingLambda: true, convertSingleExprToReturn: true);
         }
 
         internal virtual BoundBlock BindEmbeddedBlock(BlockSyntax node, DiagnosticBag diagnostics)
@@ -1813,6 +1813,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         private BoundBlock BindBlock(BlockSyntax node, DiagnosticBag diagnostics, Binder? fallbackBinder = null,
+            TypeWithAnnotations? returnType = null,
             bool isBindingLambda = false,
             bool convertSingleExprToReturn = false)
         {
@@ -1824,10 +1825,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             var binder = GetBinder(node) ?? fallbackBinder;
             Debug.Assert(binder != null);
 
-            return binder.BindBlockParts(node, diagnostics, isBindingLambda, convertSingleExprToReturn);
+            return binder.BindBlockParts(node, diagnostics, returnType, isBindingLambda, convertSingleExprToReturn);
         }
 
         private BoundBlock BindBlockParts(BlockSyntax node, DiagnosticBag diagnostics,
+            TypeWithAnnotations? returnType = null,
             bool isBindingLambda = false,
             bool convertSingleExprToReturn = false)
         {
@@ -1836,47 +1838,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             ArrayBuilder<BoundStatement> boundStatements = ArrayBuilder<BoundStatement>.GetInstance(nStatements);
 
-            var createImplicitReturn = convertSingleExprToReturn;
-            bool isSingeExprLambdaBlock = false;
-            ExpressionStatementSyntax singleExprLambdaStat = null;
-            bool isEmptyLambdaBlock = false;
-            if (isBindingLambda && createImplicitReturn)
+            if (TryBindBlockPartsImplicitReturn(node, diagnostics, out var implicitReturnStat, returnType, isBindingLambda, convertSingleExprToReturn))
             {
-                isSingeExprLambdaBlock = nStatements == 1;
-                if (isSingeExprLambdaBlock)
-                    singleExprLambdaStat = syntaxStatements[0] as ExpressionStatementSyntax;
-
-                isEmptyLambdaBlock = nStatements == 0;
-
-                if (!isSingeExprLambdaBlock && !isEmptyLambdaBlock)
-                    createImplicitReturn = false;
-            }
-
-            if (createImplicitReturn && isEmptyLambdaBlock)
-            {
-                // create a default return
-                var returnSyntax = SyntaxFactory.ReturnStatement(
-                    SyntaxFactory.FakeToken(SyntaxKind.ReturnKeyword),
-                    SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression, SyntaxFactory.FakeToken(SyntaxKind.DefaultKeyword)),
-                    SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken),
-                    node,
-                    node.Position + 1
-                );
-                var boundReturnStatement = BindReturn(returnSyntax, diagnostics);
-                boundStatements.Add(boundReturnStatement);
-            }
-            else if (createImplicitReturn && isSingeExprLambdaBlock && singleExprLambdaStat != null)
-            {
-                // create a return from the expression
-                var returnSyntax = SyntaxFactory.ReturnStatement(
-                    SyntaxFactory.FakeToken(SyntaxKind.ReturnKeyword),
-                    singleExprLambdaStat.Expression,
-                    SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken),
-                    singleExprLambdaStat.Parent,
-                    singleExprLambdaStat.Position
-                );
-                var boundReturnStatement = BindReturn(returnSyntax, diagnostics);
-                boundStatements.Add(boundReturnStatement);
+                boundStatements.Add(implicitReturnStat);
             }
             else
             {
@@ -1897,6 +1861,90 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             return block;
+        }
+
+        private bool TryBindBlockPartsImplicitReturn(BlockSyntax node, DiagnosticBag diagnostics, out BoundStatement implicitReturnStat,
+            TypeWithAnnotations? returnType = null,
+            bool isBindingLambda = false,
+            bool convertSingleExprToReturn = false)
+        {
+            // only do this if specified
+            var createImplicitReturn = convertSingleExprToReturn;
+            implicitReturnStat = null;
+            if (!isBindingLambda || !createImplicitReturn) return false;
+
+            // only do this when container is a lambda
+            var containingLambda = ContainingMemberOrLambda as MethodSymbol;
+            if (!containingLambda.IsLambda()) return false;
+
+            // helper states
+            bool isSingeExprLambdaBlock = false;
+            bool isEmptyLambdaBlock = false;
+            ExpressionStatementSyntax singleExprLambdaStat = null;
+
+            // check the statements for supported block structure
+            var syntaxStatements = node.Statements;
+            int nStatements = syntaxStatements.Count;
+
+            isSingeExprLambdaBlock = nStatements == 1;
+            if (isSingeExprLambdaBlock)
+                singleExprLambdaStat = syntaxStatements[0] as ExpressionStatementSyntax;
+            isEmptyLambdaBlock = nStatements == 0;
+
+            // must be either single expression statement or empty block to create an implicit return
+            if (!isSingeExprLambdaBlock && !isEmptyLambdaBlock)
+                return false;
+
+            // handle empty block
+            if (isEmptyLambdaBlock)
+            {
+                // we can return an implicit default for blocks where lambda is bound and expecting some value other than "void" as return type
+                if (returnType is null) return false;
+
+                // void return type don't need any implicit return
+                var isVoidReturn = returnType?.Type?.IsVoidType() == true || returnType?.Type?.IsNonGenericTaskType(Compilation) == true;
+                if (isVoidReturn) return false;
+
+                // tasks need to have a return of task type
+                // create a default return
+                var returnSyntax = SyntaxFactory.ReturnStatement(
+                    SyntaxFactory.FakeToken(SyntaxKind.ReturnKeyword),
+                    SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression, SyntaxFactory.FakeToken(SyntaxKind.DefaultKeyword)),
+                    SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken),
+                    node,
+                    node.Position + 1
+                );
+                implicitReturnStat = BindReturn(returnSyntax, diagnostics);
+                return true;
+            }
+
+            // handle single expression statement
+            if (isSingeExprLambdaBlock)
+            {
+                // only available if the expression is available and of certain type
+                var expr = singleExprLambdaStat?.Expression;
+                if (expr == null) return false;
+
+                // assignment expressions are not possible to return
+                if (expr is AssignmentExpressionSyntax) return false;
+
+                // void return type don't need any implicit return
+                var isVoidReturn = returnType?.Type?.IsVoidType() == true || returnType?.Type?.IsNonGenericTaskType(Compilation) == true;
+                if (isVoidReturn) return false;
+
+                // create a return from the expression
+                var returnSyntax = SyntaxFactory.ReturnStatement(
+                    SyntaxFactory.FakeToken(SyntaxKind.ReturnKeyword),
+                    singleExprLambdaStat.Expression,
+                    SyntaxFactory.FakeToken(SyntaxKind.SemicolonToken),
+                    singleExprLambdaStat.Parent,
+                    singleExprLambdaStat.Position
+                );
+                implicitReturnStat = BindReturn(returnSyntax, diagnostics);
+                return true;
+            }
+
+            return false;
         }
 
         private BoundBlock FinishBindBlockParts(CSharpSyntaxNode node, ImmutableArray<BoundStatement> boundStatements, DiagnosticBag diagnostics)
