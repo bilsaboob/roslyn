@@ -59,6 +59,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             set => base.IsThis = value;
         }
 
+        public override bool IsLambdaWithThisScope
+        {
+            get
+            {
+                if (_underlyingParameter.IsLambdaWithThisScope) return true;
+                return base.IsLambdaWithThisScope;
+            }
+            set => base.IsLambdaWithThisScope = value;
+        }
+
         public override TypeWithAnnotations TypeWithAnnotations
         {
             get { return _underlyingParameter.TypeWithAnnotations; }
