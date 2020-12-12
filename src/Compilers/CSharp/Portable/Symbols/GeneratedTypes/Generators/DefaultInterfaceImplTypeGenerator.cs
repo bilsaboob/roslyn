@@ -103,7 +103,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var type = tb.ConstructType() as GeneratedDefaultInterfaceTypeSymbol;
                 if (!(type is null))
                 {
-                    type.SynthesizedInterfaceConstructor ??= new SynthesizedInstanceConstructor(interfaceType);
+                    type.InterfaceConstructor ??= new SynthesizedInstanceConstructor(interfaceType);
                     type.InterfaceType ??= interfaceType;
                 }
                 return type;

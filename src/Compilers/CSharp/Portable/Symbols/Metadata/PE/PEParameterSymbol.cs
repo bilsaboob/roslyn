@@ -271,6 +271,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
                 typeWithAnnotations = TupleTypeDecoder.DecodeTupleTypesIfApplicable(typeWithAnnotations, handle, moduleSymbol);
             }
 
+            AnalyzeRSharpAttributes();
+
+            // this scoped lambda should have a delegate type, for which we need to extract the first parameter type
+            if (IsLambdaWithThisScope)
+            {
+                var type = typeWithAnnotations.Type;
+                if (!(type is null))
+                {
+                    if (type.IsDelegateType())
+                    {
+                        var delegateParams = type.DelegateParameters();
+                        if (delegateParams.Length > 0)
+                        {
+                            var annotationType = delegateParams[0];
+                            typeWithAnnotations = typeWithAnnotations.WithAnnotationType(annotationType.Type, TypeAnnotationKind.ThisParamType);
+                        }
+                    }
+                }
+            }
+
             _typeWithAnnotations = typeWithAnnotations;
 
             bool hasNameInMetadata = !string.IsNullOrEmpty(_name);
@@ -284,6 +304,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
 
             Debug.Assert(refKind == this.RefKind);
             Debug.Assert(hasNameInMetadata == this.HasNameInMetadata);
+        }
+
+        private void AnalyzeRSharpAttributes()
+        {
+            var attributes = GetAttributes();
+            if (attributes == null) return;
+
+            foreach (var attr in attributes)
+            {
+                if (RSharpParamSpreadAttributeGenerator.ATTRIBUTE_TYPE_NAME == attr.AttributeClass?.Name)
+                {
+                    this.IsSpread = true;
+                    continue;
+                }
+
+                if (RSharpParamLambdaWithThisScopeAttributeGenerator.ATTRIBUTE_TYPE_NAME == attr.AttributeClass?.Name)
+                {
+                    this.IsLambdaWithThisScope = true;
+                    continue;
+                }
+            }
         }
 
         private bool HasNameInMetadata

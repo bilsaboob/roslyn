@@ -24,8 +24,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
             }
 
-            public SynthesizedInstanceConstructor SynthesizedInterfaceConstructor { get; set; }
             public NamedTypeSymbol InterfaceType { get; set; }
+
+            public SynthesizedInstanceConstructor InterfaceConstructor { get; set; }
         }
 
         internal class GeneratedTypeSymbol : NamedTypeSymbol
@@ -63,6 +64,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 }
                 _typeMembers = typeMembersBuilder.ToImmutableAndFree();
             }
+
+            public SynthesizedInstanceConstructor DefaultConstructor { get; set; }
 
             #region Implementation
 

@@ -2,9 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Linq;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Threading;
+using Microsoft.CodeAnalysis.CSharp.Emit;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
@@ -263,5 +267,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         internal override bool IsMetadataIn => RefKind == RefKind.In;
 
         internal override bool IsMetadataOut => RefKind == RefKind.Out;
+
+        internal override IEnumerable<CSharpAttributeData> GetCustomAttributesToEmit(PEModuleBuilder moduleBuilder)
+        {
+            var baseCustomAttributes = base.GetCustomAttributesToEmit(moduleBuilder);
+            if (baseCustomAttributes != null)
+            {
+                foreach (var attr in baseCustomAttributes)
+                    yield return attr;
+            }
+
+            // synthesize metadata attribute for rsharp specifics
+            if (IsLambdaWithThisScope)
+            {
+                var attrType = RSharpParamLambdaWithThisScopeAttributeGenerator.GetOrGenerate(moduleBuilder.Compilation);
+                var attr = new SynthesizedAttributeData(attrType.DefaultConstructor, ImmutableArray<TypedConstant>.Empty, ImmutableArray<KeyValuePair<string, TypedConstant>>.Empty);
+                yield return attr;
+            }
+
+            if (IsSpread)
+            {
+                var attrType = RSharpParamSpreadAttributeGenerator.GetOrGenerate(moduleBuilder.Compilation);
+                var attr = new SynthesizedAttributeData(attrType.DefaultConstructor, ImmutableArray<TypedConstant>.Empty, ImmutableArray<KeyValuePair<string, TypedConstant>>.Empty);
+                yield return attr;
+            }
+        }
     }
 }

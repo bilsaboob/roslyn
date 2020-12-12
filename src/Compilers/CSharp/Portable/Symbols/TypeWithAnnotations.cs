@@ -60,6 +60,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             AnnotationTypeKind = annotationTypeKind;
             AnnotationType = annotationType;
+
+            if (AnnotationType is null && annotationTypeKind is null)
+            {
+                AnnotationType = defaultType?.AnnotationType;
+                AnnotationTypeKind = defaultType?.AnnotationTypeKind;
+            }
         }
 
         public TypeWithAnnotations WithAnnotationType(TypeSymbol type, TypeAnnotationKind annotationTypeKind)

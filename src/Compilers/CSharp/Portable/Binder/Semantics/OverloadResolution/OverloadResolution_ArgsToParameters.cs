@@ -156,7 +156,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (argIsLambda && !hasAnyLambdaArgWithThisScope && namedParamPos != -1)
                     {
                         var param = parameters[namedParamPos];
-                        if (param?.Type?.IsDelegateType() == true && param?.Type?.AnnotationTypeKind == TypeAnnotationKind.ThisParamType)
+                        if (param.IsDelegateParamWithThisScope())
                             hasAnyLambdaArgWithThisScope = true;
                     }
 
@@ -247,7 +247,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         // check if the parameter is of a lambda type that has first argument with "this" scope
                         if (argIsLambda && !hasAnyLambdaArgWithThisScope)
                         {
-                            if (param?.Type?.IsDelegateType() == true && param?.Type?.AnnotationTypeKind == TypeAnnotationKind.ThisParamType)
+                            if (param.IsDelegateParamWithThisScope())
                                 hasAnyLambdaArgWithThisScope = true;
                         }
 
@@ -282,7 +282,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (argIsLambda && !hasAnyLambdaArgWithThisScope && parameterCount > parameterPosition)
                     {
                         var param = parameters[parameterPosition];
-                        if (param?.Type?.IsDelegateType() == true && param?.Type?.AnnotationTypeKind == TypeAnnotationKind.ThisParamType)
+                        if (param.IsDelegateParamWithThisScope())
                             hasAnyLambdaArgWithThisScope = true;
                     }
 
@@ -309,7 +309,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (argIsLambda && !hasAnyLambdaArgWithThisScope && parameterCount > parameterPosition)
                     {
                         var param = parameters[parameterPosition];
-                        if (param?.Type?.IsDelegateType() == true && param?.Type?.AnnotationTypeKind == TypeAnnotationKind.ThisParamType)
+                        if (param.IsDelegateParamWithThisScope())
                             hasAnyLambdaArgWithThisScope = true;
                     }
 
