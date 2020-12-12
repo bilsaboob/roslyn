@@ -282,6 +282,9 @@ namespace Microsoft.CodeAnalysis.Formatting
         public static IList<TextChange> GetFormattedTextChanges(SyntaxNode node, Workspace workspace, OptionSet options = null, CancellationToken cancellationToken = default)
             => GetFormattedTextChanges(node, SpecializedCollections.SingletonEnumerable(node.FullSpan), workspace, options, rules: null, cancellationToken: cancellationToken);
 
+        internal static IList<TextChange> GetFormattedTextChanges(SyntaxNode node, Workspace workspace, OptionSet options, CancellationToken cancellationToken, FormattingReason reason)
+            => GetFormattedTextChanges(node, SpecializedCollections.SingletonEnumerable(node.FullSpan), workspace, options, rules: null, cancellationToken: cancellationToken, reason);
+
         /// <summary>
         /// Determines the changes necessary to format the whitespace of a syntax tree.
         /// </summary>

@@ -19,7 +19,8 @@ namespace Microsoft.CodeAnalysis.Formatting
         DefaultFormatAction,
         CommandAction,
         CopyPasteAction,
-        CodeGen
+        CodeGen,
+        CodeGenFromFileTemplate,
     }
 
     internal abstract class AbstractFormattingResult : IFormattingResult

@@ -21,6 +21,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
         public override AdjustNewLinesOperation GetAdjustNewLinesOperation(in SyntaxToken previousToken, in SyntaxToken currentToken, in NextGetAdjustNewLinesOperation nextOperation, FormattingReason reason)
         {
+            if (currentToken.IsKind(SyntaxKind.EndOfFileToken))
+                return base.GetAdjustNewLinesOperation(previousToken, currentToken, nextOperation, reason);
+
             var op = EvalNewlineForPropertyAccessors(previousToken, currentToken, reason);
             if (op != null) return op;
 
@@ -69,9 +72,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             // always add a newline for code gen if the previous was a brace too!
             if (reason == FormattingReason.CodeGen)
             {
-                if (currentToken.IsKind(SyntaxKind.CloseBraceToken) && previousToken.IsKind(SyntaxKind.CloseBraceToken))
+                // } }
+                if (previousToken.IsKind(SyntaxKind.CloseBraceToken) && currentToken.IsKind(SyntaxKind.CloseBraceToken))
                 {
-                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.ForceLinesIfOnSingleLine);
+                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.ForceLines);
+                }
+
+                // }; }
+                if (previousToken.IsKind(SyntaxKind.CloseBraceToken) && currentToken.IsKind(SyntaxKind.SemicolonToken) && currentToken.GetNextToken().IsKind(SyntaxKind.CloseBraceToken) == true)
+                {
+                    return CreateAdjustNewLinesOperation(1, AdjustNewLinesOption.ForceLines);
                 }
 
                 return null;
@@ -104,7 +114,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             var prevDecl = previousToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
 
             // calculate the line diff
-            var lineDiff = GetLineDiff(previousToken, currentToken);
+            var lineDiff = previousToken.GetLineDiff(currentToken);
             var onSameLine = lineDiff == 0;
 
             // if it's a fake semicomma token and it's on a newline... force it back on the previous line so that it stays together with the declaration
@@ -115,7 +125,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                 var options = AdjustNewLinesOption.ForceLines;
 
                 var nextToken = currentToken.GetNextToken();
-                var nextLineDiff = GetLineDiff(currentToken, nextToken);
+                var nextLineDiff = currentToken.GetLineDiff(nextToken);
                 if (nextLineDiff > 0)
                 {
                     // keep additional lines if the next token isn't on the same line
@@ -129,6 +139,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
                     case NamespaceDeclarationSyntax:
                     case UsingDirectiveSyntax:
                     case AttributeSyntax:
+                        return CreateAdjustNewLinesOperation(lines, options);
+                    case MethodDeclarationSyntax:
+                        // we only handle methods for code gen action
+                        if (reason != FormattingReason.CodeGen) return null;
                         return CreateAdjustNewLinesOperation(lines, options);
                 }
             }
@@ -150,13 +164,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             if (prevDecl == currentDecl) return null;
 
             // special handling for properties without any get/set body - need an additional line for those if it's a code gen action ... since those properties generate a big "funky syntax" with hidden tokens and such...
-            if (reason == FormattingReason.CodeGen && prevDecl is PropertyDeclarationSyntax propDecl)
+            if (reason == FormattingReason.CodeGen && prevDecl is PropertyDeclarationSyntax prevPropDecl)
             {
-                var anyAccessorWithBody = propDecl.AccessorList?.Accessors.Any(a => (a.Body != null || a.ExpressionBody != null) && a.Keyword.Width() > 0) == true;
-                var hasExprBody = propDecl.ExpressionBody?.Expression != null;
+                var anyAccessorWithBody = prevPropDecl.AccessorList?.Accessors.Any(a => (a.Body != null || a.ExpressionBody != null) && a.Keyword.Width() > 0) == true;
+                var hasExprBody = prevPropDecl.ExpressionBody?.Expression != null;
                 if (!anyAccessorWithBody && !hasExprBody)
                 {
-                    return CreateAdjustNewLinesOperation(3, AdjustNewLinesOption.ForceLines);
+                    var lineDiff = previousToken.GetLineDiff(currentToken);
+                    if (lineDiff <= 1)
+                        return CreateAdjustNewLinesOperation(3, AdjustNewLinesOption.ForceLines);
                 }
             }
 
@@ -178,7 +194,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             var prevDecl = previousToken.Parent?.GetAncestorOrThis(n => IsTopDeclaration(n));
 
             // calculate the line diff
-            var lineDiff = GetLineDiff(previousToken, currentToken);
+            var lineDiff = previousToken.GetLineDiff(currentToken);
             var onSameLine = lineDiff == 0;
             var linesCount = 0;
 
@@ -210,6 +226,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
 
             // no need to force anything if no expected line count
             if (linesCount <= 0) return null;
+
+            if (reason == FormattingReason.CodeGenFromFileTemplate && linesCount <= 1)
+            {
+                // code gen from template only needs lines if it's more than 1
+                return null;
+            }
 
             return CreateAdjustNewLinesOperation(linesCount, AdjustNewLinesOption.PreserveLines);
         }
@@ -273,15 +295,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Formatting
             }
 
             return false;
-        }
-
-        private static int GetLineDiff(SyntaxToken t1, SyntaxToken t2)
-        {
-            if (t1.IsNull || t2.IsNull) return 0;
-
-            var t1StartLine = t1.GetLocation().GetLineSpan().StartLinePosition.Line;
-            var t2StartLine = t2.GetLocation().GetLineSpan().StartLinePosition.Line;
-            return Math.Abs(t1StartLine - t2StartLine);
         }
     }
 }

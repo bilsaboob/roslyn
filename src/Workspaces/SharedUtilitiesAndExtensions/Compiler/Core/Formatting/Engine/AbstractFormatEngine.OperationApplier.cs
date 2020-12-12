@@ -219,22 +219,23 @@ namespace Microsoft.CodeAnalysis.Formatting
                 var t1 = _context.TokenStream.GetToken(t1Index);
                 var t2 = _context.TokenStream.GetToken(t2Index);
 
+                var lineBreaks = t1.GetLineDiff(t2);
                 var t1Trivia = _context.TokenStream.GetTriviaData(t1Index);
+                if (t1Trivia.LineBreaks > lineBreaks) lineBreaks = t1Trivia.LineBreaks;
 
                 // okay, check whether there is line between token more than we want
                 // check whether we should force it if it is less than given number
                 var indentation = _context.GetBaseIndentation(t2);
-                if (operation.Line > t1Trivia.LineBreaks)
+                if (operation.Line > lineBreaks)
                 {
-                    Debug.Assert(!_context.IsFormattingDisabled(t1Index));
-
                     // alright force them
                     _context.TokenStream.ApplyChange(t1Index, t1Trivia.WithLine(operation.Line, indentation, _context, _formattingRules, cancellationToken));
                     return true;
                 }
 
+                var spaces = t1Trivia.Spaces;
                 // lines between tokens are as expected, but indentation is not right
-                if (t1Trivia.SecondTokenIsFirstTokenOnLine && indentation != t1Trivia.Spaces)
+                if (t1Trivia.SecondTokenIsFirstTokenOnLine && indentation != spaces)
                 {
                     // Formatting can only be disabled for entire lines. This block only modifies the line containing
                     // the second token of the current pair, so we only need to check for disabled formatting at the

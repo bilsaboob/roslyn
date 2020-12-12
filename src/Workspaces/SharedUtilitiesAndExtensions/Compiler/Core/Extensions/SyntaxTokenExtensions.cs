@@ -81,6 +81,44 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
             return token;
         }
 
+        public static int GetLineDiff(this SyntaxToken t1, SyntaxToken t2)
+        {
+            if (t1.IsNull || t2.IsNull) return 0;
+
+            var t1StartLine = t1.GetLocation().GetLineSpan().StartLinePosition.Line;
+            var t2StartLine = t2.GetLocation().GetLineSpan().StartLinePosition.Line;
+            return Math.Abs(t1StartLine - t2StartLine);
+        }
+
+        public static int GetSpaceDiff(this SyntaxToken t1, SyntaxToken t2)
+        {
+            if (t1.IsNull || t2.IsNull) return 0;
+
+            var t1EndCol = t1.Span.End;
+            var t2StartCol = t2.Span.Start;
+            var diff = Math.Abs(t2StartCol - t1EndCol);
+            if (diff == 0) return 0;
+
+            var text = t1.SyntaxTree?.GetText();
+            if (text == null) return diff;
+
+            // check that it's really whitespaces
+            var diffText = text.GetSubText(Text.TextSpan.FromBounds(t1EndCol, t2StartCol))?.ToString();
+            if (string.IsNullOrEmpty(diffText)) return 0;
+
+            var actualDiff = 0;
+            for (var i = 0; i < diffText.Length; ++i)
+            {
+                var ch = diffText[i];
+                if (ch == '\n')
+                    actualDiff = 0;
+                else
+                    actualDiff++;
+            }
+
+            return actualDiff;
+        }
+
         public static SyntaxToken GetNextTokenOrEndOfFile(
             this SyntaxToken token,
             bool includeZeroWidth = false,

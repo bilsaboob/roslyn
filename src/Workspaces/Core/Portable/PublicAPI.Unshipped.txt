@@ -2,6 +2,8 @@ Microsoft.CodeAnalysis.CodeActions.CodeAction.PostProcessAsync(System.Collection
 Microsoft.CodeAnalysis.CodeActions.CodeAction.PostProcessChangesAsync(Microsoft.CodeAnalysis.Document document, System.Threading.CancellationToken cancellationToken, Microsoft.CodeAnalysis.Formatting.FormattingReason reason) -> System.Threading.Tasks.Task<Microsoft.CodeAnalysis.Document>
 Microsoft.CodeAnalysis.CodeActions.CodeAction.PostProcessChangesAsync(Microsoft.CodeAnalysis.Solution changedSolution, System.Threading.CancellationToken cancellationToken, Microsoft.CodeAnalysis.Formatting.FormattingReason reason) -> System.Threading.Tasks.Task<Microsoft.CodeAnalysis.Solution>
 Microsoft.CodeAnalysis.Formatting.FormattingReason
+Microsoft.CodeAnalysis.Formatting.FormattingReason.CodeGen = 3 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
+Microsoft.CodeAnalysis.Formatting.FormattingReason.CodeGenFromFileTemplate = 4 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
 Microsoft.CodeAnalysis.Formatting.FormattingReason.CommandAction = 1 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
 Microsoft.CodeAnalysis.Formatting.FormattingReason.CopyPasteAction = 2 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
 Microsoft.CodeAnalysis.Formatting.FormattingReason.DefaultFormatAction = 0 -> Microsoft.CodeAnalysis.Formatting.FormattingReason
