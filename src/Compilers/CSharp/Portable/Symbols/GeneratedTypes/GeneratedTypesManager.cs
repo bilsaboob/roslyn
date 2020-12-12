@@ -48,6 +48,23 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return _generatedTypesByKey.Values.ToImmutableArray<NamedTypeSymbol>();
         }
 
+        internal GeneratedTypeSymbol GetRSharpAttributeType(string attributeName)
+        {
+            _generatedTypesByKey.TryGetValue(attributeName, out var generatedType);
+            return generatedType;
+        }
+
+        internal GeneratedTypeBuilder GetRSharpAttributeTypeBuilder(string attributeName, DiagnosticBag diagnostics)
+        {
+            // prepare the type descriptor
+            var td = new GeneratedTypeDescriptor();
+            td.Name = attributeName;
+            td.TypeKind = TypeKind.Class;
+
+            // return a new builder
+            return new GeneratedTypeBuilder(this, td, GeneratedTypeKind.RSharpParamAttribute, diagnostics);
+        }
+
         internal GeneratedDefaultInterfaceTypeSymbol GetDefaultInterfaceType(TypeSymbol interfaceType)
         {
             var name = $"__DefaultImpl_{interfaceType.Name}";

@@ -394,6 +394,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        public virtual bool IsLambdaWithThisScope { get; set; }
+
         /// <summary>
         /// Returns data decoded from Obsolete attribute or null if there is no Obsolete attribute.
         /// This property returns ObsoleteAttributeData.Uninitialized if attribute arguments haven't been decoded yet.

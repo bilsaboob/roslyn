@@ -15,6 +15,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal enum GeneratedTypeKind
     {
+        RSharpParamAttribute,
         DefaultInterface
     }
 
@@ -180,9 +181,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             public GeneratedTypeBuilder WithDefaultConstructor()
             {
                 return WithConstructor(new SymbolTypeMemberBuilder((t, td, memberIndex, diagnostics) => {
+                    SynthesizedInstanceConstructor constructor = null;
                     if (td.TypeKind == TypeKind.Submission)
-                        return new SynthesizedSubmissionConstructor(t, diagnostics);
-                    return new SynthesizedInstanceConstructor(t);
+                        constructor = new SynthesizedSubmissionConstructor(t, diagnostics);
+                    else
+                        constructor = new SynthesizedInstanceConstructor(t);
+                    t.DefaultConstructor = constructor;
+                    return constructor;
                 }));
             }
 

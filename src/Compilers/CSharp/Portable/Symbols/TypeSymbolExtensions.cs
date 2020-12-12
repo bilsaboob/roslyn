@@ -436,6 +436,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return type.TypeKind == TypeKind.Delegate;
         }
 
+        public static bool IsDelegateParamWithThisScope(this Symbol symbol)
+        {
+            var paramSymbol = symbol as ParameterSymbol;
+            if (paramSymbol == null) return false;
+
+            if (paramSymbol.IsLambdaWithThisScope) return true;
+
+            var type = symbol.GetTypeOrReturnType();
+            if (type.TypeKind != TypeKind.Delegate) return false;
+
+            if (type.AnnotationTypeKind == TypeAnnotationKind.ThisParamType)
+                return true;
+
+            return false;
+        }
+
+        public static bool IsSpreadParam(this Symbol symbol)
+        {
+            var paramSymbol = symbol as ParameterSymbol;
+            if (paramSymbol == null) return false;
+
+            return paramSymbol.IsSpread;
+        }
+
         public static ImmutableArray<ParameterSymbol> DelegateParameters(this TypeSymbol type)
         {
             var invokeMethod = type.DelegateInvokeMethod();

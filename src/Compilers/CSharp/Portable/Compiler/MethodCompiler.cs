@@ -164,6 +164,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var embeddedTypes = moduleBeingBuiltOpt.GetEmbeddedTypes(diagnostics);
                 methodCompiler.CompileSynthesizedMethods(embeddedTypes, diagnostics);
 
+                RSharpBuiltInSystemTypes.GenerateTypes(compilation);
+
                 // Compile the generated types if any
                 compilation.GeneratedTypesManager.CompileGeneratedTypes(methodCompiler, moduleBeingBuiltOpt, diagnostics);
                 methodCompiler.WaitForWorkers();
@@ -1868,6 +1870,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 if (baseType.SpecialType == SpecialType.System_Object)
                 {
+                    return GenerateBaseParameterlessConstructorInitializer(constructor, diagnostics);
+                }
+                else if (constructor is SynthesizedInstanceConstructor && baseType.ToString().Equals("System.Attribute"))
+                {
+                    // synthesized attribute should just call the standard base type
                     return GenerateBaseParameterlessConstructorInitializer(constructor, diagnostics);
                 }
                 else if (baseType.IsErrorType() || baseType.IsStatic)

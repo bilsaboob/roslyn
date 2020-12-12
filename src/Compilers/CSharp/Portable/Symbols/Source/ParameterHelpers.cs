@@ -41,6 +41,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                                         SyntaxToken paramsKeyword, SyntaxToken thisKeyword, bool addRefReadOnlyModifier,
                                         DiagnosticBag declarationDiagnostics) =>
                 {
+                    // check if we have any spread params
                     var isSpread = syntax.Spread.Node != null;
                     if (isSpread && !SpreadParamHelpers.IsValidSpreadArgType(parameterType.Type))
                     {
@@ -48,8 +49,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         diagnostics.Add(ErrorCode.ERR_DefaultConstructorRequiredForSpreadParam, syntax.Location, parameterType.Type.Name);
                     }
 
-                    var isThis = syntax?.Modifiers.Any(SyntaxKind.ThisKeyword) == true;
+                    // check if we have a "this scoped lambda"
+                    var isThisLambdaScope = parameterType.AnnotationTypeKind == TypeAnnotationKind.ThisParamType;
 
+                    var isThis = syntax?.Modifiers.Any(SyntaxKind.ThisKeyword) == true;
                     var p = SourceParameterSymbol.Create(
                         context,
                         owner,
@@ -65,6 +68,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                     p.IsSpread = isSpread;
                     p.IsThis = isThis;
+                    p.IsLambdaWithThisScope = isThisLambdaScope;
 
                     return p;
                 }

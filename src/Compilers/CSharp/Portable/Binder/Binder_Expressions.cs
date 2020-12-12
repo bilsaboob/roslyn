@@ -6033,7 +6033,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var defaultImplType = DefaultInterfaceImplTypeGenerator.GetOrGenerate(Compilation, type);
                 if (!(defaultImplType is null))
                 {
-                    allInstanceConstructors = ImmutableArray.Create<MethodSymbol>(defaultImplType.SynthesizedInterfaceConstructor);
+                    allInstanceConstructors = ImmutableArray.Create<MethodSymbol>(defaultImplType.InterfaceConstructor);
                 }
             }
 
