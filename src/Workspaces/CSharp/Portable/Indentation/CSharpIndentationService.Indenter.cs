@@ -262,6 +262,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
 
         private static IndentationResult? GetIndentationBasedOnSemanticsForNewLine(Indenter indenter, SyntaxToken token, SyntaxToken prevToken, SyntaxNode parent = null)
         {
+            if (prevToken.IsKind(SyntaxKind.EndOfLineTrivia)) return NoIndentation(indenter);
+            if (prevToken.IsKind(SyntaxKind.None))
+            {
+                var nextToken = token.GetNextToken();
+                if (nextToken.IsKind(SyntaxKind.None, SyntaxKind.EndOfFileToken)) return NoIndentation(indenter);
+            }
+
             // Try indent with special handling for the "=>" token
             var result = GetIndentationForArrowToken(indenter, token, prevToken);
             if (result != null) return result;
@@ -1740,5 +1747,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Indentation
 
             return indenter.IndentFromStartOfLine(indent + spaceToAdd);
         }
+
+        private static IndentationResult NoIndentation(Indenter indenter) => indenter.IndentFromStartOfLine(0);
     }
 }
