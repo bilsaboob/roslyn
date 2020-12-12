@@ -37,5 +37,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 this.Diagnostics = diagnostics;
             }
         }
+
+        internal TypeSymbol WithAnnotationTypeFromOther(TypeSymbol type)
+        {
+            if (type is null) return this;
+
+            if (AnnotationType is null && AnnotationTypeKind is null)
+            {
+                AnnotationType = type.AnnotationType;
+                AnnotationTypeKind = type.AnnotationTypeKind;
+
+                // this param type needs to be replaced with a concrete type if it's a type parameter - it may be that this type is a concrete type...
+                if (AnnotationTypeKind == TypeAnnotationKind.ThisParamType && AnnotationType?.TypeKind == TypeKind.TypeParameter)
+                {
+                    var delegateParams = this.DelegateParameters();
+                    if (delegateParams.Length > 0)
+                    {
+                        AnnotationType = delegateParams[0]?.Type;
+                    }
+                }
+            }
+
+            return this;
+        }
     }
 }

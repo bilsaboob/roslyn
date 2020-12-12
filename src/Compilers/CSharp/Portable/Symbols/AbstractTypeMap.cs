@@ -79,7 +79,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return previous;
             }
 
-            return newConstructedFrom.ConstructIfGeneric(newTypeArguments.ToImmutableAndFree()).WithTupleDataFrom(previous);
+            var newConstructedType = newConstructedFrom.ConstructIfGeneric(newTypeArguments.ToImmutableAndFree()).WithTupleDataFrom(previous);
+            return (NamedTypeSymbol)newConstructedType.WithAnnotationTypeFromOther(previous);
         }
 
         /// <summary>

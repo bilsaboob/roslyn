@@ -49,7 +49,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var mapOrType = _mapOrType;
                 if (mapOrType is TypeWithAnnotations type)
                 {
-                    return type;
+                    return GetTypeWithOriginalAnnotation(type);
                 }
 
                 TypeWithAnnotations substituted = ((TypeMap)mapOrType).SubstituteType(this._underlyingParameter.TypeWithAnnotations);
@@ -61,10 +61,31 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     _mapOrType = substituted;
                 }
 
-                return substituted;
+                return GetTypeWithOriginalAnnotation(substituted);
             }
         }
 
+        private TypeWithAnnotations GetTypeWithOriginalAnnotation(TypeWithAnnotations type)
+        {
+            var originalType = this._underlyingParameter.TypeWithAnnotations;
+
+            if (!(originalType.AnnotationType is null) && originalType.AnnotationTypeKind != null)
+            {
+                if (originalType.AnnotationTypeKind == TypeAnnotationKind.ThisParamType && originalType.AnnotationType.TypeKind == TypeKind.TypeParameter)
+                {
+                    // replace the annotation type with "this" substituted type from the delegate! ... since "ThisParamType" can only occur for Action<T> ...
+                    var delegateParams = type.Type.DelegateParameters();
+                    if (delegateParams.Length > 0)
+                    {
+                        return type.WithAnnotationType(delegateParams[0].Type, originalType.AnnotationTypeKind.Value);
+                    }
+                }
+
+                return type.WithAnnotationType(originalType.AnnotationType, originalType.AnnotationTypeKind.Value);
+            }
+
+            return type;
+        }
 
         public override ImmutableArray<CustomModifier> RefCustomModifiers
         {
