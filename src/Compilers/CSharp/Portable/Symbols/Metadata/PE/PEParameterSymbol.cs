@@ -284,6 +284,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
 
             Debug.Assert(refKind == this.RefKind);
             Debug.Assert(hasNameInMetadata == this.HasNameInMetadata);
+
+            AnalyzeRSharpAttributes();
+        }
+
+        private void AnalyzeRSharpAttributes()
+        {
+            var attributes = GetAttributes();
+            if (attributes == null) return;
+
+            foreach (var attr in attributes)
+            {
+                if (RSharpParamSpreadAttributeGenerator.ATTRIBUTE_TYPE_NAME == attr.AttributeClass?.Name)
+                {
+                    this.IsSpread = true;
+                    continue;
+                }
+
+                if (RSharpParamLambdaWithThisScopeAttributeGenerator.ATTRIBUTE_TYPE_NAME == attr.AttributeClass?.Name)
+                {
+                    this.IsLambdaWithThisScope = true;
+                    continue;
+                }
+            }
         }
 
         private bool HasNameInMetadata
