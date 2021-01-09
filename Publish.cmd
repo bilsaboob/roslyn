@@ -1,3 +1,2 @@
 @echo off
-
-powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0eng\publish.ps1""" %*"
+powershell -ExecutionPolicy ByPass -NoProfile -command ". .\eng\rsharp\publish.ps1; Publish %*;"

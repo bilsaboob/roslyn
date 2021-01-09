@@ -5,9 +5,15 @@
     Roslyn version
   -->
   <PropertyGroup>
-    <MajorVersion>1</MajorVersion>
-    <MinorVersion>0</MinorVersion>
-    <PatchVersion>0</PatchVersion>
+    <MajorVersion Condition="'$(RSMajorVersion)'==''">1</MajorVersion>
+    <MajorVersion Condition="'$(RSMajorVersion)'!=''">$(RSMajorVersion)</MajorVersion>
+
+    <MinorVersion Condition="'$(RSMinorVersion)'==''">0</MinorVersion>
+    <MinorVersion Condition="'$(RSMinorVersion)'!=''">$(RSMinorVersion)</MinorVersion>
+
+    <PatchVersion Condition="'$(RSPatchVersion)'==''">0</PatchVersion>
+    <PatchVersion Condition="'$(RSPatchVersion)'!=''">$(RSPatchVersion)</PatchVersion>
+
     <PreReleaseVersionLabel>2</PreReleaseVersionLabel>
     <VersionPrefix>$(MajorVersion).$(MinorVersion).$(PatchVersion)</VersionPrefix>
     <!--

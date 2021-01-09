@@ -14,56 +14,55 @@
 # it's fine to call `build.ps1 -build -testDesktop` followed by repeated calls to
 # `.\build.ps1 -testDesktop`.
 
-[CmdletBinding(PositionalBinding=$false)]
-param (
-  [string][Alias('c')]$configuration = "Debug",
-  [string][Alias('v')]$verbosity = "m",
-  [string]$msbuildEngine = "vs",
+$_configuration = "Debug"
+$_configuration = "m"
+$_msbuildEngine = "vs"
 
-  # Actions
-  [switch][Alias('r')]$restore,
-  [switch][Alias('b')]$build,
-  [switch]$rebuild,
-  [switch]$sign,
-  [switch]$pack,
-  [switch]$publish,
-  [switch]$launch,
-  [switch]$help,
+# Actions
+$_restore = $false
+$_build = $false
+$_rebuild = $false
+$_sign = $false
+$_pack = $false
+$_publish = $false
+$_launch = $false
+$_help = $false
 
-  # Options
-  [switch]$bootstrap,
-  [string]$bootstrapConfiguration = "Release",
-  [switch][Alias('bl')]$binaryLog,
-  [switch]$buildServerLog,
-  [switch]$ci,
-  [switch]$procdump,
-  [switch][Alias('a')]$runAnalyzers,
-  [switch][Alias('d')]$deployExtensions,
-  [switch]$prepareMachine,
-  [switch]$useGlobalNuGetCache = $true,
-  [switch]$warnAsError = $false,
-  [switch]$sourceBuild = $false,
+# Options
+$_bootstrap = $false
+$_bootstrapConfiguration = "Release"
+$_binaryLog = $false
+$_buildServerLog = $false
+$_ci = $false
+$_procdump = $false
+$_runAnalyzers = $false
+$_deployExtensions = $false
+$_prepareMachine = $false
+$_useGlobalNuGetCache = $true
+$_warnAsError = $false
+$_sourceBuild = $false
 
-  # official build settings
-  [string]$officialBuildId = "",
-  [string]$officialSkipApplyOptimizationData = "",
-  [string]$officialSkipTests = "",
-  [string]$officialSourceBranchName = "",
-  [string]$officialIbcDrop = "",
+# official build settings
+$_officialBuildId = ""
+$_officialSkipApplyOptimizationData = ""
+$_officialSkipTests = ""
+$_officialSourceBranchName = ""
+$_officialIbcDrop = ""
 
-  # Test actions
-  [switch]$test32,
-  [switch]$test64,
-  [switch]$testVsi,
-  [switch][Alias('test')]$testDesktop,
-  [switch]$testCoreClr,
-  [switch]$testIOperation,
-  [switch]$sequential,
+$_majorVer = ""
+$_minorVer = ""
+$_patchVer = ""
 
-  [parameter(ValueFromRemainingArguments=$true)][string[]]$properties)
+# Test actions
+$_test32 = $false
+$_test64 = $false
+$_testVsi = $false
+$_testDesktop = $false
+$_testCoreClr = $false
+$_testIOperation = $false
+$_sequential = $false
 
-Set-StrictMode -version 2.0
-$ErrorActionPreference = "Stop"
+[parameter(ValueFromRemainingArguments=$true)][string[]]$properties
 
 function Print-Usage() {
   Write-Host "Common settings:"
@@ -118,76 +117,76 @@ function Print-Usage() {
 # specified.
 #
 # In this function it's okay to use two arguments to extend the effect of another. For
-# example it's okay to look at $testVsi and infer $runAnalyzers. It's not okay though to infer
-# $build based on say $testDesktop. It's possible the developer wanted only for testing
+# example it's okay to look at $_testVsi and infer $_runAnalyzers. It's not okay though to infer
+# $_build based on say $_testDesktop. It's possible the developer wanted only for testing
 # to execute, not any build.
 function Process-Arguments() {
   function OfficialBuildOnly([string]$argName) {
     if ((Get-Variable $argName -Scope Script).Value) {
-      if (!$officialBuildId) {
+      if (!$_officialBuildId) {
         Write-Host "$argName can only be specified for official builds"
         exit 1
       }
     } else {
-      if ($officialBuildId) {
+      if ($_officialBuildId) {
         Write-Host "$argName must be specified in official builds"
         exit 1
       }
     }
   }
 
-  if ($help -or (($properties -ne $null) -and ($properties.Contains("/help") -or $properties.Contains("/?")))) {
+  if ($_help -or (($properties -ne $null) -and ($properties.Contains("/help") -or $properties.Contains("/?")))) {
        Print-Usage
        exit 0
   }
 
-  OfficialBuildOnly "officialSkipTests"
-  OfficialBuildOnly "officialSkipApplyOptimizationData"
-  OfficialBuildOnly "officialSourceBranchName"
+  OfficialBuildOnly "_officialSkipTests"
+  OfficialBuildOnly "_officialSkipApplyOptimizationData"
+  OfficialBuildOnly "_officialSourceBranchName"
 
-  if ($officialBuildId) {
+  if ($_officialBuildId) {
     $script:useGlobalNuGetCache = $false
     $script:procdump = $true
-    $script:testDesktop = ![System.Boolean]::Parse($officialSkipTests)
-    $script:applyOptimizationData = ![System.Boolean]::Parse($officialSkipApplyOptimizationData)
+    $script:testDesktop = ![System.Boolean]::Parse($_officialSkipTests)
+    $script:applyOptimizationData = ![System.Boolean]::Parse($_officialSkipApplyOptimizationData)
   } else {
     $script:applyOptimizationData = $false
   }
 
-  if ($ci) {
+  if ($_ci) {
     $script:binaryLog = $true
-    if ($bootstrap) {
+    if ($_bootstrap) {
       $script:buildServerLog = $true
     }
   }
 
-  if ($test32 -and $test64) {
+  if ($_test32 -and $_test64) {
     Write-Host "Cannot combine -test32 and -test64"
     exit 1
   }
 
-  $anyUnit = $testDesktop -or $testCoreClr
-  if ($anyUnit -and $testVsi) {
+  $anyUnit = $_testDesktop -or $_testCoreClr
+  if ($anyUnit -and $_testVsi) {
     Write-Host "Cannot combine unit and VSI testing"
     exit 1
   }
 
-  if ($testVsi) {
+  if ($_testVsi) {
     # Avoid spending time in analyzers when requested, and also in the slowest integration test builds
     $script:runAnalyzers = $false
     $script:bootstrap = $false
   }
 
-  if ($build -and $launch -and -not $deployExtensions) {
+  if ($_build -and $_launch -and -not $_deployExtensions) {
     Write-Host -ForegroundColor Red "Cannot combine -build and -launch without -deployExtensions"
     exit 1
   }
 
-  if ($bootstrap) {
+  if ($_bootstrap) {
     $script:restore = $true
   }
 
-  $script:test32 = -not $test64
+  $script:test32 = -not $_test64
 
   foreach ($property in $properties) {
     if (!$property.StartsWith("/p:", "InvariantCultureIgnoreCase")) {
@@ -203,58 +202,69 @@ function BuildSolution() {
 
   Write-Host "$($solution):"
 
-  $bl = if ($binaryLog) { "/bl:" + (Join-Path $LogDir "Build.binlog") } else { "" }
+  $bl = if ($_binaryLog) { "/bl:" + (Join-Path $LogDir "Build.binlog") } else { "" }
 
-  if ($buildServerLog) {
+  if ($_buildServerLog) {
     ${env:ROSLYNCOMMANDLINELOGFILE} = Join-Path $LogDir "Build.Server.log"
   }
 
   $projects = Join-Path $RepoRoot $solution
   $toolsetBuildProj = InitializeToolset
 
-  $testTargetFrameworks = if ($testCoreClr) { 'net5.0%3Bnetcoreapp3.1' } else { "" }
+  $testTargetFrameworks = if ($_testCoreClr) { 'net5.0%3Bnetcoreapp3.1' } else { "" }
   
   $ibcDropName = GetIbcDropName
 
   # Do not set this property to true explicitly, since that would override values set in projects.
-  $suppressExtensionDeployment = if (!$deployExtensions) { "/p:DeployExtension=false" } else { "" } 
+  $suppressExtensionDeployment = if (!$_deployExtensions) { "/p:DeployExtension=false" } else { "" } 
 
   # The warnAsError flag for MSBuild will promote all warnings to errors. This is true for warnings
   # that MSBuild output as well as ones that custom tasks output.
-  $msbuildWarnAsError = if ($warnAsError) { "/warnAsError" } else { "" }
+  $msbuildWarnAsError = if ($_warnAsError) { "/warnAsError" } else { "" }
 
   # Workaround for some machines in the AzDO pool not allowing long paths (%5c is msbuild escaped backslash)
   $ibcDir = Join-Path $RepoRoot ".o%5c"
 
   # Set DotNetBuildFromSource to 'true' if we're simulating building for source-build.
-  $buildFromSource = if ($sourceBuild) { "/p:DotNetBuildFromSource=true" } else { "" }
+  $buildFromSource = if ($_sourceBuild) { "/p:DotNetBuildFromSource=true" } else { "" }
 
   # If we are using msbuild.exe restore using static graph
   # This check can be removed and turned on for all builds once roslyn depends on a .NET Core SDK
   # that has a new enough msbuild for the -graph switch to be present
-  $restoreUseStaticGraphEvaluation = if ($msbuildEngine -ne 'dotnet') { "/p:RestoreUseStaticGraphEvaluation=true" } else { "" }
+  $restoreUseStaticGraphEvaluation = if ($_msbuildEngine -ne 'dotnet') { "/p:RestoreUseStaticGraphEvaluation=true" } else { "" }
   
+  # copy the custom toolset build file
+  $toolsetBuildFolder = [System.IO.Path]::GetDirectoryName($toolsetBuildProj)
+  $buildProjFile = [System.IO.Path]::GetFullPath($PSScriptRoot + "\build.proj")
+  $toolsetBuildProjFile = [System.IO.Path]::GetFullPath($toolsetBuildFolder + "\RSBuild.proj")
+  if (!(Test-Path -path $toolsetBuildProjFile -PathType Leaf)) {
+    Copy-Item -Path $buildProjFile $toolsetBuildProjFile -Force
+  }
+
   try {
-    MSBuild $toolsetBuildProj `
+    MSBuild $toolsetBuildProjFile `
       $bl `
-      /p:Configuration=$configuration `
+      /p:Configuration=$_configuration `
       /p:Projects=$projects `
       /p:RepoRoot=$RepoRoot `
-      /p:Restore=$restore `
-      /p:Build=$build `
-      /p:Test=$testCoreClr `
-      /p:Rebuild=$rebuild `
-      /p:Pack=$pack `
-      /p:Sign=$sign `
-      /p:Publish=$publish `
-      /p:ContinuousIntegrationBuild=$ci `
-      /p:OfficialBuildId=$officialBuildId `
-      /p:UseRoslynAnalyzers=$runAnalyzers `
+      /p:Restore=$_restore `
+      /p:Build=$_build `
+      /p:Test=$_testCoreClr `
+      /p:Rebuild=$_rebuild `
+      /p:Pack=$_pack `
+      /p:Sign=$_sign `
+      /p:Publish=$_publish `
+      /p:ContinuousIntegrationBuild=$_ci `
+      /p:OfficialBuildId=$_officialBuildId `
+      /p:UseRoslynAnalyzers=$_runAnalyzers `
       /p:BootstrapBuildPath=$bootstrapDir `
       /p:TestTargetFrameworks=$testTargetFrameworks `
-      /p:TreatWarningsAsErrors=$warnAsError `
+      /p:TreatWarningsAsErrors=$_warnAsError `
       /p:EnableNgenOptimization=$applyOptimizationData `
       /p:IbcOptimizationDataDir=$ibcDir `
+      /p:RSMajorVersion=$_majorVer `
+      /p:RSMinorVersion=$_minorVer `
+      /p:RSPatchVersion=$_patchVer `
       $restoreUseStaticGraphEvaluation `
       /p:VisualStudioIbcDrop=$ibcDropName `
       $suppressExtensionDeployment `
@@ -278,9 +288,9 @@ function GetIbcSourceBranchName() {
   function calculate {
     $fallback = "master"
 
-    $branchData = GetBranchPublishData $officialSourceBranchName
+    $branchData = GetBranchPublishData $_officialSourceBranchName
     if ($branchData -eq $null) {
-      Write-Host "Warning: Branch $officialSourceBranchName is not listed in PublishData.json. Using IBC data from '$fallback'." -ForegroundColor Yellow
+      Write-Host "Warning: Branch $_officialSourceBranchName is not listed in PublishData.json. Using IBC data from '$fallback'." -ForegroundColor Yellow
       Write-Host "Override by setting IbcDrop build variable." -ForegroundColor Yellow
       return $fallback
     }
@@ -293,12 +303,12 @@ function GetIbcSourceBranchName() {
 
 function GetIbcDropName() {
 
-    if ($officialIbcDrop -and $officialIbcDrop -ne "default"){
-        return $officialIbcDrop
+    if ($_officialIbcDrop -and $_officialIbcDrop -ne "default"){
+        return $_officialIbcDrop
     }
 
     # Don't try and get the ibc drop if we're not in an official build as it won't be used anyway
-    if (!$officialBuildId) {
+    if (!$_officialBuildId) {
         return ""
     }
 
@@ -318,11 +328,11 @@ function GetIbcDropName() {
 function SetVisualStudioBootstrapperBuildArgs() {
   $fallbackBranch = "master-vs-deps"
 
-  $branchName = if ($officialSourceBranchName) { $officialSourceBranchName } else { $fallbackBranch }
+  $branchName = if ($_officialSourceBranchName) { $_officialSourceBranchName } else { $fallbackBranch }
   $branchData = GetBranchPublishData $branchName
 
   if ($branchData -eq $null) {
-    Write-Host "Warning: Branch $officialSourceBranchName is not listed in PublishData.json. Using VS bootstrapper for branch '$fallbackBranch'. " -ForegroundColor Yellow
+    Write-Host "Warning: Branch $_officialSourceBranchName is not listed in PublishData.json. Using VS bootstrapper for branch '$fallbackBranch'. " -ForegroundColor Yellow
     $branchData = GetBranchPublishData $fallbackBranch
   }
 
@@ -345,10 +355,10 @@ function TestUsingOptimizedRunner() {
   # Tests need to locate .NET Core SDK
   $dotnet = InitializeDotNetCli
 
-  if ($testVsi) {
+  if ($_testVsi) {
     Deploy-VsixViaTool
 
-    if ($ci) {
+    if ($_ci) {
       # Minimize all windows to avoid interference during integration test runs
       $shell = New-Object -ComObject "Shell.Application"
       $shell.MinimizeAll()
@@ -361,13 +371,13 @@ function TestUsingOptimizedRunner() {
     }
   }
 
-  if ($testIOperation) {
+  if ($_testIOperation) {
     $env:ROSLYN_TEST_IOPERATION = "true"
   }
 
-  $secondaryLogDir = Join-Path (Join-Path $ArtifactsDir "log2") $configuration
+  $secondaryLogDir = Join-Path (Join-Path $ArtifactsDir "log2") $_configuration
   Create-Directory $secondaryLogDir
-  $testResultsDir = Join-Path $ArtifactsDir "TestResults\$configuration"
+  $testResultsDir = Join-Path $ArtifactsDir "TestResults\$_configuration"
   $binDir = Join-Path $ArtifactsDir "bin" 
   $runTests = GetProjectOutputBinary "RunTests.exe"
 
@@ -384,16 +394,16 @@ function TestUsingOptimizedRunner() {
   $args += " -nocache"
   $args += " -tfm:net472"
 
-  if ($testDesktop -or $testIOperation) {
-    if ($test32) {
+  if ($_testDesktop -or $_testIOperation) {
+    if ($_test32) {
       $dlls = Get-ChildItem -Recurse -Include "*.UnitTests.dll" $binDir
     } else {
       $dlls = Get-ChildItem -Recurse -Include "*.UnitTests.dll" -Exclude "*InteractiveHost*" $binDir
     }
-  } elseif ($testVsi) {
+  } elseif ($_testVsi) {
     # Since they require Visual Studio to be installed, ensure that the MSBuildWorkspace tests run along with our VS
     # integration tests in CI.
-    if ($ci) {
+    if ($_ci) {
       $dlls += @(Get-Item (GetProjectOutputBinary "Microsoft.CodeAnalysis.Workspaces.MSBuild.UnitTests.dll"))
     }
 
@@ -412,7 +422,7 @@ function TestUsingOptimizedRunner() {
   $dlls = $dlls | ?{ -not ($_.FullName -match ".*\\ref\\.*") }
   $dlls = $dlls | ?{ -not ($_.FullName -match ".*/ref/.*") }
 
-  if ($configuration -eq 'Debug') {
+  if ($_configuration -eq 'Debug') {
     $excludedConfiguration = 'Release'
   } else {
     $excludedConfiguration = 'Debug'
@@ -420,9 +430,9 @@ function TestUsingOptimizedRunner() {
 
   $dlls = $dlls | ?{ -not (($_.FullName -match ".*\\$excludedConfiguration\\.*") -or ($_.FullName -match ".*/$excludedConfiguration/.*")) }
 
-  if ($ci) {
+  if ($_ci) {
     $args += " -xml"
-    if ($testVsi) {
+    if ($_testVsi) {
       $args += " -timeout:110"
     } else {
       $args += " -timeout:90"
@@ -431,15 +441,15 @@ function TestUsingOptimizedRunner() {
 
   $procdumpPath = Ensure-ProcDump
   $args += " -procdumppath:$procDumpPath"
-  if ($procdump) {
+  if ($_procdump) {
     $args += " -useprocdump";
   }
 
-  if ($test64) {
+  if ($_test64) {
     $args += " -test64"
   }
 
-  if ($sequential) {
+  if ($_sequential) {
     $args += " -sequential"
   }
 
@@ -451,11 +461,11 @@ function TestUsingOptimizedRunner() {
     Exec-Console $runTests $args
   } finally {
     Get-Process "xunit*" -ErrorAction SilentlyContinue | Stop-Process
-    if ($testIOperation) {
+    if ($_testIOperation) {
       Remove-Item env:\ROSLYN_TEST_IOPERATION
     }
 
-    if ($testVsi) {
+    if ($_testVsi) {
       Write-Host "Copying ServiceHub logs to $LogDir"
       Copy-Item -Path (Join-Path $TempDir "servicehub\logs") -Destination (Join-Path $LogDir "servicehub") -Recurse
     }
@@ -615,99 +625,205 @@ function List-Processes() {
   Get-Process -Name "devenv" -ErrorAction SilentlyContinue | Out-Host
 }
 
-try {
-  if ($PSVersionTable.PSVersion.Major -lt "5") {
-    Write-Host "PowerShell version must be 5 or greater (version $($PSVersionTable.PSVersion) detected)"
-    exit 1
-  }
+function RunBuild {
+  Param (
+    [string][Alias('c')]$configuration = "Debug",
+    [string][Alias('v')]$verbosity = "m",
+    [string]$msbuildEngine = "vs",
 
-  $regKeyProperty = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem -Name "LongPathsEnabled" -ErrorAction Ignore
-  if (($null -eq $regKeyProperty) -or ($regKeyProperty.LongPathsEnabled -ne 1)) {
-    Write-Host "LongPath is not enabled, you may experience build errors. You can avoid these by enabling LongPath with `"reg ADD HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1`""
-  }
+    # Actions
+    [switch][Alias('r')]$restore,
+    [switch][Alias('b')]$build,
+    [switch]$rebuild,
+    [switch]$sign,
+    [switch]$pack,
+    [switch]$publish,
+    [switch]$launch,
+    [switch]$help,
 
-  Process-Arguments
+    # Options
+    [switch]$bootstrap,
+    [string]$bootstrapConfiguration = "Release",
+    [switch][Alias('bl')]$binaryLog,
+    [switch]$buildServerLog,
+    [switch]$ci,
+    [switch]$procdump,
+    [switch][Alias('a')]$runAnalyzers,
+    [switch][Alias('d')]$deployExtensions,
+    [switch]$prepareMachine,
+    [switch]$useGlobalNuGetCache = $true,
+    [switch]$warnAsError = $false,
+    [switch]$sourceBuild = $false,
 
-  . (Join-Path $PSScriptRoot "build-utils.ps1")
+    # official build settings
+    [string]$officialBuildId = "",
+    [string]$officialSkipApplyOptimizationData = "",
+    [string]$officialSkipTests = "",
+    [string]$officialSourceBranchName = "",
+    [string]$officialIbcDrop = "",
 
-  if ($testVsi) {
-    . (Join-Path $PSScriptRoot "build-utils-win.ps1")
-  }
+    # version
+    [string]$majorVer = "",
+    [string]$minorVer = "",
+    [string]$patchVer = "",
 
-  Push-Location $RepoRoot
+    # Test actions
+    [switch]$test32,
+    [switch]$test64,
+    [switch]$testVsi,
+    [switch][Alias('test')]$testDesktop,
+    [switch]$testCoreClr,
+    [switch]$testIOperation,
+    [switch]$sequential,
 
-  if ($ci) {
-    List-Processes
-    Prepare-TempDir
-    EnablePreviewSdks
-    if ($testVsi) {
-      Setup-IntegrationTestRun 
+    [parameter(ValueFromRemainingArguments=$true)][string[]]$properties
+  )
+
+  Set-StrictMode -version 2.0
+  $ErrorActionPreference = "Stop"
+
+  $_configuration = $configuration
+  $_verbosity = $verbosity
+  $_msbuildEngine = $msbuildEngine
+
+  # Actions
+  $_restore = $restore
+  $_build = $build
+  $_rebuild = $rebuild
+  $_sign = $sign
+  $_pack = $pack
+  $_publish = $publish
+  $_launch = $launch
+  $_help = $help
+
+  # Options
+  $_bootstrap = $bootstrap
+  $_bootstrapConfiguration = $bootstrapConfiguration
+  $_binaryLog = $binaryLog
+  $_buildServerLog = $buildServerLog
+  $_ci = $ci
+  $_procdump = $procdump
+  $_runAnalyzers = $runAnalyzers
+  $_deployExtensions = $deployExtensions
+  $_prepareMachine = $prepareMachine
+  $_useGlobalNuGetCache = $useGlobalNuGetCache
+  $_warnAsError = $warnAsError
+  $_sourceBuild = $sourceBuild
+
+  # official build settings
+  $_officialBuildId = $officialBuildId
+  $_officialSkipApplyOptimizationData = $officialSkipApplyOptimizationData
+  $_officialSkipTests = $officialSkipTests
+  $_officialSourceBranchName = $officialSourceBranchName
+  $_officialIbcDrop = $officialIbcDrop
+
+  $_majorVer = $majorVer
+  $_minorVer = $minorVer
+  $_patchVer = $patchVer
+
+  # Test actions
+  $_test32 = $test32
+  $_test64 = $test64
+  $_testVsi = $testVsi
+  $_testDesktop = $testDesktop
+  $_testCoreClr = $testCoreClr
+  $_testIOperation = $testIOperation
+  $_sequential = $sequential
+
+  try {
+    if ($PSVersionTable.PSVersion.Major -lt "5") {
+      Write-Host "PowerShell version must be 5 or greater (version $($PSVersionTable.PSVersion) detected)"
+      return 1
     }
 
-    $global:_DotNetInstallDir = Join-Path $RepoRoot ".dotnet"
-    InstallDotNetSdk $global:_DotNetInstallDir $GlobalJson.tools.dotnet
-  }
-
-  if ($restore) {
-    &(Ensure-DotNetSdk) tool restore
-  }
-
-  try
-  {
-    if ($bootstrap) {
-      $bootstrapDir = Make-BootstrapBuild -force32:$test32
-    }
-  }
-  catch
-  {
-    if ($ci) {
-      echo "##vso[task.logissue type=error](NETCORE_ENGINEERING_TELEMETRY=Build) Build failed"
-    }
-    throw $_
-  }
-
-  if ($restore -or $build -or $rebuild -or $pack -or $sign -or $publish -or $testCoreClr) {
-    BuildSolution
-  }
-
-  if ($ci -and $build -and $msbuildEngine -eq "vs") {
-    SetVisualStudioBootstrapperBuildArgs
-  }
-
-  try
-  {
-    if ($testDesktop -or $testVsi -or $testIOperation) {
-      TestUsingOptimizedRunner
-    }
-  }
-  catch
-  {
-    if ($ci) {
-      echo "##vso[task.logissue type=error](NETCORE_ENGINEERING_TELEMETRY=Test) Tests failed"
-    }
-    throw $_
-  }
-
-  if ($launch) {
-    if (-not $build) {
-      InitializeBuildTool
+    $regKeyProperty = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem -Name "LongPathsEnabled" -ErrorAction Ignore
+    if (($null -eq $regKeyProperty) -or ($regKeyProperty.LongPathsEnabled -ne 1)) {
+      Write-Host "LongPath is not enabled, you may experience build errors. You can avoid these by enabling LongPath with `"reg ADD HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1`""
     }
 
-    $devenvExe = Join-Path $env:VSINSTALLDIR 'Common7\IDE\devenv.exe'
-    &$devenvExe /rootSuffix RoslynDev
-  }
+    Process-Arguments
 
-  ExitWithExitCode 0
-}
-catch {
-  Write-Host $_
-  Write-Host $_.Exception
-  Write-Host $_.ScriptStackTrace
-  ExitWithExitCode 1
-}
-finally {
-  if ($ci) {
-    Stop-Processes
+    . (Join-Path $PSScriptRoot "build-utils.ps1")
+
+    if ($_testVsi) {
+      . (Join-Path $PSScriptRoot "build-utils-win.ps1")
+    }
+
+    Push-Location $RepoRoot
+
+    if ($_ci) {
+      List-Processes
+      Prepare-TempDir
+      EnablePreviewSdks
+      if ($_testVsi) {
+        Setup-IntegrationTestRun 
+      }
+
+      $global:_DotNetInstallDir = Join-Path $RepoRoot ".dotnet"
+      InstallDotNetSdk $global:_DotNetInstallDir $GlobalJson.tools.dotnet
+    }
+
+    if ($_restore) {
+      &(Ensure-DotNetSdk) tool restore
+    }
+
+    try
+    {
+      if ($_bootstrap) {
+        $bootstrapDir = Make-BootstrapBuild -force32:$_test32
+      }
+    }
+    catch
+    {
+      if ($_ci) {
+        echo "##vso[task.logissue type=error](NETCORE_ENGINEERING_TELEMETRY=Build) Build failed"
+      }
+      throw $_
+    }
+
+    if ($_restore -or $_build -or $_rebuild -or $_pack -or $_sign -or $_publish -or $_testCoreClr) {
+      BuildSolution
+    }
+
+    if ($_ci -and $_build -and $_msbuildEngine -eq "vs") {
+      SetVisualStudioBootstrapperBuildArgs
+    }
+
+    try
+    {
+      if ($_testDesktop -or $_testVsi -or $_testIOperation) {
+        TestUsingOptimizedRunner
+      }
+    }
+    catch
+    {
+      if ($_ci) {
+        echo "##vso[task.logissue type=error](NETCORE_ENGINEERING_TELEMETRY=Test) Tests failed"
+      }
+      throw $_
+    }
+
+    if ($_launch) {
+      if (-not $_build) {
+        InitializeBuildTool
+      }
+
+      $devenvExe = Join-Path $env:VSINSTALLDIR 'Common7\IDE\devenv.exe'
+      &$devenvExe /rootSuffix RoslynDev
+    }
+
+    return 0
   }
-  Pop-Location
+  catch {
+    Write-Host $_
+    Write-Host $_.Exception
+    Write-Host $_.ScriptStackTrace
+    return 1
+  }
+  finally {
+    if ($_ci) {
+      Stop-Processes
+    }
+    Pop-Location
+  }
 }
