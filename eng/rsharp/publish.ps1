@@ -24,7 +24,7 @@ function Publish
   if(!$version) {
     # get the next expected version
     $versions = GetCurrentReleaseVersion
-    $version = $versions[1][0]
+    $version = $versions[0]
   }
 
   # get the artifact paths for the version
