@@ -43,6 +43,21 @@ function GetCurrentReleaseVersion
   return @($releaseVersion, $releaseMajorVersion, $releaseMinorVersion, $releasePatchVersion)
 }
 
+function ParseVersionParts
+{
+  Param
+  (
+    [string]$version
+  )
+
+  $versionParts = $version.Split('.')
+  $releaseMajorVersion = $versionParts[0]
+  $releaseMinorVersion = $versionParts[1]
+  $releasePatchVersion = $versionParts[2]
+  $releaseVersion = "$releaseMajorVersion.$releaseMinorVersion.$releasePatchVersion"
+  return @($releaseVersion, $releaseMajorVersion, $releaseMinorVersion, $releasePatchVersion)
+}
+
 function UpdateVersion
 {
   Param 

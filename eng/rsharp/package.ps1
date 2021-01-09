@@ -3,6 +3,10 @@
 
 function BuildAndPackage
 {
+  Param 
+  (
+    [string]$version=""
+  )
   Set-StrictMode -version 2.0
   $ErrorActionPreference = "Stop"
 
@@ -15,12 +19,22 @@ function BuildAndPackage
   # run the script
 
   # get the new version to be packaged
-  $versions = GetNewReleaseVersion
-  $oldVersion = $versions[0][0]
-  $newVersion = $versions[1][0]
-  Write-Host ""
-  Write-Host "Packaging new version:" "[$newVersion]"
-
+  $oldVersion = $version
+  $newVersion = $version
+  $versions = ""
+  if(!$newVersion) {
+    $versions = GetNewReleaseVersion
+    $oldVersion = $versions[0][0]
+    $newVersion = $versions[1][0]
+    Write-Host ""
+    Write-Host "Packaging new version:" "[$newVersion]"
+  } else {
+    $versionParts = ParseVersionParts $version
+    $versions = @($versionParts, $versionParts)
+    Write-Host ""
+    Write-Host "Re-Packaging version:" "[$newVersion]"
+  }
+  
   # prepare paths
   $artifactsFolder = [System.IO.Path]::GetFullPath($PSScriptRoot + "\..\..\artifacts")
   $releaseNugetPackagesFoler = [System.IO.Path]::GetFullPath($artifactsFolder + "\packages\Release")
@@ -32,7 +46,7 @@ function BuildAndPackage
   $publishFolder = $publishRootFolder + "\" + $newVersion
 
   $rsharpVsixPublishFile = $publishFolder + "\rsharp." + $newVersion + ".vsix"
-  $rsharpCompilerToolsetPublishFile = $publishFolder + "\rsharp-compiler-tools." + $newVersion + ".nupkg"
+  $rsharpCompilerToolsetPublishFile = $publishFolder + "\Microsoft.Net.Compilers.Toolset." + $newVersion + ".nupkg"
 
   # delete the release package folders before releasing
   if (Test-Path -path $releaseNugetPackagedFolder) {

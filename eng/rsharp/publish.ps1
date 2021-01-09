@@ -34,7 +34,7 @@ function Publish
     $vsixFile = [System.IO.Path]::GetFullPath($publishFolder + "\rsharp." + $version + ".vsix")
   }
   if(!$compilerToolsFile) {
-    $compilerToolsFile = [System.IO.Path]::GetFullPath($publishFolder + "\rsharp-compiler-tools." + $version + ".nupkg")
+    $compilerToolsFile = [System.IO.Path]::GetFullPath($publishFolder + "\Microsoft.Net.Compilers.Toolset." + $version + ".nupkg")
   }
 
   $repo = "bilsaboob/roslyn-sharp"
