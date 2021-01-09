@@ -408,12 +408,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Emit
 
         public override IEnumerable<Cci.INamespaceTypeDefinition> GetGeneratedTypeDefinitions(EmitContext context)
         {
+            var generatedTypes = Compilation.GeneratedTypesManager.GetGeneratedTypes();
+
             if (context.MetadataOnly)
             {
-                return SpecializedCollections.EmptyEnumerable<Cci.INamespaceTypeDefinition>();
+                // NOTE: not sure why we had this here before, if the generated types such as "RSharpParamSpreadAttribute" aren't included, then we will have issues with generating pdb for the the "secondary module"
+                //return SpecializedCollections.EmptyEnumerable<Cci.INamespaceTypeDefinition>();
+                return generatedTypes.Where(t => RSharpBuiltInSystemTypes.IsGeneratedType(t));
             }
 
-            return Compilation.GeneratedTypesManager.GetGeneratedTypes();
+            return generatedTypes;
         }
 
         public override IEnumerable<Cci.INamespaceTypeDefinition> GetTopLevelSourceTypeDefinitions(EmitContext context)

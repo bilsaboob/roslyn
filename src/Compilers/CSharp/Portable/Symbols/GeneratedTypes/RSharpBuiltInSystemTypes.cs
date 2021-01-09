@@ -10,6 +10,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal static class RSharpBuiltInSystemTypes
     {
+        internal static bool IsGeneratedType(NamedTypeSymbol type)
+        {
+            if (type.Name == RSharpParamLambdaWithThisScopeAttributeGenerator.ATTRIBUTE_TYPE_NAME) return true;
+            if (type.Name == RSharpParamSpreadAttributeGenerator.ATTRIBUTE_TYPE_NAME) return true;
+
+            return false;
+        }
+
         internal static void GenerateTypes(CSharpCompilation compilation)
         {
             // generate the param decoration attributes
