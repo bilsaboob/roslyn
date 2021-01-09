@@ -23,7 +23,7 @@ function Publish
 
   if(!$version) {
     # get the next expected version
-    $versions = GetNewReleaseVersion
+    $versions = GetCurrentReleaseVersion
     $version = $versions[1][0]
   }
 

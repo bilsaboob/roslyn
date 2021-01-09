@@ -3,6 +3,25 @@ function GetNewReleaseVersion
   # read the version information from "versions.txt"
   $versionsFile = [System.IO.Path]::GetFullPath($PSScriptRoot + "\..\..\versions.txt")
 
+  $version = GetCurrentReleaseVersion
+  $releaseVersion = $version[0]
+  $releaseMajorVersion = $version[1]
+  $releaseMinorVersion = $version[2]
+  $releasePatchVersion = $version[3]
+
+  # build the new release version
+  $newReleasePatchVerValue = [int]$releasePatchVersion + 1
+  $newReleasePatchVer = "$newReleasePatchVerValue"
+  $newReleaseVersion = "$releaseMajorVersion.$releaseMinorVersion.$newReleasePatchVer"
+
+  return @(@($releaseVersion, $releaseMajorVersion, $releaseMinorVersion, $releasePatchVersion), @($newReleaseVersion, $releaseMajorVersion, $releaseMinorVersion, $newReleasePatchVer))
+}
+
+function GetCurrentReleaseVersion
+{
+  # read the version information from "versions.txt"
+  $versionsFile = [System.IO.Path]::GetFullPath($PSScriptRoot + "\..\..\versions.txt")
+
   $releaseMajorVersion = ""
   $releaseMinorVersion = ""
   $releasePatchVersion = ""
@@ -21,12 +40,7 @@ function GetNewReleaseVersion
     }
   }
 
-  # build the new release version
-  $newReleasePatchVerValue = [int]$releasePatchVersion + 1
-  $newReleasePatchVer = "$newReleasePatchVerValue"
-  $newReleaseVersion = "$releaseMajorVersion.$releaseMinorVersion.$newReleasePatchVer"
-
-  return @(@($releaseVersion, $releaseMajorVersion, $releaseMinorVersion, $releasePatchVersion), @($newReleaseVersion, $releaseMajorVersion, $releaseMinorVersion, $newReleasePatchVer))
+  return @($releaseVersion, $releaseMajorVersion, $releaseMinorVersion, $releasePatchVersion)
 }
 
 function UpdateVersion
