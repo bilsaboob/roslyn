@@ -296,19 +296,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Structure
                 return false;
             }
 
+            static SyntaxToken? GetFirstModifierOrNull(SyntaxTokenList modifiers) => modifiers.FirstOrNull(n => n.Span.Length > 0);
+
             static SyntaxToken GetEndToken(SyntaxNode node)
             {
                 if (node.IsKind(SyntaxKind.ConstructorDeclaration, out ConstructorDeclarationSyntax constructorDeclaration))
                 {
-                    return constructorDeclaration.Modifiers.FirstOrNull() ?? constructorDeclaration.Identifier;
+                    return GetFirstModifierOrNull(constructorDeclaration.Modifiers) ?? constructorDeclaration.Identifier;
                 }
                 else if (node.IsKind(SyntaxKind.ConversionOperatorDeclaration, out ConversionOperatorDeclarationSyntax conversionOperatorDeclaration))
                 {
-                    return conversionOperatorDeclaration.Modifiers.FirstOrNull() ?? conversionOperatorDeclaration.ImplicitOrExplicitKeyword;
+                    return GetFirstModifierOrNull(conversionOperatorDeclaration.Modifiers) ?? conversionOperatorDeclaration.ImplicitOrExplicitKeyword;
                 }
                 else if (node.IsKind(SyntaxKind.DelegateDeclaration, out DelegateDeclarationSyntax delegateDeclaration))
                 {
-                    return delegateDeclaration.Modifiers.FirstOrNull() ?? delegateDeclaration.DelegateKeyword;
+                    return GetFirstModifierOrNull(delegateDeclaration.Modifiers) ?? delegateDeclaration.DelegateKeyword;
                 }
                 else if (node.IsKind(SyntaxKind.DestructorDeclaration, out DestructorDeclarationSyntax destructorDeclaration))
                 {
@@ -316,7 +318,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Structure
                 }
                 else if (node.IsKind(SyntaxKind.EnumDeclaration, out EnumDeclarationSyntax enumDeclaration))
                 {
-                    return enumDeclaration.Modifiers.FirstOrNull() ?? enumDeclaration.EnumKeyword;
+                    return GetFirstModifierOrNull(enumDeclaration.Modifiers) ?? enumDeclaration.EnumKeyword;
                 }
                 else if (node.IsKind(SyntaxKind.EnumMemberDeclaration, out EnumMemberDeclarationSyntax enumMemberDeclaration))
                 {
@@ -324,38 +326,38 @@ namespace Microsoft.CodeAnalysis.CSharp.Structure
                 }
                 else if (node.IsKind(SyntaxKind.EventDeclaration, out EventDeclarationSyntax eventDeclaration))
                 {
-                    return eventDeclaration.Modifiers.FirstOrNull() ?? eventDeclaration.EventKeyword;
+                    return GetFirstModifierOrNull(eventDeclaration.Modifiers) ?? eventDeclaration.EventKeyword;
                 }
                 else if (node.IsKind(SyntaxKind.EventFieldDeclaration, out EventFieldDeclarationSyntax eventFieldDeclaration))
                 {
-                    return eventFieldDeclaration.Modifiers.FirstOrNull() ?? eventFieldDeclaration.EventKeyword;
+                    return GetFirstModifierOrNull(eventFieldDeclaration.Modifiers) ?? eventFieldDeclaration.EventKeyword;
                 }
                 else if (node.IsKind(SyntaxKind.FieldDeclaration, out FieldDeclarationSyntax fieldDeclaration))
                 {
-                    return fieldDeclaration.Modifiers.FirstOrNull() ?? fieldDeclaration.Declaration.GetFirstToken();
+                    return GetFirstModifierOrNull(fieldDeclaration.Modifiers) ?? fieldDeclaration.Declaration.GetFirstToken();
                 }
                 else if (node.IsKind(SyntaxKind.IndexerDeclaration, out IndexerDeclarationSyntax indexerDeclaration))
                 {
-                    return indexerDeclaration.Modifiers.FirstOrNull() ?? indexerDeclaration.Type.GetFirstToken();
+                    return GetFirstModifierOrNull(indexerDeclaration.Modifiers) ?? indexerDeclaration.Type.GetFirstToken();
                 }
                 else if (node.IsKind(SyntaxKind.MethodDeclaration, out MethodDeclarationSyntax methodDeclaration))
                 {
-                    return methodDeclaration.Modifiers.FirstOrNull() ?? methodDeclaration.ReturnType.GetFirstToken();
+                    return GetFirstModifierOrNull(methodDeclaration.Modifiers) ?? methodDeclaration.ReturnType.GetFirstToken();
                 }
                 else if (node.IsKind(SyntaxKind.OperatorDeclaration, out OperatorDeclarationSyntax operatorDeclaration))
                 {
-                    return operatorDeclaration.Modifiers.FirstOrNull() ?? operatorDeclaration.ReturnType.GetFirstToken();
+                    return GetFirstModifierOrNull(operatorDeclaration.Modifiers) ?? operatorDeclaration.ReturnType.GetFirstToken();
                 }
                 else if (node.IsKind(SyntaxKind.PropertyDeclaration, out PropertyDeclarationSyntax propertyDeclaration))
                 {
-                    return propertyDeclaration.Modifiers.FirstOrNull() ?? propertyDeclaration.Type.GetFirstToken();
+                    return GetFirstModifierOrNull(propertyDeclaration.Modifiers) ?? propertyDeclaration.Type.GetFirstToken();
                 }
                 else if (node.IsKind(SyntaxKind.ClassDeclaration, out TypeDeclarationSyntax typeDeclaration)
                     || node.IsKind(SyntaxKind.RecordDeclaration, out typeDeclaration)
                     || node.IsKind(SyntaxKind.StructDeclaration, out typeDeclaration)
                     || node.IsKind(SyntaxKind.InterfaceDeclaration, out typeDeclaration))
                 {
-                    return typeDeclaration.Modifiers.FirstOrNull() ?? typeDeclaration.Keyword;
+                    return GetFirstModifierOrNull(typeDeclaration.Modifiers) ?? typeDeclaration.Keyword;
                 }
                 else
                 {

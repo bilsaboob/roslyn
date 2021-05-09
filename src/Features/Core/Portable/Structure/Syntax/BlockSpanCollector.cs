@@ -49,13 +49,20 @@ namespace Microsoft.CodeAnalysis.Structure
 
             foreach (var nodeOrToken in root.DescendantNodesAndTokensAndSelf(descendIntoTrivia: true))
             {
-                if (nodeOrToken.IsNode)
+                try
                 {
-                    GetBlockSpans(nodeOrToken.AsNode());
+                    if (nodeOrToken.IsNode)
+                    {
+                        GetBlockSpans(nodeOrToken.AsNode());
+                    }
+                    else
+                    {
+                        GetBlockSpans(nodeOrToken.AsToken());
+                    }
                 }
-                else
+                catch(Exception ex)
                 {
-                    GetBlockSpans(nodeOrToken.AsToken());
+                    //whatever... this generally breaks when going to some "decompiled source"...
                 }
             }
         }
