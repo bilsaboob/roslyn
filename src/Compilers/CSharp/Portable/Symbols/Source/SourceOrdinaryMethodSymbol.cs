@@ -159,10 +159,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 {
                     // use the return type from the base instead
                     var baseType = OverriddenMethod?.ReturnTypeWithAnnotations;
-                    if (!(baseType?.Type is null))
+                    if (!(baseType?.Type is null) && (_lazyReturnType.Type is null || _lazyReturnType.Type.IsErrorType()))
                     {
-                        // set the return type to match the base symbols return type
-                        _lazyReturnType = baseType.Value;
+                        if (baseType?.Type?.Kind != SymbolKind.ErrorType)
+                        {
+                            // set the return type to match the base symbols return type
+                            _lazyReturnType = baseType.Value;
+                        }
                     }
                 }
             }
@@ -203,7 +206,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get
             {
                 if (_isCalculatingReturnType)
+                {
+                    // reset the member overrides ... they may have gotten evaluated based on incorrect return type.
+                    _lazyOverriddenOrHiddenMembers = null;
+
+                    // at least return "some type"
                     return _partialReturnType;
+                }
 
                 return base.ReturnTypeWithAnnotations;
             }
@@ -274,7 +283,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     // before we do a full binding of the body, we could attempt just binding the "return statements" ... this will then work for "recursive methods" methods too...
                     // "temporarily" set the first resolve type we get
                     var (firstResolvedType, firstIsVoidType) = CodeBlockReturnTypeResolver.TryResolveReturnTypeFromSyntax(syntax, bodyBinder, bodyBinder.Conversions);
-                    if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
+                    if (firstIsVoidType) tmpReturnType = signatureBinder.BindSpecialType(SyntaxKind.VoidKeyword);
+                    else if (firstResolvedType != null) tmpReturnType = firstResolvedType.Value;
+
                     tmpReturnType = PostProcessReturnType(tmpReturnType, explicitInterfaceType, signatureBinder, returnTypeSyntax, IsAsync, tmpDiagnostics);
                     _partialReturnType = tmpReturnType;
 
