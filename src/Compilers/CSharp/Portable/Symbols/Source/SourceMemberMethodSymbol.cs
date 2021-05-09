@@ -180,7 +180,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private ParameterSymbol _lazyThisParameter;
         private TypeWithAnnotations.Boxed _lazyIteratorElementType;
 
-        private OverriddenOrHiddenMembersResult _lazyOverriddenOrHiddenMembers;
+        protected OverriddenOrHiddenMembersResult _lazyOverriddenOrHiddenMembers;
 
         protected ImmutableArray<Location> locations;
         protected string lazyDocComment;
@@ -711,9 +711,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get
             {
                 this.LazyMethodChecks();
-                if (_lazyOverriddenOrHiddenMembers == null)
+
+                // force re-evaluation of the overridden methods if this is an explicit "override" but none were found
+                // - this could happen if there is some issue with inferring the return type the "first pass"...
+                // - worst case we loose some performance, but have "correct" return type inference
+                var evalOverriddenMembers = _lazyOverriddenOrHiddenMembers == null;
+                if ((_lazyOverriddenOrHiddenMembers == null || _lazyOverriddenOrHiddenMembers.OverriddenMembers.Length == 0) && this.IsOverride)
+                    evalOverriddenMembers = true;
+
+                if (evalOverriddenMembers)
                 {
-                    Interlocked.CompareExchange(ref _lazyOverriddenOrHiddenMembers, this.MakeOverriddenOrHiddenMembers(), null);
+                    Interlocked.Exchange(ref _lazyOverriddenOrHiddenMembers, this.MakeOverriddenOrHiddenMembers());
                 }
 
                 return _lazyOverriddenOrHiddenMembers;
