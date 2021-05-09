@@ -226,15 +226,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get
             {
-                if (_lazyReturnType == null)
+                // sometimes the original method may have issues inferring the type the first pass ... so repeat if no type available or it's an error type ...
+                // - worst case we loose performance, but have can infer types "correctly" ...
+                if (_lazyReturnType?.Value.Type is null || _lazyReturnType?.Value.Type?.IsErrorType() == true)
                 {
+                    // now substitute the types
                     var returnType = Map.SubstituteType(OriginalDefinition.ReturnTypeWithAnnotations);
-                    Interlocked.CompareExchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(returnType), null);
+                    Interlocked.Exchange(ref _lazyReturnType, new TypeWithAnnotations.Boxed(returnType));
                 }
-                return _lazyReturnType.Value;
+
+                return _lazyReturnType?.Value ?? TypeWithAnnotations.CreateError(DeclaringCompilation);
             }
         }
-
 
         public sealed override ImmutableArray<CustomModifier> RefCustomModifiers
         {
