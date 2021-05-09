@@ -378,11 +378,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // create an error type if no type was computed
             if (_lazyReturnType.Type is null)
             {
-                _lazyReturnType = TypeWithAnnotations.CreateError(DeclaringCompilation);
+                if (bodySyntax == null)
+                {
+                    // when no body syntax, then the property must have an explicit return type!
+                    var associatedProperty = _property;
+                    var propType = associatedProperty.TypeWithAnnotations;
+                    _lazyReturnType = propType;
+                }
+
+                if (_lazyReturnType.Type is null || _lazyReturnType.Type.IsErrorType())
+                    _lazyReturnType = TypeWithAnnotations.CreateError(DeclaringCompilation);
             }
             else
             {
-                // verify converion with the explicit property type
+                // verify conversion with the explicit property type
                 var associatedProperty = _property;
                 var propType = associatedProperty.TypeWithAnnotations;
                 if (!(propType.Type is null) && !propType.Type.IsErrorType())
@@ -399,9 +408,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 Debug.Assert(_explicitInterfaceImplementations.Length == 1);
                 MethodSymbol implementedMethod = _explicitInterfaceImplementations[0];
-                CustomModifierUtils.CopyMethodCustomModifiers(implementedMethod, this, out _lazyReturnType,
-                                                              out _lazyRefCustomModifiers,
-                                                              out _lazyParameters, alsoCopyParamsModifier: false);
+                CustomModifierUtils.CopyMethodCustomModifiers(
+                    implementedMethod,
+                    this,
+                    out _lazyReturnType,
+                    out _lazyRefCustomModifiers,
+                    out _lazyParameters, 
+                    alsoCopyParamsModifier: false
+                );
             }
             else if (this.IsOverride)
             {
@@ -410,21 +424,43 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 MethodSymbol overriddenMethod = this.OverriddenMethod;
                 if ((object)overriddenMethod != null)
                 {
-                    CustomModifierUtils.CopyMethodCustomModifiers(overriddenMethod, this, out _lazyReturnType,
-                                                                  out _lazyRefCustomModifiers,
-                                                                  out _lazyParameters, alsoCopyParamsModifier: true);
+                    CustomModifierUtils.CopyMethodCustomModifiers(
+                        overriddenMethod,
+                        this,
+                        out _lazyReturnType,
+                        out _lazyRefCustomModifiers,
+                        out _lazyParameters,
+                        alsoCopyParamsModifier: true
+                    );
                 }
             }
             else if (!_lazyReturnType.IsVoidType())
             {
                 PropertySymbol associatedProperty = _property;
                 var propType = associatedProperty.TypeWithAnnotations;
+
+                // update the return type with the modifiers from the property
                 if (!(propType.Type is null) && !propType.Type.IsErrorType())
                 {
-                    _lazyReturnType = _lazyReturnType.WithTypeAndModifiers(
-                        CustomModifierUtils.CopyTypeCustomModifiers(propType.Type, _lazyReturnType.Type, this.ContainingAssembly),
-                        propType.CustomModifiers);
+                    if (_lazyReturnType.Type is null || _lazyReturnType.Type.IsErrorType())
+                    {
+                        // use the prop type "as is"
+                        _lazyReturnType = propType;
+                    }
+                    else
+                    {
+                        // update
+                        _lazyReturnType = _lazyReturnType.WithTypeAndModifiers(
+                            CustomModifierUtils.CopyTypeCustomModifiers(
+                                propType.Type,
+                                _lazyReturnType.Type,
+                                this.ContainingAssembly
+                            ),
+                            propType.CustomModifiers
+                        );
+                    }
                 }
+
                 _lazyRefCustomModifiers = associatedProperty.RefCustomModifiers;
             }
         }
